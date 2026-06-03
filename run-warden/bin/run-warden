@@ -1,0 +1,48 @@
+#!/usr/bin/env sh
+set -eu
+
+RUN_WARDEN_BIN=$0
+case "$RUN_WARDEN_BIN" in */*) RUN_WARDEN_DIR=${RUN_WARDEN_BIN%/*} ;; *) RUN_WARDEN_DIR=. ;; esac
+RUN_WARDEN_ROOT=$(cd "$RUN_WARDEN_DIR/.." && pwd -P)
+WARDEN_HOME=${WARDEN_HOME:-$(cd "$RUN_WARDEN_ROOT/.." && pwd -P)}
+export WARDEN_HOME RUN_WARDEN_ROOT
+
+. "$RUN_WARDEN_ROOT/lib/welcome.sh"
+. "$RUN_WARDEN_ROOT/lib/doctor.sh"
+. "$RUN_WARDEN_ROOT/lib/shell-integration.sh"
+
+usage() {
+  cat <<'EOF'
+usage: run-warden [command]
+
+commands:
+  welcome              print welcome and next steps
+  doctor               run readiness checks
+  shell status         show bash/zsh/fish integration status
+  shell install        append guarded shell integration blocks after consent
+  shell remove         remove guarded shell integration blocks
+  shell snippet SHELL  print manual snippet for bash, zsh, or fish
+  help                 show this help
+EOF
+}
+
+command_name=${1:-welcome}
+if [ $# -gt 0 ]; then shift; fi
+
+case "$command_name" in
+  welcome) warden_welcome ;;
+  doctor) warden_doctor ;;
+  shell)
+    subcommand=${1:-status}
+    if [ $# -gt 0 ]; then shift; fi
+    case "$subcommand" in
+      status) warden_shell_status ;;
+      install) warden_shell_install ;;
+      remove) warden_shell_remove ;;
+      snippet) warden_shell_snippet "${1:-}" ;;
+      *) usage >&2; exit 2 ;;
+    esac
+    ;;
+  help|-h|--help) usage ;;
+  *) printf '%s\n' "run-warden: unknown command: $command_name" >&2; usage >&2; exit 2 ;;
+esac

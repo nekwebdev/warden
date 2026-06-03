@@ -1,0 +1,93 @@
+#!/usr/bin/env sh
+set -eu
+
+log() { printf '%s\n' "$*" >&2; }
+fail() { log "warden: $*"; exit 1; }
+
+confirm() {
+  prompt=$1
+  if [ "${WARDEN_YES:-}" = "1" ]; then return 0; fi
+  if [ ! -t 0 ]; then return 1; fi
+  printf '%s [y/N] ' "$prompt" >&2
+  read -r answer
+  case "$answer" in y|Y|yes|YES) return 0 ;; *) return 1 ;; esac
+}
+
+physical_dir() { (cd "$1" 2>/dev/null && pwd -P) || return 1; }
+
+default_warden_home() {
+  if [ -n "${WARDEN_HOME:-}" ]; then printf '%s\n' "$WARDEN_HOME"
+  elif [ -n "${XDG_CONFIG_HOME:-}" ]; then printf '%s/warden\n' "$XDG_CONFIG_HOME"
+  else printf '%s/.config/warden\n' "$HOME"; fi
+}
+
+choose_warden_home() {
+  default_home=$(default_warden_home)
+  if [ -n "${WARDEN_HOME:-}" ] || [ "${WARDEN_YES:-}" = "1" ] || [ ! -t 0 ]; then
+    printf '%s\n' "$default_home"; return 0
+  fi
+  printf 'WARDEN_HOME [%s]: ' "$default_home" >&2
+  read -r chosen_home
+  [ -n "$chosen_home" ] && printf '%s\n' "$chosen_home" || printf '%s\n' "$default_home"
+}
+
+find_mise() {
+  if command -v mise >/dev/null 2>&1; then command -v mise; return 0; fi
+  if [ -x "$HOME/.local/bin/mise" ]; then printf '%s\n' "$HOME/.local/bin/mise"; return 0; fi
+  return 1
+}
+
+ensure_mise() {
+  if mise_bin=$(find_mise); then printf '%s\n' "$mise_bin"; return 0; fi
+  log "mise is required so Warden can run project tasks and delegate to run-warden."
+  log "Installer: curl https://mise.run | sh"
+  if ! confirm "Install mise now?"; then
+    fail "mise install declined. Install mise from https://mise.jdx.dev/getting-started.html, then rerun ./warden."
+  fi
+  command -v curl >/dev/null 2>&1 || fail "curl is required for the mise installer. Install curl or mise manually, then rerun ./warden."
+  curl https://mise.run | sh
+  if mise_bin=$(find_mise); then printf '%s\n' "$mise_bin"; return 0; fi
+  fail "mise installer completed, but mise was not found. Add ~/.local/bin to PATH or rerun after installing mise manually."
+}
+
+move_to_warden_home_if_needed() {
+  script_path=$0
+  case "$script_path" in */*) script_dir=${script_path%/*} ;; *) script_dir=. ;; esac
+  repo_dir=$(physical_dir "$script_dir") || fail "cannot resolve repository directory from $script_path"
+  target_home=$(choose_warden_home)
+  parent_dir=${target_home%/*}
+  [ "$parent_dir" != "$target_home" ] || fail "invalid WARDEN_HOME: $target_home"
+
+  if [ -d "$target_home" ]; then
+    target_dir=$(physical_dir "$target_home") || fail "cannot resolve existing WARDEN_HOME: $target_home"
+    if [ "$target_dir" = "$repo_dir" ]; then WARDEN_HOME_DIR=$target_dir; return 0; fi
+    if [ -z "$(ls -A "$target_home")" ]; then
+      rmdir "$target_home"
+    else
+      fail "target WARDEN_HOME already exists and is not this repo: $target_home. Move it aside or set WARDEN_HOME to an empty path. Nothing was overwritten."
+    fi
+  fi
+
+  log "Warden will move this clone to: $target_home"
+  if ! confirm "Move repository into WARDEN_HOME?"; then
+    fail "move declined. Set WARDEN_HOME to desired path or rerun and approve the move."
+  fi
+  mkdir -p "$parent_dir"
+  mv "$repo_dir" "$target_home"
+  target_dir=$(physical_dir "$target_home") || fail "cannot resolve moved WARDEN_HOME: $target_home"
+  export WARDEN_HOME=$target_dir
+  exec "$target_dir/warden" "$@"
+}
+
+main() {
+  WARDEN_HOME_DIR=
+  move_to_warden_home_if_needed "$@"
+  export WARDEN_HOME=$WARDEN_HOME_DIR
+  mise_bin=$(ensure_mise)
+  export PATH="$WARDEN_HOME/run-warden/bin:$PATH"
+  runner="$WARDEN_HOME/run-warden/bin/run-warden"
+  [ -x "$runner" ] || fail "run-warden runner is not executable at $runner. Apply the run-warden phase, then rerun ./warden."
+  exec "$mise_bin" exec -- "$runner" "$@"
+}
+
+main "$@"

@@ -1,0 +1,32 @@
+[tools]
+bats = "latest"
+
+[tasks.test]
+description = "Run all currently available Warden dev test suites"
+depends = [
+  "test:root",
+  "test:run-warden",
+  "test:nix-warden",
+  "test:pi-warden",
+  "test:dev-warden",
+]
+
+[tasks."test:root"]
+description = "Run root bootstrap Bats tests when present"
+run = "if [ -d tests/root ]; then bats tests/root; else echo 'tests/root not created yet'; fi"
+
+[tasks."test:run-warden"]
+description = "Run run-warden Bats tests when present"
+run = "if [ -d run-warden/tests ]; then bats run-warden/tests; else echo 'run-warden/tests not created yet'; fi"
+
+[tasks."test:nix-warden"]
+description = "Run nix-warden smoke tests when present"
+run = "if [ -d nix-warden/tests ]; then bats nix-warden/tests; else echo 'nix-warden/tests not created yet'; fi"
+
+[tasks."test:pi-warden"]
+description = "Run pi-warden smoke tests when present"
+run = "if [ -d pi-warden/tests ]; then bats pi-warden/tests; else echo 'pi-warden/tests not created yet'; fi"
+
+[tasks."test:dev-warden"]
+description = "Run dev-warden smoke tests when present"
+run = "if [ -d dev-warden/tests ]; then bats dev-warden/tests; else echo 'dev-warden/tests not created yet'; fi"
