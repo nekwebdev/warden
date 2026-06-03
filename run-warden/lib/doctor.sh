@@ -37,6 +37,39 @@ warden_shell_has_any_integration() {
 	warden_shell_is_installed bash || warden_shell_is_installed zsh || warden_shell_is_installed fish
 }
 
+warden_doctor_pi_agent_hints() {
+	agents_root=$(warden_agents_root)
+	printf 'info - WARDEN_AGENTS root: %s\n' "$agents_root"
+
+	if command -v npm >/dev/null 2>&1; then
+		printf 'info - npm available for Pi agent installs\n'
+	else
+		printf 'warn - npm unavailable; warden agents new will fail until npm is installed\n'
+	fi
+
+	if [ ! -d "$agents_root" ]; then
+		printf 'info - no Pi agents created yet\n'
+		return 0
+	fi
+
+	found=0
+	for agent_dir in "$agents_root"/* "$agents_root"/.[!.]* "$agents_root"/..?*; do
+		[ -d "$agent_dir" ] || continue
+		found=1
+		agent_name=${agent_dir##*/}
+		pi_bin=$(warden_agent_pi_bin "$agent_dir")
+		if [ -x "$pi_bin" ]; then
+			printf 'info - Pi agent %s has local executable: %s\n' "$agent_name" "$pi_bin"
+		else
+			printf 'warn - Pi agent %s missing local executable: %s\n' "$agent_name" "$pi_bin"
+		fi
+	done
+
+	if [ "$found" -eq 0 ]; then
+		printf 'info - no Pi agents created yet\n'
+	fi
+}
+
 warden_doctor() {
 	failures=0
 	warden_doctor_check "WARDEN_HOME is set" test -n "${WARDEN_HOME:-}" || failures=$((failures + 1))
@@ -50,5 +83,6 @@ warden_doctor() {
 	else
 		printf 'not ok - shell integration not installed; run ./warden shell install or ./warden shell snippet bash|zsh|fish\n'
 	fi
+	warden_doctor_pi_agent_hints
 	[ "$failures" -eq 0 ]
 }

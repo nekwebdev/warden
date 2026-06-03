@@ -17,6 +17,7 @@ export WARDEN_HOME RUN_WARDEN_ROOT
 . "$RUN_WARDEN_ROOT/lib/welcome.sh"
 . "$RUN_WARDEN_ROOT/lib/doctor.sh"
 . "$RUN_WARDEN_ROOT/lib/shell-integration.sh"
+. "$RUN_WARDEN_ROOT/lib/pi-agents.sh"
 
 usage() {
   cat <<'EOF'
@@ -25,6 +26,8 @@ usage: warden [command]
 commands:
   welcome              print welcome and next steps
   doctor               run readiness checks
+  agents new [NAME]   create isolated Pi agent environment
+  pi NAME [ARGS...]   run Pi inside an isolated agent environment
   shell status         show bash/zsh/fish integration status
   shell install        append guarded shell integration blocks after consent
   shell remove         remove guarded shell integration blocks
@@ -39,6 +42,15 @@ if [ $# -gt 0 ]; then shift; fi
 case "$command_name" in
   welcome) warden_welcome ;;
   doctor) warden_doctor ;;
+  pi) warden_pi "$@" ;;
+  agents)
+    subcommand=${1:-}
+    if [ $# -gt 0 ]; then shift; fi
+    case "$subcommand" in
+      new) warden_agents_new "$@" ;;
+      *) usage >&2; exit 2 ;;
+    esac
+    ;;
   shell)
     subcommand=${1:-status}
     if [ $# -gt 0 ]; then shift; fi

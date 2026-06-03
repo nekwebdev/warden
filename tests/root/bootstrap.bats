@@ -12,6 +12,25 @@ if [ "$1" = "exec" ]; then shift; [ "$1" = "--" ] && shift; exec "$@"; fi
 exit 0
 SH
   chmod +x "$FAKE_BIN/mise"
+  cat > "$FAKE_BIN/npm" <<'SH'
+#!/usr/bin/env sh
+printf 'argc=%s\n' "$#" >>"$NPM_LOG"
+for arg do printf 'arg=%s\n' "$arg" >>"$NPM_LOG"; done
+prefix=
+while [ "$#" -gt 0 ]; do
+  case "$1" in --prefix) shift; prefix=${1:-} ;; esac
+  shift || break
+done
+mkdir -p "$prefix/node_modules/.bin"
+cat > "$prefix/node_modules/.bin/pi" <<'PI'
+#!/usr/bin/env sh
+printf 'PI_BIN=%s\n' "$0" >>"$PI_LOG"
+printf 'argc=%s\n' "$#" >>"$PI_LOG"
+for arg do printf 'arg=%s\n' "$arg" >>"$PI_LOG"; done
+PI
+chmod +x "$prefix/node_modules/.bin/pi"
+SH
+  chmod +x "$FAKE_BIN/npm"
 }
 
 copy_repo() {
@@ -45,4 +64,19 @@ copy_repo() {
   run env -u HOME PATH="$FAKE_BIN:$PATH" WARDEN_HOME="$clone" "$clone/warden"
   [ "$status" -ne 0 ]
   [[ "$output" == *"HOME is required"* ]]
+}
+
+@test "bootstrap delegates agents and pi command argv through mise" {
+  clone=$(copy_repo)
+  agents="$BATS_TEST_TMPDIR/agents"
+  run env HOME="$TEST_HOME" PATH="$FAKE_BIN:$PATH" WARDEN_YES=1 WARDEN_HOME="$clone" WARDEN_AGENTS="$agents" NPM_LOG="$BATS_TEST_TMPDIR/npm.log" PI_LOG="$BATS_TEST_TMPDIR/pi.log" "$clone/warden" agents new ada
+  [ "$status" -eq 0 ]
+  [ -x "$agents/ada/npm/node_modules/.bin/pi" ]
+  grep -F "arg=@earendil-works/pi-coding-agent" "$BATS_TEST_TMPDIR/npm.log"
+
+  run env HOME="$TEST_HOME" PATH="$FAKE_BIN:$PATH" WARDEN_HOME="$clone" WARDEN_AGENTS="$agents" PI_LOG="$BATS_TEST_TMPDIR/pi.log" "$clone/warden" pi ada --flag "two words"
+  [ "$status" -eq 0 ]
+  grep -F "PI_BIN=$agents/ada/npm/node_modules/.bin/pi" "$BATS_TEST_TMPDIR/pi.log"
+  grep -F "arg=--flag" "$BATS_TEST_TMPDIR/pi.log"
+  grep -F "arg=two words" "$BATS_TEST_TMPDIR/pi.log"
 }

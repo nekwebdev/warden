@@ -48,13 +48,39 @@ $WARDEN_HOME/nix-warden
 `./warden` is the root bootstrap shim. It delegates to `run-warden/bin/warden` through mise. After shell integration, `run-warden/bin` is on PATH and the delegated CLI is `warden`:
 
 ```sh
-./warden              # bootstrap if needed, then show welcome
-./warden shell install # install PATH/shell integration before `warden` is available
-warden help           # show command help after shell integration
-warden doctor         # readiness checks
-warden shell status   # show shell integration state
+./warden                    # bootstrap if needed, then show welcome
+./warden shell install      # install PATH/shell integration before `warden` is available
+warden help                 # show command help after shell integration
+warden doctor               # readiness checks, including non-fatal Pi agent hints
+warden agents new [name]    # create isolated Pi agent environment
+warden pi <name> ...        # run Pi from that isolated agent environment
+warden shell status         # show shell integration state
 warden shell remove
 warden shell snippet bash|zsh|fish
+```
+
+## Pi agent environments
+
+`warden agents new [name]` creates a local Pi agent environment under `WARDEN_AGENTS/<name>` when `WARDEN_AGENTS` is set; otherwise it uses `${XDG_CONFIG_HOME:-$HOME/.config}/pi-agents/<name>`. If `name` is omitted, Warden prompts for it interactively.
+
+Agent names may contain letters, numbers, `.`, `_`, and `-`; `/`, `.`, `..`, and empty names are rejected. Existing agent directories are not overwritten.
+
+Warden installs the registry package `@earendil-works/pi-coding-agent` with agent-local npm settings:
+
+```sh
+npm install \
+  --prefix "$WARDEN_AGENTS/<name>/npm" \
+  --cache "$WARDEN_AGENTS/<name>/npm/.npm-cache" \
+  --userconfig "$WARDEN_AGENTS/<name>/npm/.npmrc" \
+  --globalconfig "$WARDEN_AGENTS/<name>/npm/.npm-globalrc" \
+  @earendil-works/pi-coding-agent
+```
+
+`warden pi <name> ...` runs `$WARDEN_AGENTS/<name>/npm/node_modules/.bin/pi` with:
+
+```sh
+PI_CODING_AGENT_DIR="$WARDEN_AGENTS/<name>"
+PILENS_DATA_DIR="$WARDEN_AGENTS/<name>/pi-lens"
 ```
 
 Shell integration writes reversible guarded blocks only after consent:
