@@ -94,7 +94,7 @@ warden_shell_status() {
 
 warden_shell_install() {
 	printf '%s\n' "Warden can add reversible guarded blocks to bash, zsh, and fish startup files."
-	printf '%s\n' "Remove later with: ./warden shell remove"
+	printf '%s\n' "Remove later with: warden shell remove"
 	if ! warden_confirm "Install shell integration blocks?"; then
 		printf '%s\n' "shell integration declined. Manual snippets: ./warden shell snippet bash|zsh|fish"
 		return 0
@@ -111,9 +111,12 @@ warden_shell_remove() {
 
 warden_shell_snippet() {
 	shell_name=$1
-	if [ -z "$shell_name" ]; then
-		printf '%s\n' "usage: run-warden shell snippet bash|zsh|fish" >&2
+	case "$shell_name" in
+	bash | zsh | fish) ;;
+	*)
+		printf '%s\n' "usage: warden shell snippet bash|zsh|fish" >&2
 		return 2
-	fi
+		;;
+	esac
 	warden_shell_block "$shell_name"
 }

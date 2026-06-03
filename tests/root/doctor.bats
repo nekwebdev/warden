@@ -9,7 +9,7 @@ setup() {
 if [ "$1" = "exec" ]; then shift; [ "$1" = "--" ] && shift; exec "$@"; fi
 exit 0
 SH
-  chmod +x "$FAKE_BIN/mise" "$REPO_ROOT/warden" "$REPO_ROOT/run-warden/bin/run-warden"
+  chmod +x "$FAKE_BIN/mise" "$REPO_ROOT/warden" "$REPO_ROOT/run-warden/bin/warden"
 }
 
 @test "doctor reports readiness checks" {

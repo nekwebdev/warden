@@ -5,9 +5,12 @@ Welcome to Warden.
 WARDEN_HOME: ${WARDEN_HOME:-unset}
 NixOS config: ${WARDEN_HOME:-unset}/nix-warden
 
-Next steps:
+Next steps before shell integration:
   ./warden doctor
   ./warden shell status
   ./warden shell install
+
+After shell integration and reload:
+  warden doctor
 EOF
 }

@@ -18,7 +18,7 @@ On first run, `./warden`:
 2. Moves the clone into `WARDEN_HOME` after consent.
 3. Refuses to overwrite unrelated existing target directories.
 4. Installs mise with consent when missing using `curl https://mise.run | sh`.
-5. Delegates to `run-warden` through `mise exec`.
+5. Delegates to `run-warden/bin/warden` through `mise exec`.
 6. Prints welcome output.
 
 Default `WARDEN_HOME`:
@@ -45,13 +45,16 @@ $WARDEN_HOME/nix-warden
 
 ## Commands
 
+`./warden` is the root bootstrap shim. It delegates to `run-warden/bin/warden` through mise. After shell integration, `run-warden/bin` is on PATH and the delegated CLI is `warden`:
+
 ```sh
 ./warden              # bootstrap if needed, then show welcome
-./warden doctor       # readiness checks
-./warden shell status # show shell integration state
-./warden shell install
-./warden shell remove
-./warden shell snippet bash|zsh|fish
+./warden shell install # install PATH/shell integration before `warden` is available
+warden help           # show command help after shell integration
+warden doctor         # readiness checks
+warden shell status   # show shell integration state
+warden shell remove
+warden shell snippet bash|zsh|fish
 ```
 
 Shell integration writes reversible guarded blocks only after consent:

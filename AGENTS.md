@@ -7,7 +7,7 @@ Keep Warden's first-run monorepo experience safe, boring, and testable.
 ## Root bootstrap rules
 
 - Keep `./warden` tiny.
-- Root bootstrap may normalize `WARDEN_HOME`, move/re-exec, ensure mise with consent, and delegate to `run-warden`.
+- Root bootstrap may normalize `WARDEN_HOME`, move/re-exec, ensure mise with consent, and delegate to `run-warden/bin/warden`.
 - Put workflow growth in `run-warden`, not root shell code.
 - Never silently overwrite existing unknown `WARDEN_HOME` contents.
 - Ask consent before external installers or shell startup-file mutations.

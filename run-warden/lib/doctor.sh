@@ -30,7 +30,7 @@ warden_repo_is_home() {
 }
 
 warden_runner_delegates() {
-	[ -n "${WARDEN_HOME:-}" ] && [ -x "$WARDEN_HOME/run-warden/bin/run-warden" ]
+	[ -n "${WARDEN_HOME:-}" ] && [ -x "$WARDEN_HOME/run-warden/bin/warden" ]
 }
 
 warden_shell_has_any_integration() {

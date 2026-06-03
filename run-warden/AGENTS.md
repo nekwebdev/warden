@@ -1,10 +1,10 @@
 # run-warden Agent Guidance
 
-`run-warden` owns Warden commands after root bootstrap delegates through mise.
+`run-warden` owns Warden commands after root bootstrap delegates to `bin/warden` through mise.
 
 ## Rules
 
-- Keep command dispatch in `bin/run-warden`.
+- Keep command dispatch in `bin/warden`.
 - Put reusable behavior in `lib/*.sh`.
 - Put shell-specific activation snippets in `shell/`.
 - Keep shell integration reversible with `# warden begin` / `# warden end` guarded blocks.

@@ -1,8 +1,15 @@
 #!/usr/bin/env sh
 set -eu
 
-RUN_WARDEN_BIN=$0
-case "$RUN_WARDEN_BIN" in */*) RUN_WARDEN_DIR=${RUN_WARDEN_BIN%/*} ;; *) RUN_WARDEN_DIR=. ;; esac
+warden_fail() { printf 'warden: %s\n' "$*" >&2; exit 1; }
+warden_require_home() {
+  [ -n "${HOME:-}" ] || warden_fail "HOME is required so Warden can resolve default paths. Set HOME, then rerun warden."
+}
+
+warden_require_home
+
+WARDEN_BIN=$0
+case "$WARDEN_BIN" in */*) RUN_WARDEN_DIR=${WARDEN_BIN%/*} ;; *) RUN_WARDEN_DIR=. ;; esac
 RUN_WARDEN_ROOT=$(cd "$RUN_WARDEN_DIR/.." && pwd -P)
 WARDEN_HOME=${WARDEN_HOME:-$(cd "$RUN_WARDEN_ROOT/.." && pwd -P)}
 export WARDEN_HOME RUN_WARDEN_ROOT
@@ -13,7 +20,7 @@ export WARDEN_HOME RUN_WARDEN_ROOT
 
 usage() {
   cat <<'EOF'
-usage: run-warden [command]
+usage: warden [command]
 
 commands:
   welcome              print welcome and next steps
@@ -44,5 +51,5 @@ case "$command_name" in
     esac
     ;;
   help|-h|--help) usage ;;
-  *) printf '%s\n' "run-warden: unknown command: $command_name" >&2; usage >&2; exit 2 ;;
+  *) printf '%s\n' "warden: unknown command: $command_name" >&2; usage >&2; exit 2 ;;
 esac

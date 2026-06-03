@@ -4,6 +4,10 @@ set -eu
 log() { printf '%s\n' "$*" >&2; }
 fail() { log "warden: $*"; exit 1; }
 
+require_home() {
+  [ -n "${HOME:-}" ] || fail "HOME is required so Warden can resolve default paths. Set HOME, then rerun ./warden."
+}
+
 confirm() {
   prompt=$1
   if [ "${WARDEN_YES:-}" = "1" ]; then return 0; fi
@@ -80,13 +84,15 @@ move_to_warden_home_if_needed() {
 }
 
 main() {
+  require_home
   WARDEN_HOME_DIR=
   move_to_warden_home_if_needed "$@"
   export WARDEN_HOME=$WARDEN_HOME_DIR
+  cd "$WARDEN_HOME" || fail "cannot enter WARDEN_HOME: $WARDEN_HOME"
   mise_bin=$(ensure_mise)
   export PATH="$WARDEN_HOME/run-warden/bin:$PATH"
-  runner="$WARDEN_HOME/run-warden/bin/run-warden"
-  [ -x "$runner" ] || fail "run-warden runner is not executable at $runner. Apply the run-warden phase, then rerun ./warden."
+  runner="$WARDEN_HOME/run-warden/bin/warden"
+  [ -x "$runner" ] || fail "delegated warden runner is not executable at $runner. Apply the run-warden phase, then rerun ./warden."
   exec "$mise_bin" exec -- "$runner" "$@"
 }
 
