@@ -21,8 +21,8 @@ physical_dir() { (cd "$1" 2>/dev/null && pwd -P) || return 1; }
 
 default_warden_home() {
   if [ -n "${WARDEN_HOME:-}" ]; then printf '%s\n' "$WARDEN_HOME"
-  elif [ -n "${XDG_CONFIG_HOME:-}" ]; then printf '%s/warden\n' "$XDG_CONFIG_HOME"
-  else printf '%s/.config/warden\n' "$HOME"; fi
+  elif [ -n "${XDG_DATA_HOME:-}" ]; then printf '%s/warden\n' "$XDG_DATA_HOME"
+  else printf '%s/.local/share/warden\n' "$HOME"; fi
 }
 
 choose_warden_home() {

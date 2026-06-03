@@ -13,6 +13,16 @@ setup() {
   [[ "$output" == *"custom home"* ]]
 }
 
+@test "shell snippets default WARDEN_HOME to XDG data home" {
+  run env -u WARDEN_HOME HOME="$BATS_TEST_TMPDIR/home" XDG_DATA_HOME="$BATS_TEST_TMPDIR/xdg-data" PATH=/usr/bin /bin/sh -c '. "$1"; printf "%s\n" "$WARDEN_HOME"' sh "$REPO_ROOT/run-warden/shell/bash.sh"
+  [ "$status" -eq 0 ]
+  [ "$output" = "$BATS_TEST_TMPDIR/xdg-data/warden" ]
+
+  run env -u WARDEN_HOME HOME="$BATS_TEST_TMPDIR/home" XDG_DATA_HOME="$BATS_TEST_TMPDIR/xdg-data" PATH=/usr/bin /bin/sh -c '. "$1"; printf "%s\n" "$WARDEN_HOME"' sh "$REPO_ROOT/run-warden/shell/zsh.sh"
+  [ "$status" -eq 0 ]
+  [ "$output" = "$BATS_TEST_TMPDIR/xdg-data/warden" ]
+}
+
 @test "shell snippet rejects unsupported shell names with usage" {
   run env HOME="$BATS_TEST_TMPDIR/home" WARDEN_HOME="$REPO_ROOT" "$REPO_ROOT/run-warden/bin/warden" shell snippet tcsh
   [ "$status" -eq 2 ]

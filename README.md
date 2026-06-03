@@ -24,7 +24,7 @@ On first run, `./warden`:
 Default `WARDEN_HOME`:
 
 ```sh
-${XDG_CONFIG_HOME:-$HOME/.config}/warden
+${XDG_DATA_HOME:-$HOME/.local/share}/warden
 ```
 
 Use a custom home:

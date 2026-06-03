@@ -43,11 +43,21 @@ copy_repo() {
 
 @test "fresh clone moves to default WARDEN_HOME and prints welcome" {
   clone=$(copy_repo)
-  run env -u WARDEN_HOME -u XDG_CONFIG_HOME HOME="$TEST_HOME" PATH="$FAKE_BIN:$PATH" WARDEN_YES=1 MISE_PWD_LOG="$BATS_TEST_TMPDIR/mise-pwd" "$clone/warden"
+  run env -u WARDEN_HOME -u XDG_DATA_HOME HOME="$TEST_HOME" PATH="$FAKE_BIN:$PATH" WARDEN_YES=1 MISE_PWD_LOG="$BATS_TEST_TMPDIR/mise-pwd" "$clone/warden"
   [ "$status" -eq 0 ]
   [[ "$output" == *"Welcome to Warden"* ]]
-  [ -x "$TEST_HOME/.config/warden/warden" ]
-  [ "$(cat "$BATS_TEST_TMPDIR/mise-pwd")" = "$TEST_HOME/.config/warden" ]
+  [ -x "$TEST_HOME/.local/share/warden/warden" ]
+  [ "$(cat "$BATS_TEST_TMPDIR/mise-pwd")" = "$TEST_HOME/.local/share/warden" ]
+}
+
+@test "fresh clone honors XDG_DATA_HOME for default WARDEN_HOME" {
+  clone=$(copy_repo)
+  xdg_data="$BATS_TEST_TMPDIR/xdg-data"
+  run env -u WARDEN_HOME HOME="$TEST_HOME" XDG_DATA_HOME="$xdg_data" PATH="$FAKE_BIN:$PATH" WARDEN_YES=1 MISE_PWD_LOG="$BATS_TEST_TMPDIR/mise-pwd" "$clone/warden"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"Welcome to Warden"* ]]
+  [ -x "$xdg_data/warden/warden" ]
+  [ "$(cat "$BATS_TEST_TMPDIR/mise-pwd")" = "$xdg_data/warden" ]
 }
 
 @test "custom WARDEN_HOME is honored" {

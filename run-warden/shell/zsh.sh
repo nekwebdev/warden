@@ -1,5 +1,5 @@
 # warden shell integration for zsh
-: "${WARDEN_HOME:=${XDG_CONFIG_HOME:-$HOME/.config}/warden}"
+: "${WARDEN_HOME:=${XDG_DATA_HOME:-$HOME/.local/share}/warden}"
 export WARDEN_HOME
 case ":$PATH:" in
 *:"$WARDEN_HOME/run-warden/bin":*) ;;
