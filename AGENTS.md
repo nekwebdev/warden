@@ -15,7 +15,8 @@ This file is project guidance for any agent working in the repository. Role-spec
 - Root bootstrap ensures mise with consent and delegates through `mise exec` to `run-warden/bin/warden`.
 - `run-warden/` owns command workflows after bootstrap.
 - Current delegated CLI supports welcome/help, doctor checks, shell integration, Pi agent environment creation, and Pi launch through isolated agent dirs.
-- `nix-warden/`, `pi-warden/`, and `dev-warden/` are current skeleton/product-boundary placeholders unless their own guidance says otherwise.
+- `pi-warden/` is a container for Pi extension package directories; first package is `pi-warden/warden-panel/` (`@nekwebdev/warden-panel`).
+- `nix-warden/` and `dev-warden/` are current skeleton/product-boundary placeholders unless their own guidance says otherwise.
 
 ## Root bootstrap rules
 
@@ -37,6 +38,7 @@ This file is project guidance for any agent working in the repository. Role-spec
 - Shell integration must require consent before mutating startup files and must avoid overwriting existing managed state unexpectedly.
 - Pi agent commands must keep agent installs isolated under `WARDEN_AGENTS/<name>` or `${XDG_CONFIG_HOME:-$HOME/.config}/pi-agents/<name>`.
 - `warden pi <name> ...` must run agent-local Pi with `PI_CODING_AGENT_DIR` and `PILENS_DATA_DIR` pointed inside that agent directory.
+- Pi extension package code belongs under `pi-warden/<extension>/`, never directly under `pi-warden/` root.
 
 ## Testing
 
@@ -54,7 +56,8 @@ This file is project guidance for any agent working in the repository. Role-spec
 
 ## Scope boundaries
 
-- Do not implement `nix-warden`, `pi-warden`, or `dev-warden` product features during bootstrap/runner groundwork.
+- Do not implement `nix-warden` or `dev-warden` product features during bootstrap/runner groundwork.
+- Keep `pi-warden/` top-level as extension package container; extension-specific product code goes in `pi-warden/<extension>/` with its own `AGENTS.md`.
 - Do not add package release/build systems until later feature explicitly asks for them.
 - Preserve MIT license text.
-- Read subproject `AGENTS.md` before editing inside that subproject.
+- Read subproject `AGENTS.md` before editing inside that subproject, plus extension package `AGENTS.md` before editing inside `pi-warden/<extension>/`.
