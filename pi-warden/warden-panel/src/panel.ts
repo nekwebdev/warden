@@ -9,6 +9,7 @@ import { getPanelGlyphs, renderPanelBorder } from "./glyphs.js";
 import {
 	getWardenPanes,
 	type WardenPanelPane,
+	type WardenPanelPaneAction,
 	type WardenPanelPaneContext,
 } from "./registry.js";
 import {
@@ -28,13 +29,22 @@ export type WardenPanelResult =
 	| {
 			readonly action: "settings-error";
 			readonly settingsError: PiAgentSettingsError;
+	  }
+	| {
+			readonly action: "pane-action";
+			readonly paneId: string;
+			readonly paneAction: WardenPanelPaneAction;
 	  };
 
 export type ShowWardenPanelOptions = { readonly initialPaneId?: string };
 
-const PANEL_TITLE = "Warden configuration";
+type PanelControl = "apply";
+
+const PANEL_TITLE = "Pi Warden";
 const FOOTER =
 	"↑↓ navigate • Space/Enter select • Tab/Shift+Tab pane • Esc close";
+const MAX_PANEL_HEIGHT_RATIO = 0.7;
+const UNBOUNDED_PANE_LINES = Number.MAX_SAFE_INTEGER;
 
 export async function showWardenPanel(
 	ui: WardenPanelUI,
@@ -71,12 +81,37 @@ export async function showWardenPanel(
 				return pane ? (selectedByPane.get(pane.id) ?? 0) : 0;
 			}
 
+			function controlsForPane(pane: WardenPanelPane): PanelControl[] {
+				if (pane.showApplyControl === false) return [];
+				return hasPendingSettingsChanges(settings, draftSettings)
+					? ["apply"]
+					: [];
+			}
+
+			function maxPaneLinesFor(pane: WardenPanelPane): number {
+				if (lastTermHeight === undefined) return UNBOUNDED_PANE_LINES;
+				const controls = controlsForPane(pane).length;
+				const maxPanelLines = Math.max(
+					6,
+					Math.floor(lastTermHeight * MAX_PANEL_HEIGHT_RATIO),
+				);
+				const chromeLines = controls + 6;
+				return Math.max(1, maxPanelLines - chromeLines);
+			}
+
+			function maxSelectionForPane(pane: WardenPanelPane): number {
+				return Math.max(
+					0,
+					itemCountForPane(pane) + controlsForPane(pane).length - 1,
+				);
+			}
+
 			function setSelected(index: number): void {
 				const pane = activePane();
 				if (pane)
 					selectedByPane.set(
 						pane.id,
-						clamp(index, 0, itemCountForPane(pane) + 1),
+						clamp(index, 0, maxSelectionForPane(pane)),
 					);
 			}
 
@@ -91,13 +126,14 @@ export async function showWardenPanel(
 				draftSettings = { ...draftSettings, ...patch };
 			}
 
-			function contextFor(_pane: WardenPanelPane): WardenPanelPaneContext {
+			function contextFor(pane: WardenPanelPane): WardenPanelPaneContext {
 				return {
 					settings,
 					draftSettings,
 					glyphs: getPanelGlyphs(draftSettings.useNerdGlyphs === true),
 					theme,
 					selectedIndex: selectedIndex(),
+					maxPaneLines: maxPaneLinesFor(pane),
 					updateDraftSettings,
 					requestRender: refresh,
 				};
@@ -112,8 +148,7 @@ export async function showWardenPanel(
 				activePaneIndex =
 					(activePaneIndex + delta + panes.length) % panes.length;
 				const pane = activePane();
-				if (pane)
-					setSelected(Math.min(selectedIndex(), itemCountForPane(pane) + 1));
+				if (pane) setSelected(selectedIndex());
 				refresh();
 			}
 
@@ -138,14 +173,20 @@ export async function showWardenPanel(
 				if (!pane) return;
 				const paneItemCount = itemCountForPane(pane);
 				if (selectedIndex() < paneItemCount) {
-					if (pane.handleInput?.(data, contextFor(pane))) refresh();
+					const result = pane.handleInput?.(data, contextFor(pane));
+					if (isPaneAction(result)) {
+						done({
+							action: "pane-action",
+							paneId: pane.id,
+							paneAction: result,
+						});
+						return;
+					}
+					if (result === true) refresh();
 					return;
 				}
-				if (selectedIndex() === paneItemCount) {
-					apply();
-					return;
-				}
-				done({ action: "close" });
+				const control = controlsForPane(pane)[selectedIndex() - paneItemCount];
+				if (control === "apply") apply();
 			}
 
 			function handleInput(data: string): void {
@@ -233,26 +274,17 @@ export async function showWardenPanel(
 						true,
 					))
 						addInner(line);
-					addInner("");
-					const paneItemCount = itemCountForPane(pane);
-					addInner(
-						renderControlRow(
-							"Apply",
-							hasPendingSettingsChanges(settings, draftSettings),
-							selectedIndex() === paneItemCount,
-							theme,
-							glyphs,
-						),
-					);
-					addInner(
-						renderControlRow(
-							"Close",
-							true,
-							selectedIndex() === paneItemCount + 1,
-							theme,
-							glyphs,
-						),
-					);
+					const controls = controlsForPane(pane);
+					if (controls.length > 0) {
+						addInner("");
+						const paneItemCount = itemCountForPane(pane);
+						for (const [controlIndex, control] of controls.entries()) {
+							const selected = selectedIndex() === paneItemCount + controlIndex;
+							if (control === "apply") {
+								addInner(renderControlRow("Apply", selected, theme, glyphs));
+							}
+						}
+					}
 				}
 				const minBoxHeight =
 					lastTermHeight === undefined
@@ -312,14 +344,12 @@ function renderPaneStrip(
 
 function renderControlRow(
 	label: string,
-	enabled: boolean,
 	active: boolean,
 	theme: WardenPanelPaneContext["theme"],
 	glyphs: ReturnType<typeof getPanelGlyphs>,
 ): string {
 	const prefix = active ? theme.bold(theme.fg("text", glyphs.pointer)) : "  ";
-	const text = enabled ? label : "No changes";
-	const styled = enabled ? theme.fg("text", text) : theme.fg("muted", text);
+	const styled = theme.fg("text", label);
 	return active ? theme.bold(prefix + styled) : prefix + styled;
 }
 
@@ -330,6 +360,17 @@ function hasPendingSettingsChanges(
 	return (settings.useNerdGlyphs === true) !== (draft.useNerdGlyphs === true);
 }
 
+function isPaneAction(
+	result: boolean | void | WardenPanelPaneAction,
+): result is WardenPanelPaneAction {
+	return (
+		typeof result === "object" &&
+		result !== null &&
+		!Array.isArray(result) &&
+		typeof result.action === "string"
+	);
+}
+
 function clamp(value: number, min: number, max: number): number {
 	return Math.min(max, Math.max(min, value));
 }
@@ -338,5 +379,7 @@ export function formatWardenPanelResult(result: WardenPanelResult): string {
 	if (result.action === "applied") return "Warden settings saved.";
 	if (result.action === "settings-error")
 		return `Warden settings error: ${formatPiAgentSettingsError(result.settingsError)}`;
+	if (result.action === "pane-action")
+		return `Warden pane action: ${result.paneId}.${result.paneAction.action}`;
 	return "Warden panel closed.";
 }

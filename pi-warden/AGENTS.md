@@ -28,6 +28,7 @@ Use only folders that fit the extension.
 - Read `pi-warden/<extension>/AGENTS.md` before editing inside an extension package.
 - Do not put extension package manifests or source files directly at `pi-warden/` root.
 - Keep each extension independently installable/testable with `npm install --prefix pi-warden/<extension>` and `npm test --prefix pi-warden/<extension>` when it is TypeScript/npm-based.
+- `warden-packages` depends on `warden-panel` public pane APIs; keep package-manager behavior in `warden-packages`, not `warden-panel`.
 - `warden agents new` / `warden pi <name> ...` is a `run-warden` workflow that installs the registry Pi package into per-agent directories; it is not the agent-environment bootstrap for `pi-warden` and not a local `pi-warden` package install.
 - Do not mutate root `./warden` or `run-warden/` from extension package work unless a feature explicitly scopes that boundary change.
 

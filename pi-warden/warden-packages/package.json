@@ -1,0 +1,60 @@
+{
+  "name": "@nekwebdev/warden-packages",
+  "version": "0.1.0",
+  "description": "Warden package manager pane for Pi Agent",
+  "type": "module",
+  "files": [
+    "index.ts",
+    "src/**/*.ts",
+    "!**/*.test.ts",
+    "README.md",
+    "LICENSE"
+  ],
+  "keywords": [
+    "pi-package",
+    "pi",
+    "pi-agent",
+    "warden",
+    "warden-panel",
+    "packages",
+    "package-manager"
+  ],
+  "author": "nekwebdev",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/nekwebdev/warden.git",
+    "directory": "pi-warden/warden-packages"
+  },
+  "homepage": "https://github.com/nekwebdev/warden#readme",
+  "bugs": {
+    "url": "https://github.com/nekwebdev/warden/issues"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "test": "node scripts/run-tests.mjs"
+  },
+  "dependencies": {
+    "@nekwebdev/warden-panel": "file:../warden-panel"
+  },
+  "peerDependencies": {
+    "@earendil-works/pi-coding-agent": "*",
+    "@earendil-works/pi-tui": "*"
+  },
+  "devDependencies": {
+    "@earendil-works/pi-coding-agent": "*",
+    "@earendil-works/pi-tui": "*",
+    "@types/node": "^25.9.1",
+    "tsx": "^4.20.0"
+  },
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "pi": {
+    "extensions": [
+      "./index.ts"
+    ]
+  }
+}

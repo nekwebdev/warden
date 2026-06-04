@@ -14,11 +14,12 @@
 ## Rules
 
 - Keep Pi manifest pointed at `./index.ts`; keep package export pointed at `./src/index.ts`.
-- Keep public pane registry exports importable from `@nekwebdev/warden-panel`.
+- Keep public pane registry and `showWardenPanel` exports importable from `@nekwebdev/warden-panel`.
+- Keep pane registry and action-handler state shared through `globalThis` so separately loaded Warden packages see one registry and `/warden` can dispatch contributed pane actions.
 - Register `/warden` and `/warden:settings` as separate exact Pi commands.
 - Persist only Warden panel preferences under `settings.warden`; preserve unknown root keys and unknown `warden` keys.
-- Settings pane changes stay draft-only until Apply; Close/Esc must not write.
-- Do not add old package-manager, dependency installer, MCP config mutation, or update-report behavior here.
+- Settings pane changes stay draft-only until Apply; show Apply only when changes are pending; Esc must not write.
+- Do not add old package-manager, dependency installer, MCP config mutation, or update-report behavior here; package-management behavior belongs in `warden-packages`.
 - Do not change root bootstrap or `run-warden/` agent workflows from this package.
 
 ## Tests

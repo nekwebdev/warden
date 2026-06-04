@@ -6,7 +6,10 @@ import {
 	getWardenPanes,
 	type WardenPanelPaneContext,
 } from "../src/registry.js";
-import { createSettingsPane, registerSettingsPane } from "../src/panes/settings.js";
+import {
+	createSettingsPane,
+	registerSettingsPane,
+} from "../src/panes/settings.js";
 import type { WardenSettings } from "../src/settings.js";
 
 const envBefore = process.env.NODE_ENV;
@@ -26,6 +29,7 @@ function createContext(initial: WardenSettings = {}): WardenPanelPaneContext {
 		glyphs: getPanelGlyphs(draftSettings.useNerdGlyphs === true),
 		theme: plainTheme,
 		selectedIndex: 0,
+		maxPaneLines: Number.MAX_SAFE_INTEGER,
 		updateDraftSettings(patch) {
 			draftSettings = { ...draftSettings, ...patch };
 		},

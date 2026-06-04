@@ -1,4 +1,8 @@
-import type { ExtensionUIContext } from "@earendil-works/pi-coding-agent";
+import type {
+	ExtensionAPI,
+	ExtensionCommandContext,
+	ExtensionUIContext,
+} from "@earendil-works/pi-coding-agent";
 import type { PanelGlyphs } from "./glyphs.js";
 import type { WardenSettings } from "./settings.js";
 
@@ -9,12 +13,30 @@ export type WardenPanelTheme = Pick<
 	"fg" | "bg" | "bold"
 >;
 
+export type WardenPanelPaneAction = {
+	readonly action: string;
+	readonly payload?: unknown;
+};
+
+export type WardenPanelPaneInputResult = boolean | void | WardenPanelPaneAction;
+
+export type WardenPanelPaneActionContext = {
+	readonly pi: ExtensionAPI;
+	readonly commandContext: ExtensionCommandContext;
+};
+
+export type WardenPanelPaneActionHandler = (
+	action: WardenPanelPaneAction,
+	ctx: WardenPanelPaneActionContext,
+) => void | Promise<void>;
+
 export type WardenPanelPaneContext = {
 	readonly settings: WardenSettings;
 	readonly draftSettings: WardenSettings;
 	readonly glyphs: PanelGlyphs;
 	readonly theme: WardenPanelTheme;
 	readonly selectedIndex: number;
+	readonly maxPaneLines: number;
 	updateDraftSettings(patch: WardenSettings): void;
 	requestRender(): void;
 };
@@ -24,12 +46,31 @@ export type WardenPanelPane = {
 	readonly label: string;
 	readonly order?: number;
 	readonly command?: `warden:${string}`;
+	readonly showApplyControl?: boolean;
 	itemCount(ctx: WardenPanelPaneContext): number;
 	render(ctx: WardenPanelPaneContext, width: number, active: boolean): string[];
-	handleInput?(data: string, ctx: WardenPanelPaneContext): boolean | void;
+	handleInput?(
+		data: string,
+		ctx: WardenPanelPaneContext,
+	): WardenPanelPaneInputResult;
 };
 
-const panes = new Map<string, WardenPanelPane>();
+const REGISTRY_KEY = Symbol.for("@nekwebdev/warden-panel/panes");
+const ACTION_HANDLERS_KEY = Symbol.for(
+	"@nekwebdev/warden-panel/pane-action-handlers",
+);
+const globalRegistry = globalThis as typeof globalThis & {
+	[REGISTRY_KEY]?: Map<string, WardenPanelPane>;
+	[ACTION_HANDLERS_KEY]?: Map<string, WardenPanelPaneActionHandler>;
+};
+const panes = (globalRegistry[REGISTRY_KEY] ??= new Map<
+	string,
+	WardenPanelPane
+>());
+const actionHandlers = (globalRegistry[ACTION_HANDLERS_KEY] ??= new Map<
+	string,
+	WardenPanelPaneActionHandler
+>());
 
 export function contributeWardenPane(pane: WardenPanelPane): void {
 	validatePane(pane);
@@ -49,6 +90,25 @@ export function getWardenPanes(): WardenPanelPane[] {
 	return [...panes.values()].sort(comparePanes);
 }
 
+export function contributeWardenPaneActionHandler(
+	paneId: string,
+	handler: WardenPanelPaneActionHandler,
+): void {
+	if (paneId.trim() === "") throw new Error("Warden pane id is required");
+	actionHandlers.set(paneId, handler);
+}
+
+export async function handleWardenPaneAction(
+	paneId: string,
+	action: WardenPanelPaneAction,
+	ctx: WardenPanelPaneActionContext,
+): Promise<boolean> {
+	const handler = actionHandlers.get(paneId);
+	if (!handler) return false;
+	await handler(action, ctx);
+	return true;
+}
+
 export function clearWardenPanesForTests(): void {
 	if (process.env.NODE_ENV !== "test") {
 		throw new Error(
@@ -56,6 +116,7 @@ export function clearWardenPanesForTests(): void {
 		);
 	}
 	panes.clear();
+	actionHandlers.clear();
 }
 
 function comparePanes(a: WardenPanelPane, b: WardenPanelPane): number {

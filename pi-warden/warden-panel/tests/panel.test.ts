@@ -10,7 +10,10 @@ import {
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { afterEach, beforeEach, describe, it, mock } from "node:test";
-import { clearWardenPanesForTests, contributeWardenPane } from "../src/registry.js";
+import {
+	clearWardenPanesForTests,
+	contributeWardenPane,
+} from "../src/registry.js";
 import { registerSettingsPane } from "../src/panes/settings.js";
 import { getPiAgentSettingsPath } from "../src/settings.js";
 import { showWardenPanel, type WardenPanelUI } from "../src/panel.js";
@@ -30,10 +33,18 @@ function renderText(component: Component, width = 100): string {
 
 function testUI(
 	run: (component: Component, resolve: (value: unknown) => void) => void,
+	termHeight?: number,
 ): WardenPanelUI {
 	return {
-		custom: async (factory: any) =>
+		custom: async (factory: any, options?: any) =>
 			await new Promise((resolve) => {
+				if (termHeight !== undefined) {
+					const overlayOptions =
+						typeof options?.overlayOptions === "function"
+							? options.overlayOptions()
+							: options?.overlayOptions;
+					overlayOptions?.visible?.(100, termHeight);
+				}
 				Promise.resolve(
 					factory({ requestRender: mock.fn() }, plainTheme, undefined, resolve),
 				).then((component) => run(component, resolve));
@@ -81,10 +92,11 @@ describe("warden panel", () => {
 		await withTempSettings({ warden: { useNerdGlyphs: false } }, async () => {
 			const ui = testUI((component, resolve) => {
 				const text = renderText(component);
-				assert.match(text, /^┏━━ Warden configuration ━+┓$/m);
+				assert.match(text, /^┏━━ Pi Warden ━+┓$/m);
 				assert.match(text, /Settings/);
 				assert.match(text, /> \[ \] Use Nerd Glyphs/);
-				assert.match(text, /Apply|No changes/);
+				assert.doesNotMatch(text, /Apply|No changes/);
+				assert.doesNotMatch(text, /(?:> | {2})Close/);
 				resolve({ action: "close" });
 			});
 
@@ -115,7 +127,7 @@ describe("warden panel", () => {
 		await withTempSettings({ warden: { useNerdGlyphs: false } }, async () => {
 			const ui = testUI((component, resolve) => {
 				const text = renderText(component, 40);
-				assert.match(text, /^┏━━ Warden configuration/m);
+				assert.match(text, /^┏━━ Pi Warden/m);
 				assert.match(text, /┃/);
 				resolve({ action: "close" });
 			});
@@ -143,6 +155,79 @@ describe("warden panel", () => {
 			});
 
 			assert.deepEqual(await showWardenPanel(ui), { action: "close" });
+		});
+	});
+
+	it("supports panes without the panel Apply control", async () => {
+		contributeWardenPane({
+			id: "packages",
+			label: "Packages",
+			order: 10,
+			showApplyControl: false,
+			itemCount: () => 0,
+			render: () => ["Packages pane"],
+		});
+		await withTempSettings({ warden: { useNerdGlyphs: false } }, async () => {
+			const ui = testUI((component) => {
+				const text = renderText(component);
+				assert.match(text, /Packages pane/);
+				assert.doesNotMatch(text, /Apply|No changes/);
+				assert.doesNotMatch(text, /(?:> | {2})Close/);
+				component.handleInput?.("\x1b");
+			});
+
+			assert.deepEqual(
+				await showWardenPanel(ui, { initialPaneId: "packages" }),
+				{ action: "close" },
+			);
+		});
+	});
+
+	it("returns pane action results from pane input", async () => {
+		contributeWardenPane({
+			id: "packages",
+			label: "Packages",
+			order: 10,
+			showApplyControl: false,
+			itemCount: () => 1,
+			render: () => ["> Install package"],
+			handleInput: () => ({ action: "install", payload: { source: "npm:x" } }),
+		});
+		await withTempSettings({ warden: { useNerdGlyphs: false } }, async () => {
+			const ui = testUI((component) => {
+				component.handleInput?.("\r");
+			});
+
+			assert.deepEqual(
+				await showWardenPanel(ui, { initialPaneId: "packages" }),
+				{
+					action: "pane-action",
+					paneId: "packages",
+					paneAction: { action: "install", payload: { source: "npm:x" } },
+				},
+			);
+		});
+	});
+
+	it("passes pane line budget based on terminal height", async () => {
+		contributeWardenPane({
+			id: "packages",
+			label: "Packages",
+			order: 10,
+			showApplyControl: false,
+			itemCount: () => 0,
+			render: (ctx) => [`budget ${ctx.maxPaneLines}`],
+		});
+		await withTempSettings({ warden: { useNerdGlyphs: false } }, async () => {
+			const ui = testUI((component, resolve) => {
+				assert.match(renderText(component), /budget 8/);
+				resolve({ action: "close" });
+			}, 20);
+
+			assert.deepEqual(
+				await showWardenPanel(ui, { initialPaneId: "packages" }),
+				{ action: "close" },
+			);
 		});
 	});
 
