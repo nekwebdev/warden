@@ -1,7 +1,3 @@
-import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
-import { registerWardenPanelCommands } from "./commands.js";
-import { registerSettingsPane } from "./panes/settings.js";
-
 export type {
 	WardenPanelPane,
 	WardenPanelPaneAction,
@@ -24,10 +20,9 @@ export type {
 	WardenPanelUI,
 } from "./panel.js";
 export { formatWardenPanelResult, showWardenPanel } from "./panel.js";
-export { registerSettingsPane, SETTINGS_PANE_ID } from "./panes/settings.js";
+export {
+	WARDEN_COMMAND,
+	openWardenPanel,
+	registerWardenPanelCommands,
+} from "./commands.js";
 export type { WardenSettings } from "./settings.js";
-
-export default function wardenPanel(pi: ExtensionAPI): void {
-	registerSettingsPane();
-	registerWardenPanelCommands(pi);
-}

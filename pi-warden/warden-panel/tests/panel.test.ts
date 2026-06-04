@@ -14,7 +14,7 @@ import {
 	clearWardenPanesForTests,
 	contributeWardenPane,
 } from "../src/registry.js";
-import { registerSettingsPane } from "../src/panes/settings.js";
+import { registerDisplayPane } from "../extensions/warden-display/pane.js";
 import { getPiAgentSettingsPath } from "../src/settings.js";
 import { showWardenPanel, type WardenPanelUI } from "../src/panel.js";
 
@@ -78,7 +78,7 @@ async function withTempSettings(
 beforeEach(() => {
 	process.env.NODE_ENV = "test";
 	clearWardenPanesForTests();
-	registerSettingsPane();
+	registerDisplayPane();
 });
 
 afterEach(() => {
@@ -88,12 +88,12 @@ afterEach(() => {
 });
 
 describe("warden panel", () => {
-	it("renders Settings pane with unicode glyphs", async () => {
+	it("renders Display pane with unicode glyphs", async () => {
 		await withTempSettings({ warden: { useNerdGlyphs: false } }, async () => {
 			const ui = testUI((component, resolve) => {
 				const text = renderText(component);
 				assert.match(text, /^┏━━ Pi Warden ━+┓$/m);
-				assert.match(text, /Settings/);
+				assert.match(text, /Display/);
 				assert.match(text, /> \[ \] Use Nerd Glyphs/);
 				assert.doesNotMatch(text, /Apply|No changes/);
 				assert.doesNotMatch(text, /(?:> | {2})Close/);
@@ -101,7 +101,7 @@ describe("warden panel", () => {
 			});
 
 			assert.deepEqual(
-				await showWardenPanel(ui, { initialPaneId: "settings" }),
+				await showWardenPanel(ui, { initialPaneId: "display" }),
 				{ action: "close" },
 			);
 		});
@@ -117,7 +117,7 @@ describe("warden panel", () => {
 			});
 
 			assert.deepEqual(
-				await showWardenPanel(ui, { initialPaneId: "settings" }),
+				await showWardenPanel(ui, { initialPaneId: "display" }),
 				{ action: "close" },
 			);
 		});
@@ -146,7 +146,7 @@ describe("warden panel", () => {
 		});
 		await withTempSettings({ warden: { useNerdGlyphs: false } }, async () => {
 			const ui = testUI((component, resolve) => {
-				assert.match(renderText(component), /Settings \| Extra/);
+				assert.match(renderText(component), /Display \| Extra/);
 				component.handleInput?.("\t");
 				assert.match(renderText(component), /Extra pane/);
 				component.handleInput?.("\x1b[Z");
@@ -251,7 +251,7 @@ describe("warden panel", () => {
 					component.handleInput?.("\r");
 				});
 
-				const result = await showWardenPanel(ui, { initialPaneId: "settings" });
+				const result = await showWardenPanel(ui, { initialPaneId: "display" });
 				assert.deepEqual(result, {
 					action: "applied",
 					settings: { useNerdGlyphs: true },

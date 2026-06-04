@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { existsSync, readFileSync } from "node:fs";
-import { dirname, resolve } from "node:path";
+import { existsSync, readFileSync, readdirSync } from "node:fs";
+import { dirname, join, resolve } from "node:path";
 import { describe, it } from "node:test";
 import { fileURLToPath } from "node:url";
 
@@ -20,6 +20,19 @@ const pkg = JSON.parse(
 	pi?: { extensions?: string[] };
 };
 
+function advertisedExtensionEntries(): string[] {
+	return (pkg.pi?.extensions ?? []).flatMap((entry) => {
+		if (entry === "./extensions/*/index.ts") {
+			return readdirSync(resolve(packageRoot, "extensions"), {
+				withFileTypes: true,
+			})
+				.filter((dirent) => dirent.isDirectory())
+				.map((dirent) => join("extensions", dirent.name, "index.ts"));
+		}
+		return [entry];
+	});
+}
+
 describe("package pi resources", () => {
 	it("declares warden-panel package identity", () => {
 		assert.equal(pkg.name, "@nekwebdev/warden-panel");
@@ -36,22 +49,26 @@ describe("package pi resources", () => {
 		assert.equal(pkg.devDependencies?.tsx, "^4.20.0");
 	});
 
-	it("advertises the warden-panel extension entrypoint", () => {
-		assert.deepEqual(pkg.pi?.extensions, ["./index.ts"]);
+	it("advertises bundled extension entrypoints and core exports", () => {
+		assert.deepEqual(pkg.pi?.extensions, ["./extensions/*/index.ts"]);
 		assert.equal(pkg.exports?.["."], "./src/index.ts");
 		assert.equal(pkg.files?.includes("index.ts"), true);
 		assert.equal(pkg.files?.includes("src/**/*.ts"), true);
+		assert.equal(pkg.files?.includes("extensions/**/*.ts"), true);
 		assert.equal(pkg.files?.includes("!**/*.test.ts"), true);
 	});
 
-	it("keeps Pi package entrypoint at the package root for startup labels", () => {
-		assert.equal(pkg.pi?.extensions?.[0], "./index.ts");
-		assert.notEqual(pkg.pi?.extensions?.[0], "./src/index.ts");
+	it("loads all bundled extension families", () => {
+		assert.deepEqual(advertisedExtensionEntries().sort(), [
+			"extensions/warden-display/index.ts",
+			"extensions/warden-packages/index.ts",
+			"extensions/warden-panel/index.ts",
+		]);
 	});
 
 	it("all advertised Pi resources and package exports exist", () => {
 		const entries = [
-			...(pkg.pi?.extensions ?? []),
+			...advertisedExtensionEntries(),
 			...(pkg.exports ? Object.values(pkg.exports) : []),
 		];
 		assert.ok(

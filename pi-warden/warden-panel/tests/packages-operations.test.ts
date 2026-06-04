@@ -4,7 +4,7 @@ import {
 	formatPackageOperationReport,
 	installPackage,
 	removePackages,
-} from "../src/operations.js";
+} from "../extensions/warden-packages/operations.js";
 
 describe("package operations", () => {
 	it("installs through injected package manager", async () => {

@@ -6,8 +6,12 @@ const tests = [
 	"tests/settings.test.ts",
 	"tests/glyphs.test.ts",
 	"tests/registry.test.ts",
-	"tests/settings-pane.test.ts",
+	"tests/display-pane.test.ts",
 	"tests/panel.test.ts",
+	"tests/packages-settings.test.ts",
+	"tests/packages-pane.test.ts",
+	"tests/packages-operations.test.ts",
+	"tests/packages-index.test.ts",
 	"tests/index.test.ts",
 ];
 

@@ -7,9 +7,9 @@ import {
 	type WardenPanelPaneContext,
 } from "../src/registry.js";
 import {
-	createSettingsPane,
-	registerSettingsPane,
-} from "../src/panes/settings.js";
+	createDisplayPane,
+	registerDisplayPane,
+} from "../extensions/warden-display/pane.js";
 import type { WardenSettings } from "../src/settings.js";
 
 const envBefore = process.env.NODE_ENV;
@@ -48,20 +48,20 @@ afterEach(() => {
 	else process.env.NODE_ENV = envBefore;
 });
 
-describe("settings pane", () => {
-	it("registers the built-in Settings pane once", () => {
-		registerSettingsPane();
-		registerSettingsPane();
+describe("display pane", () => {
+	it("registers the built-in Display pane once", () => {
+		registerDisplayPane();
+		registerDisplayPane();
 
 		assert.deepEqual(
 			getWardenPanes().map((pane) => pane.id),
-			["settings"],
+			["display"],
 		);
-		assert.equal(getWardenPanes()[0]?.command, "warden:settings");
+		assert.equal(getWardenPanes()[0]?.command, "warden:display");
 	});
 
 	it("renders the Nerd Glyph draft setting", () => {
-		const pane = createSettingsPane();
+		const pane = createDisplayPane();
 
 		assert.deepEqual(
 			pane.render(createContext({ useNerdGlyphs: false }), 80, true),
@@ -74,7 +74,7 @@ describe("settings pane", () => {
 	});
 
 	it("omits pointer when pane is inactive", () => {
-		const pane = createSettingsPane();
+		const pane = createDisplayPane();
 
 		assert.deepEqual(
 			pane.render(createContext({ useNerdGlyphs: false }), 80, false),
@@ -83,7 +83,7 @@ describe("settings pane", () => {
 	});
 
 	it("toggles only draft settings on activation", () => {
-		const pane = createSettingsPane();
+		const pane = createDisplayPane();
 		const ctx = createContext({ useNerdGlyphs: false });
 
 		assert.equal(pane.handleInput?.(" ", ctx), true);
@@ -92,7 +92,7 @@ describe("settings pane", () => {
 	});
 
 	it("ignores non-activation input", () => {
-		const pane = createSettingsPane();
+		const pane = createDisplayPane();
 		const ctx = createContext({ useNerdGlyphs: false });
 
 		assert.equal(pane.handleInput?.("x", ctx), false);

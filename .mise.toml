@@ -24,7 +24,7 @@ description = "Run nix-warden smoke tests when present"
 run = "if [ -d nix-warden/tests ]; then bats nix-warden/tests; else echo 'nix-warden/tests not created yet'; fi"
 
 [tasks."test:pi-warden"]
-description = "Run pi-warden smoke tests and each extension package test suite when present"
+description = "Run pi-warden smoke tests and each Pi package test suite when present"
 run = "set -e; if [ -d pi-warden/tests ]; then bats pi-warden/tests; else echo 'pi-warden/tests not created yet'; fi; for package in pi-warden/*/package.json; do [ -f \"$package\" ] || continue; npm test --prefix \"$(dirname \"$package\")\"; done"
 
 [tasks."test:dev-warden"]

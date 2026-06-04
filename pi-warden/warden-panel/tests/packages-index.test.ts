@@ -8,12 +8,12 @@ import {
 	clearWardenPanesForTests,
 	getWardenPanes,
 	handleWardenPaneAction,
-} from "../../warden-panel/src/registry.js";
+} from "../src/registry.js";
 import wardenPackages, {
 	PACKAGES_COMMAND,
 	PACKAGES_PANE_ID,
 	WARDEN_PACKAGES_REPORT_MESSAGE,
-} from "../src/index.js";
+} from "../extensions/warden-packages/index.js";
 
 type CommandRegistration = { description?: string; handler: unknown };
 const envBefore = process.env.NODE_ENV;
@@ -30,7 +30,7 @@ afterEach(() => {
 });
 
 describe("wardenPackages extension", () => {
-	it("registers Settings and Packages panes plus command", () => {
+	it("registers Packages pane plus command", () => {
 		const commands = new Map<string, CommandRegistration>();
 		const renderers = new Set<string>();
 		wardenPackages({
@@ -44,10 +44,10 @@ describe("wardenPackages extension", () => {
 
 		assert.deepEqual(
 			getWardenPanes().map((pane) => pane.id),
-			["settings", PACKAGES_PANE_ID],
+			[PACKAGES_PANE_ID],
 		);
-		assert.equal(getWardenPanes()[1]?.label, "Packages");
-		assert.equal(getWardenPanes()[1]?.command, PACKAGES_COMMAND);
+		assert.equal(getWardenPanes()[0]?.label, "Packages");
+		assert.equal(getWardenPanes()[0]?.command, PACKAGES_COMMAND);
 		assert.equal(commands.has(PACKAGES_COMMAND), true);
 		assert.equal(
 			commands.get(PACKAGES_COMMAND)?.description,
@@ -97,7 +97,7 @@ describe("wardenPackages extension", () => {
 
 		assert.deepEqual(
 			getWardenPanes().map((pane) => pane.id),
-			["settings", PACKAGES_PANE_ID],
+			[PACKAGES_PANE_ID],
 		);
 	});
 });

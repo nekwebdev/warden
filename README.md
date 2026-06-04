@@ -137,10 +137,10 @@ The root suite uses Bats with temp HOME/clone fixtures to verify bootstrap movem
 
 - `run-warden/` owns command workflows after root bootstrap.
 - `nix-warden/` will own NixOS/system configuration.
-- `pi-warden/` owns Pi Agent extension packages. It is a container: each extension lives in its own folder, starting with `pi-warden/warden-panel/` for package `@nekwebdev/warden-panel`.
+- `pi-warden/` owns Pi Agent packages. It is a container: each package lives in its own folder. Current package `pi-warden/warden-panel/` (`@nekwebdev/warden-panel`) bundles multiple panel-related Pi extensions.
 - `dev-warden/` will own developer-environment work.
 
-Current groundwork does not implement product features for `nix-warden` or `dev-warden`. `pi-warden/warden-panel/` contains the first scoped Pi Agent package; runner-owned agent environment workflows remain in `run-warden/`.
+Current groundwork does not implement product features for `nix-warden` or `dev-warden`. `pi-warden/warden-panel/` contains the current scoped Pi Agent package; runner-owned agent environment workflows remain in `run-warden/`.
 
 ## Agent guidance
 

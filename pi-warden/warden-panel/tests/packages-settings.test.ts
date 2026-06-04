@@ -5,7 +5,7 @@ import {
 	readGlobalPackageEntries,
 	validateInstallSource,
 	type GlobalSettingsReader,
-} from "../src/packages.js";
+} from "../extensions/warden-packages/packages.js";
 
 describe("package settings parsing", () => {
 	it("normalizes string and filtered object package entries", () => {

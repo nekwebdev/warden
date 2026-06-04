@@ -1,19 +1,19 @@
-import type { WardenSettings } from "../settings.js";
+import type { WardenSettings } from "../../src/settings.js";
 import {
 	contributeWardenPane,
 	hasWardenPane,
 	type WardenPanelPane,
-} from "../registry.js";
+} from "../../src/registry.js";
 
-export const SETTINGS_PANE_ID = "settings";
-export const SETTINGS_COMMAND = "warden:settings";
+export const DISPLAY_PANE_ID = "display";
+export const DISPLAY_COMMAND = "warden:display";
 
-export function createSettingsPane(): WardenPanelPane {
+export function createDisplayPane(): WardenPanelPane {
 	return {
-		id: SETTINGS_PANE_ID,
-		label: "Settings",
+		id: DISPLAY_PANE_ID,
+		label: "Display",
 		order: 0,
-		command: SETTINGS_COMMAND,
+		command: DISPLAY_COMMAND,
 		itemCount: () => 1,
 		render(ctx, _width, activePane) {
 			const active = activePane && ctx.selectedIndex === 0;
@@ -43,9 +43,9 @@ export function createSettingsPane(): WardenPanelPane {
 	};
 }
 
-export function registerSettingsPane(): void {
-	if (hasWardenPane(SETTINGS_PANE_ID)) return;
-	contributeWardenPane(createSettingsPane());
+export function registerDisplayPane(): void {
+	if (hasWardenPane(DISPLAY_PANE_ID)) return;
+	contributeWardenPane(createDisplayPane());
 }
 
 function isActivation(data: string): boolean {

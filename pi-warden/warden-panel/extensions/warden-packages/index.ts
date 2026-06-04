@@ -7,12 +7,10 @@ import { Markdown } from "@earendil-works/pi-tui";
 import {
 	contributeWardenPane,
 	contributeWardenPaneActionHandler,
-	formatWardenPanelResult,
 	getWardenPane,
-	registerSettingsPane,
-	showWardenPanel,
+	openWardenPanel,
 	type WardenPanelPaneAction,
-} from "@nekwebdev/warden-panel";
+} from "../../src/index.js";
 import {
 	formatPackageOperationReport,
 	installPackage,
@@ -52,7 +50,6 @@ export {
 export const WARDEN_PACKAGES_REPORT_MESSAGE = "warden-packages-report";
 
 export default function wardenPackages(pi: ExtensionAPI): void {
-	registerSettingsPane();
 	registerPackagesPane();
 	registerPackagesPaneActionHandler();
 	registerReportRenderer(pi);
@@ -87,34 +84,14 @@ function registerReportRenderer(pi: ExtensionAPI): void {
 	);
 }
 
-async function openPackagesPanel(
+export async function openPackagesPanel(
 	pi: ExtensionAPI,
 	ctx: ExtensionCommandContext,
 ): Promise<void> {
-	if (!ctx.hasUI) {
-		ctx.ui.notify("/warden:packages requires interactive mode", "error");
-		return;
-	}
-
-	const result = await showWardenPanel(ctx.ui, {
-		initialPaneId: PACKAGES_PANE_ID,
-	});
-
-	if (result.action === "settings-error") {
-		ctx.ui.notify(formatWardenPanelResult(result), "error");
-		return;
-	}
-	if (result.action === "applied") {
-		ctx.ui.notify(formatWardenPanelResult(result), "info");
-		return;
-	}
-	if (result.action !== "pane-action" || result.paneId !== PACKAGES_PANE_ID) {
-		return;
-	}
-	await handlePackagesPaneAction(pi, ctx, result.paneAction);
+	await openWardenPanel(pi, ctx, { initialPaneId: PACKAGES_PANE_ID });
 }
 
-async function handlePackagesPaneAction(
+export async function handlePackagesPaneAction(
 	pi: ExtensionAPI,
 	ctx: ExtensionCommandContext,
 	action: WardenPanelPaneAction,

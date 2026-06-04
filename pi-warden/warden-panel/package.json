@@ -1,11 +1,12 @@
 {
   "name": "@nekwebdev/warden-panel",
   "version": "0.1.0",
-  "description": "Warden configuration panel framework for Pi Agent",
+  "description": "Warden Pi Agent panel framework and bundled panel extensions",
   "type": "module",
   "files": [
     "index.ts",
     "src/**/*.ts",
+    "extensions/**/*.ts",
     "!**/*.test.ts",
     "README.md",
     "LICENSE"
@@ -17,6 +18,8 @@
     "warden",
     "warden-panel",
     "configuration",
+    "packages",
+    "display",
     "tui"
   ],
   "author": "nekwebdev",
@@ -51,7 +54,7 @@
   },
   "pi": {
     "extensions": [
-      "./index.ts"
+      "./extensions/*/index.ts"
     ]
   }
 }

@@ -2,7 +2,7 @@ import type {
 	WardenPanelPane,
 	WardenPanelPaneAction,
 	WardenPanelPaneContext,
-} from "@nekwebdev/warden-panel";
+} from "../../src/index.js";
 import { readGlobalPackageEntries, type PackageEntry } from "./packages.js";
 
 export const PACKAGES_PANE_ID = "packages";

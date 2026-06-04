@@ -1,14 +1,14 @@
 import assert from "node:assert/strict";
 import { describe, it, mock } from "node:test";
-import type { WardenPanelPaneContext } from "@nekwebdev/warden-panel";
+import type { WardenPanelPaneContext } from "../src/index.js";
 import {
 	PACKAGES_ACTION_INSTALL,
 	PACKAGES_ACTION_REMOVE,
 	createPackagesPane,
 	renderPackagesPane,
 	sourcesFromRemovePayload,
-} from "../src/pane.js";
-import type { PackageEntry } from "../src/packages.js";
+} from "../extensions/warden-packages/pane.js";
+import type { PackageEntry } from "../extensions/warden-packages/packages.js";
 
 const plainTheme = {
 	fg: (_name: string, text: string) => text,
