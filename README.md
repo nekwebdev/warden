@@ -52,9 +52,13 @@ $WARDEN_HOME/nix-warden
 ./warden shell install      # install PATH/shell integration before `warden` is available
 warden help                 # show command help after shell integration
 warden doctor               # readiness checks, including non-fatal Pi agent hints
-warden agents new [name]    # create isolated Pi agent environment
-warden pi <name> ...        # run Pi from that isolated agent environment
-warden shell status         # show shell integration state
+warden agents new [name]             # create isolated Pi agent environment
+warden agents set <name> cwd <dir>   # pin Pi launch cwd for an agent
+warden agents unset <name> cwd       # remove pinned launch cwd
+warden agents show <name> [--json]   # show agent dirs and complete settings.json
+warden agents list [--json]          # list agent environments
+warden pi <name> ...                 # run Pi from that isolated agent environment
+warden shell status                  # show shell integration state
 warden shell remove
 warden shell snippet bash|zsh|fish
 ```
@@ -76,12 +80,41 @@ npm install \
   @earendil-works/pi-coding-agent
 ```
 
-`warden pi <name> ...` runs `$WARDEN_AGENTS/<name>/npm/node_modules/.bin/pi` with:
+`warden agents set <name> cwd <dir>` stores the agent launch working directory in the agent-local Pi settings file:
+
+```json
+{
+  "warden": {
+    "agents": {
+      "<name>": {
+        "cwd": "~/work/project"
+      }
+    }
+  }
+}
+```
+
+The file lives at `$WARDEN_AGENTS/<name>/settings.json` (for example `${XDG_CONFIG_HOME:-$HOME/.config}/pi-agents/sentinel/settings.json`). `cwd` must be an existing absolute path or a `~` path. Warden preserves unrelated Pi settings when setting or unsetting this key.
+
+Useful inspection commands:
+
+```sh
+warden agents show <name>
+warden agents show <name> --json
+warden agents list
+warden agents list --json
+```
+
+`warden agents show` prints the agent dir, Pi executable, Pi Lens dir, settings path, effective cwd, and the complete formatted `settings.json`.
+
+`warden pi <name> ...` resolves `$WARDEN_AGENTS/<name>/settings.json`, reads `warden.agents.<name>.cwd`, changes to that directory when configured, then runs `$WARDEN_AGENTS/<name>/npm/node_modules/.bin/pi` with:
 
 ```sh
 PI_CODING_AGENT_DIR="$WARDEN_AGENTS/<name>"
 PILENS_DATA_DIR="$WARDEN_AGENTS/<name>/pi-lens"
 ```
+
+If no cwd is configured, Warden preserves the caller's current working directory.
 
 Shell integration changes startup files only after consent. `./warden shell install` detects the current shell, defaults that prompt to yes, and defaults additional shell prompts to no. Extra shell prompts are shown only when their config target already exists (`~/.bashrc`, zsh rc under `$ZDOTDIR` when present, or the fish config dir); missing shell environments are reported as skipped. Existing Warden bash/zsh guarded blocks or fish managed files are reported as already installed and not overwritten. Bash/zsh use reversible guarded blocks; fish writes managed files under `${XDG_CONFIG_HOME:-$HOME/.config}/fish/conf.d/plugin-warden.fish` and `functions/warden.fish`.
 

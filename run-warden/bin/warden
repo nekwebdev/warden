@@ -26,8 +26,12 @@ usage: warden [command]
 commands:
   welcome              print welcome and next steps
   doctor               run readiness checks
-  agents new [NAME]   create isolated Pi agent environment
-  pi NAME [ARGS...]   run Pi inside an isolated agent environment
+  agents new [NAME]          create isolated Pi agent environment
+  agents set NAME cwd DIR    set agent launch working directory
+  agents unset NAME cwd      unset agent launch working directory
+  agents show NAME [--json]  show agent paths and settings
+  agents list [--json]       list agent environments
+  pi NAME [ARGS...]          run Pi inside an isolated agent environment
   shell status         show bash/zsh/fish integration status
   shell install        install selected shell integration after consent
   shell remove         remove guarded shell integration blocks
@@ -48,6 +52,10 @@ case "$command_name" in
     if [ $# -gt 0 ]; then shift; fi
     case "$subcommand" in
       new) warden_agents_new "$@" ;;
+      set) warden_agents_set "$@" ;;
+      unset) warden_agents_unset "$@" ;;
+      show) warden_agents_show "$@" ;;
+      list) warden_agents_list "$@" ;;
       *) usage >&2; exit 2 ;;
     esac
     ;;

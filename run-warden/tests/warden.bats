@@ -125,6 +125,10 @@ SH
   run env HOME="$TEST_HOME" "$RUN_WARDEN_ROOT/bin/warden" help
   [ "$status" -eq 0 ]
   [[ "$output" == *"pi NAME [ARGS...]"* ]]
+  [[ "$output" == *"agents set NAME cwd DIR"* ]]
+  [[ "$output" == *"agents unset NAME cwd"* ]]
+  [[ "$output" == *"agents show NAME [--json]"* ]]
+  [[ "$output" == *"agents list [--json]"* ]]
 }
 
 @test "pi runs local Pi with agent env and preserves argv" {
@@ -174,6 +178,193 @@ SH
   [[ "$output" == *"usage: warden pi <name> [args...]"* ]]
 }
 
+@test "agents set cwd writes nested agent settings and preserves existing settings" {
+  agents="$BATS_TEST_TMPDIR/agents"
+  project="$BATS_TEST_TMPDIR/project"
+  mkdir -p "$agents/sentinel" "$project"
+  cat > "$agents/sentinel/settings.json" <<'JSON'
+{"theme":"dark","warden":{"keep":true,"agents":{"other":{"cwd":"/tmp/other"},"sentinel":{"note":"keep"}}}}
+JSON
+
+  run env HOME="$TEST_HOME" PATH="$FAKE_BIN:$PATH" WARDEN_AGENTS="$agents" "$RUN_WARDEN_ROOT/bin/warden" agents set sentinel cwd "$project"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"set sentinel cwd: $project"* ]]
+  node - "$agents/sentinel/settings.json" "$project" <<'NODE'
+const fs = require('fs');
+const [path, expected] = process.argv.slice(2);
+const settings = JSON.parse(fs.readFileSync(path, 'utf8'));
+if (settings.theme !== 'dark') process.exit(1);
+if (settings.warden.keep !== true) process.exit(1);
+if (settings.warden.agents.other.cwd !== '/tmp/other') process.exit(1);
+if (settings.warden.agents.sentinel.note !== 'keep') process.exit(1);
+if (settings.warden.agents.sentinel.cwd !== expected) process.exit(1);
+NODE
+}
+
+@test "agents set cwd accepts tilde paths and stores original input" {
+  agents="$BATS_TEST_TMPDIR/agents"
+  mkdir -p "$agents/sentinel" "$TEST_HOME/project"
+
+  run env HOME="$TEST_HOME" PATH="$FAKE_BIN:$PATH" WARDEN_AGENTS="$agents" "$RUN_WARDEN_ROOT/bin/warden" agents set sentinel cwd "~/project"
+  [ "$status" -eq 0 ]
+  node - "$agents/sentinel/settings.json" <<'NODE'
+const fs = require('fs');
+const settings = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'));
+if (settings.warden.agents.sentinel.cwd !== '~/project') process.exit(1);
+NODE
+}
+
+@test "agents set cwd rejects missing agents, relative cwd, and missing directories" {
+  agents="$BATS_TEST_TMPDIR/agents"
+  mkdir -p "$agents/sentinel"
+
+  run env HOME="$TEST_HOME" PATH="$FAKE_BIN:$PATH" WARDEN_AGENTS="$agents" "$RUN_WARDEN_ROOT/bin/warden" agents set missing cwd "$BATS_TEST_TMPDIR"
+  [ "$status" -eq 2 ]
+  [[ "$output" == *"agent not found"* ]]
+
+  run env HOME="$TEST_HOME" PATH="$FAKE_BIN:$PATH" WARDEN_AGENTS="$agents" "$RUN_WARDEN_ROOT/bin/warden" agents set sentinel cwd relative/path
+  [ "$status" -eq 2 ]
+  [[ "$output" == *"cwd must be an absolute path or start with ~"* ]]
+
+  run env HOME="$TEST_HOME" PATH="$FAKE_BIN:$PATH" WARDEN_AGENTS="$agents" "$RUN_WARDEN_ROOT/bin/warden" agents set sentinel cwd "$BATS_TEST_TMPDIR/missing"
+  [ "$status" -eq 2 ]
+  [[ "$output" == *"cwd is not an existing directory"* ]]
+}
+
+@test "agents unset cwd removes only cwd and preserves unrelated settings" {
+  agents="$BATS_TEST_TMPDIR/agents"
+  mkdir -p "$agents/sentinel"
+  cat > "$agents/sentinel/settings.json" <<'JSON'
+{"theme":"dark","warden":{"agents":{"sentinel":{"cwd":"/tmp/old","note":"keep"},"other":{"cwd":"/tmp/other"}}}}
+JSON
+
+  run env HOME="$TEST_HOME" PATH="$FAKE_BIN:$PATH" WARDEN_AGENTS="$agents" "$RUN_WARDEN_ROOT/bin/warden" agents unset sentinel cwd
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"unset sentinel cwd"* ]]
+  node - "$agents/sentinel/settings.json" <<'NODE'
+const fs = require('fs');
+const settings = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'));
+if (settings.theme !== 'dark') process.exit(1);
+if ('cwd' in settings.warden.agents.sentinel) process.exit(1);
+if (settings.warden.agents.sentinel.note !== 'keep') process.exit(1);
+if (settings.warden.agents.other.cwd !== '/tmp/other') process.exit(1);
+NODE
+}
+
+@test "agents show prints directories and complete settings" {
+  agents="$BATS_TEST_TMPDIR/agents"
+  project="$BATS_TEST_TMPDIR/project"
+  mkdir -p "$agents/sentinel/npm/node_modules/.bin" "$agents/sentinel/pi-lens" "$project"
+  touch "$agents/sentinel/npm/node_modules/.bin/pi"
+  chmod +x "$agents/sentinel/npm/node_modules/.bin/pi"
+  cat > "$agents/sentinel/settings.json" <<JSON
+{"warden":{"agents":{"sentinel":{"cwd":"$project"}}}}
+JSON
+
+  run env HOME="$TEST_HOME" PATH="$FAKE_BIN:$PATH" WARDEN_AGENTS="$agents" "$RUN_WARDEN_ROOT/bin/warden" agents show sentinel
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"name: sentinel"* ]]
+  [[ "$output" == *"agent dir: $agents/sentinel"* ]]
+  [[ "$output" == *"pi bin: $agents/sentinel/npm/node_modules/.bin/pi"* ]]
+  [[ "$output" == *"pi-lens dir: $agents/sentinel/pi-lens"* ]]
+  [[ "$output" == *"settings: $agents/sentinel/settings.json"* ]]
+  [[ "$output" == *"configured cwd: $project"* ]]
+  [[ "$output" == *"effective cwd: $project"* ]]
+  [[ "$output" == *"settings.json:"* ]]
+  [[ "$output" == *"\"cwd\": \"$project\""* ]]
+}
+
+@test "agents show handles missing settings and show json emits valid object" {
+  agents="$BATS_TEST_TMPDIR/agents"
+  mkdir -p "$agents/sentinel"
+
+  run env HOME="$TEST_HOME" PATH="$FAKE_BIN:$PATH" WARDEN_AGENTS="$agents" "$RUN_WARDEN_ROOT/bin/warden" agents show sentinel
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"configured cwd: (unset)"* ]]
+  [[ "$output" == *"{}"* ]]
+
+  expected_cwd=$(pwd -P)
+  run env HOME="$TEST_HOME" PATH="$FAKE_BIN:$PATH" WARDEN_AGENTS="$agents" "$RUN_WARDEN_ROOT/bin/warden" agents show sentinel --json
+  [ "$status" -eq 0 ]
+  printf '%s' "$output" | node -e 'const expected = process.argv[1]; let data=""; process.stdin.on("data", c => data += c); process.stdin.on("end", () => { const parsed = JSON.parse(data); if (parsed.name !== "sentinel") process.exit(1); if (!parsed.settingsPath.endsWith("/settings.json")) process.exit(1); if (parsed.effectiveCwd !== expected) process.exit(1); });' "$expected_cwd"
+}
+
+@test "agents list prints agents and list json emits valid array" {
+  agents="$BATS_TEST_TMPDIR/agents"
+  project="$BATS_TEST_TMPDIR/project"
+  mkdir -p "$agents/ada/npm/node_modules/.bin" "$agents/sentinel" "$project"
+  touch "$agents/ada/npm/node_modules/.bin/pi"
+  chmod +x "$agents/ada/npm/node_modules/.bin/pi"
+  cat > "$agents/sentinel/settings.json" <<JSON
+{"warden":{"agents":{"sentinel":{"cwd":"$project"}}}}
+JSON
+
+  run env HOME="$TEST_HOME" PATH="$FAKE_BIN:$PATH" WARDEN_AGENTS="$agents" "$RUN_WARDEN_ROOT/bin/warden" agents list
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"ada"* ]]
+  [[ "$output" == *"sentinel"* ]]
+  [[ "$output" == *"cwd=$project"* ]]
+  [[ "$output" == *"status=missing-pi"* ]]
+
+  run env HOME="$TEST_HOME" PATH="$FAKE_BIN:$PATH" WARDEN_AGENTS="$agents" "$RUN_WARDEN_ROOT/bin/warden" agents list --json
+  [ "$status" -eq 0 ]
+  printf '%s' "$output" | node -e 'let data=""; process.stdin.on("data", c => data += c); process.stdin.on("end", () => { const parsed = JSON.parse(data); if (!Array.isArray(parsed)) process.exit(1); if (!parsed.some(a => a.name === "sentinel")) process.exit(1); });'
+}
+
+@test "pi uses configured cwd and keeps caller cwd when unset" {
+  agents="$BATS_TEST_TMPDIR/agents"
+  caller="$BATS_TEST_TMPDIR/caller"
+  project="$BATS_TEST_TMPDIR/project"
+  mkdir -p "$caller" "$project"
+  env HOME="$TEST_HOME" PATH="$FAKE_BIN:$PATH" WARDEN_AGENTS="$agents" NPM_LOG="$BATS_TEST_TMPDIR/npm.log" PI_LOG="$BATS_TEST_TMPDIR/install-pi.log" "$RUN_WARDEN_ROOT/bin/warden" agents new ada
+
+  cd "$caller"
+  run env HOME="$TEST_HOME" PATH="$FAKE_BIN:$PATH" WARDEN_AGENTS="$agents" PI_LOG="$BATS_TEST_TMPDIR/pi-unset.log" "$RUN_WARDEN_ROOT/bin/warden" pi ada
+  [ "$status" -eq 0 ]
+  grep -F "PWD=$caller" "$BATS_TEST_TMPDIR/pi-unset.log"
+
+  cd "$BATS_TEST_TMPDIR"
+  run env HOME="$TEST_HOME" PATH="$FAKE_BIN:$PATH" WARDEN_AGENTS="$agents" "$RUN_WARDEN_ROOT/bin/warden" agents set ada cwd "$project"
+  [ "$status" -eq 0 ]
+
+  cd "$caller"
+  run env HOME="$TEST_HOME" PATH="$FAKE_BIN:$PATH" WARDEN_AGENTS="$agents" PI_LOG="$BATS_TEST_TMPDIR/pi-set.log" "$RUN_WARDEN_ROOT/bin/warden" pi ada
+  [ "$status" -eq 0 ]
+  grep -F "PWD=$project" "$BATS_TEST_TMPDIR/pi-set.log"
+}
+
+@test "pi expands tilde cwd before launch" {
+  agents="$BATS_TEST_TMPDIR/agents"
+  mkdir -p "$TEST_HOME/project"
+  env HOME="$TEST_HOME" PATH="$FAKE_BIN:$PATH" WARDEN_AGENTS="$agents" NPM_LOG="$BATS_TEST_TMPDIR/npm.log" PI_LOG="$BATS_TEST_TMPDIR/install-pi.log" "$RUN_WARDEN_ROOT/bin/warden" agents new ada
+  env HOME="$TEST_HOME" PATH="$FAKE_BIN:$PATH" WARDEN_AGENTS="$agents" "$RUN_WARDEN_ROOT/bin/warden" agents set ada cwd "~/project"
+
+  run env HOME="$TEST_HOME" PATH="$FAKE_BIN:$PATH" WARDEN_AGENTS="$agents" PI_LOG="$BATS_TEST_TMPDIR/pi.log" "$RUN_WARDEN_ROOT/bin/warden" pi ada
+  [ "$status" -eq 0 ]
+  grep -F "PWD=$TEST_HOME/project" "$BATS_TEST_TMPDIR/pi.log"
+}
+
+@test "pi fails clearly for missing cwd or malformed settings" {
+  agents="$BATS_TEST_TMPDIR/agents"
+  env HOME="$TEST_HOME" PATH="$FAKE_BIN:$PATH" WARDEN_AGENTS="$agents" NPM_LOG="$BATS_TEST_TMPDIR/npm.log" PI_LOG="$BATS_TEST_TMPDIR/install-pi.log" "$RUN_WARDEN_ROOT/bin/warden" agents new ada
+  node - "$agents/ada/settings.json" "$BATS_TEST_TMPDIR/missing" <<'NODE'
+const fs = require('fs');
+const [path, cwd] = process.argv.slice(2);
+fs.writeFileSync(path, JSON.stringify({ warden: { agents: { ada: { cwd } } } }));
+NODE
+
+  run env HOME="$TEST_HOME" PATH="$FAKE_BIN:$PATH" WARDEN_AGENTS="$agents" PI_LOG="$BATS_TEST_TMPDIR/pi-missing.log" "$RUN_WARDEN_ROOT/bin/warden" pi ada
+  [ "$status" -eq 2 ]
+  [[ "$output" == *"configured cwd is not an existing directory"* ]]
+  [ ! -e "$BATS_TEST_TMPDIR/pi-missing.log" ]
+
+  printf '{bad json' > "$agents/ada/settings.json"
+  run env HOME="$TEST_HOME" PATH="$FAKE_BIN:$PATH" WARDEN_AGENTS="$agents" PI_LOG="$BATS_TEST_TMPDIR/pi-malformed.log" "$RUN_WARDEN_ROOT/bin/warden" pi ada
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"failed to read agent settings"* ]]
+  [ ! -e "$BATS_TEST_TMPDIR/pi-malformed.log" ]
+}
+
 @test "doctor prints non-fatal Pi agent hints" {
   repo_root=$(cd "$RUN_WARDEN_ROOT/.." && pwd -P)
   agents="$BATS_TEST_TMPDIR/agents"
@@ -193,8 +384,13 @@ SH
 @test "README documents Pi agent commands" {
   repo_root=$(cd "$RUN_WARDEN_ROOT/.." && pwd -P)
   grep -F "warden agents new [name]" "$repo_root/README.md"
+  grep -F "warden agents set <name> cwd <dir>" "$repo_root/README.md"
+  grep -F "warden agents unset <name> cwd" "$repo_root/README.md"
+  grep -F "warden agents show <name> [--json]" "$repo_root/README.md"
+  grep -F "warden agents list [--json]" "$repo_root/README.md"
   grep -F "warden pi <name>" "$repo_root/README.md"
   grep -F "WARDEN_AGENTS" "$repo_root/README.md"
+  grep -F "warden.agents.<name>.cwd" "$repo_root/README.md"
 }
 
 @test "pi-warden docs keep runner bootstrap out of package scope" {

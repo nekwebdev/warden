@@ -8,10 +8,20 @@ The root `./warden` script stays tiny: it normalizes `WARDEN_HOME`, handles safe
 
 ```sh
 warden agents new [name]
+warden agents set <name> cwd <dir>
+warden agents unset <name> cwd
+warden agents show <name> [--json]
+warden agents list [--json]
 warden pi <name> ...
 ```
 
-`agents new` installs the registry Pi coding-agent package into the selected agent directory's local `npm/node_modules`. `pi` runs that local executable with `PI_CODING_AGENT_DIR` and `PILENS_DATA_DIR` pointed inside the agent directory.
+`agents new` installs the registry Pi coding-agent package into the selected agent directory's local `npm/node_modules`.
+
+`agents set <name> cwd <dir>` writes `warden.agents.<name>.cwd` to the agent-local `$WARDEN_AGENTS/<name>/settings.json`, preserving unrelated Pi settings. `dir` must already exist and must be absolute or start with `~`.
+
+`agents show` prints the agent dir, Pi executable, Pi Lens dir, settings path, effective cwd, and the complete formatted `settings.json`; `--json` emits the same information as JSON. `agents list` summarizes every agent directory; `--json` emits an array.
+
+`pi` reads the configured cwd from the agent-local settings file, changes to it when present, then runs the local executable with `PI_CODING_AGENT_DIR` and `PILENS_DATA_DIR` pointed inside the agent directory. Without a configured cwd, it preserves the caller's current working directory.
 
 ## Dev test
 

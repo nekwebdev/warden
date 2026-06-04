@@ -66,6 +66,272 @@ warden_agent_pi_bin() {
 	printf '%s/npm/node_modules/.bin/pi\n' "$agent_dir"
 }
 
+warden_agent_pi_lens_dir() {
+	agent_dir=$1
+	printf '%s/pi-lens\n' "$agent_dir"
+}
+
+warden_agent_settings_path() {
+	agent_dir=$1
+	printf '%s/settings.json\n' "$agent_dir"
+}
+
+warden_agent_settings_node() {
+	if ! command -v node >/dev/null 2>&1; then
+		printf '%s\n' "warden: node is required to read and write agent settings.json" >&2
+		return 1
+	fi
+	node - "$@" <<'NODE'
+const fs = require("fs");
+const path = require("path");
+
+const [op, first, name, ...rest] = process.argv.slice(2);
+
+function fail(message) {
+  console.error(`warden: ${message}`);
+  process.exit(1);
+}
+
+function readSettingsFile(settingsPath) {
+  if (!fs.existsSync(settingsPath)) {
+    return {};
+  }
+  let raw;
+  try {
+    raw = fs.readFileSync(settingsPath, "utf8");
+  } catch (error) {
+    fail(`failed to read agent settings: ${settingsPath}: ${error.message}`);
+  }
+  if (raw.trim() === "") {
+    return {};
+  }
+  let settings;
+  try {
+    settings = JSON.parse(raw);
+  } catch (error) {
+    fail(`failed to read agent settings: ${settingsPath}: ${error.message}`);
+  }
+  if (!settings || typeof settings !== "object" || Array.isArray(settings)) {
+    fail(`failed to read agent settings: ${settingsPath}: top-level JSON value must be an object`);
+  }
+  return settings;
+}
+
+function writeSettingsFile(settingsPath, settings) {
+  fs.mkdirSync(path.dirname(settingsPath), { recursive: true });
+  fs.writeFileSync(settingsPath, `${JSON.stringify(settings, null, 2)}\n`, "utf8");
+}
+
+function ensureObject(value) {
+  return value && typeof value === "object" && !Array.isArray(value);
+}
+
+function configuredCwd(settingsPath, settings, agentName) {
+  const cwd = settings.warden?.agents?.[agentName]?.cwd;
+  if (cwd === undefined || cwd === null || cwd === "") {
+    return "";
+  }
+  if (typeof cwd !== "string") {
+    fail(`failed to read agent settings: ${settingsPath}: warden.agents.${agentName}.cwd must be a string`);
+  }
+  return cwd;
+}
+
+function expandCwd(cwd) {
+  if (!cwd) {
+    return "";
+  }
+  if (cwd === "~") {
+    return process.env.HOME || "";
+  }
+  if (cwd.startsWith("~/")) {
+    return path.join(process.env.HOME || "", cwd.slice(2));
+  }
+  if (path.isAbsolute(cwd)) {
+    return cwd;
+  }
+  return "";
+}
+
+function effectiveCwd(cwd) {
+  if (!cwd) {
+    try {
+      return fs.realpathSync(process.cwd());
+    } catch {
+      return process.cwd();
+    }
+  }
+  const expanded = expandCwd(cwd);
+  if (!expanded) {
+    return "";
+  }
+  try {
+    return fs.realpathSync(expanded);
+  } catch {
+    return "";
+  }
+}
+
+function isExecutable(filePath) {
+  try {
+    fs.accessSync(filePath, fs.constants.X_OK);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function cwdStatus(cwd) {
+  if (!cwd) {
+    return "unset";
+  }
+  const expanded = expandCwd(cwd);
+  if (!expanded) {
+    return "invalid";
+  }
+  try {
+    if (fs.statSync(expanded).isDirectory()) {
+      return "ok";
+    }
+  } catch {
+    return "missing";
+  }
+  return "missing";
+}
+
+function buildInfo(settingsPath, agentName, agentDir, piBin, piLensDir) {
+  const settings = readSettingsFile(settingsPath);
+  const cwd = configuredCwd(settingsPath, settings, agentName);
+  return {
+    name: agentName,
+    agentDir,
+    piBin,
+    piLensDir,
+    settingsPath,
+    configuredCwd: cwd || null,
+    effectiveCwd: effectiveCwd(cwd) || null,
+    cwdStatus: cwdStatus(cwd),
+    piExecutable: isExecutable(piBin),
+    settings,
+  };
+}
+
+switch (op) {
+  case "get-cwd": {
+    const settingsPath = first;
+    const settings = readSettingsFile(settingsPath);
+    process.stdout.write(configuredCwd(settingsPath, settings, name));
+    break;
+  }
+  case "set-cwd": {
+    const settingsPath = first;
+    const cwd = rest[0];
+    const settings = readSettingsFile(settingsPath);
+    if (!ensureObject(settings.warden)) {
+      settings.warden = {};
+    }
+    if (!ensureObject(settings.warden.agents)) {
+      settings.warden.agents = {};
+    }
+    if (!ensureObject(settings.warden.agents[name])) {
+      settings.warden.agents[name] = {};
+    }
+    settings.warden.agents[name].cwd = cwd;
+    writeSettingsFile(settingsPath, settings);
+    break;
+  }
+  case "unset-cwd": {
+    const settingsPath = first;
+    if (!fs.existsSync(settingsPath)) {
+      break;
+    }
+    const settings = readSettingsFile(settingsPath);
+    if (ensureObject(settings.warden) && ensureObject(settings.warden.agents) && ensureObject(settings.warden.agents[name])) {
+      delete settings.warden.agents[name].cwd;
+      if (Object.keys(settings.warden.agents[name]).length === 0) {
+        delete settings.warden.agents[name];
+      }
+      if (Object.keys(settings.warden.agents).length === 0) {
+        delete settings.warden.agents;
+      }
+      if (Object.keys(settings.warden).length === 0) {
+        delete settings.warden;
+      }
+      writeSettingsFile(settingsPath, settings);
+    }
+    break;
+  }
+  case "format": {
+    const settingsPath = first;
+    const settings = readSettingsFile(settingsPath);
+    process.stdout.write(`${JSON.stringify(settings, null, 2)}\n`);
+    break;
+  }
+  case "info-json": {
+    const settingsPath = first;
+    const [agentDir, piBin, piLensDir] = rest;
+    process.stdout.write(`${JSON.stringify(buildInfo(settingsPath, name, agentDir, piBin, piLensDir), null, 2)}\n`);
+    break;
+  }
+  case "list-json": {
+    const agentsRoot = first;
+    if (!fs.existsSync(agentsRoot)) {
+      process.stdout.write("[]\n");
+      break;
+    }
+    const entries = fs.readdirSync(agentsRoot, { withFileTypes: true })
+      .filter((entry) => entry.isDirectory())
+      .map((entry) => entry.name)
+      .sort((a, b) => a.localeCompare(b));
+    const infos = entries.map((agentName) => {
+      const agentDir = path.join(agentsRoot, agentName);
+      const settingsPath = path.join(agentDir, "settings.json");
+      const piBin = path.join(agentDir, "npm", "node_modules", ".bin", "pi");
+      const piLensDir = path.join(agentDir, "pi-lens");
+      return buildInfo(settingsPath, agentName, agentDir, piBin, piLensDir);
+    });
+    process.stdout.write(`${JSON.stringify(infos, null, 2)}\n`);
+    break;
+  }
+  default:
+    fail(`unknown agent settings operation: ${op || ""}`);
+}
+NODE
+}
+
+warden_agent_settings_get_cwd() {
+	settings_path=$1
+	name=$2
+	warden_agent_settings_node get-cwd "$settings_path" "$name"
+}
+
+warden_agent_settings_set_cwd() {
+	settings_path=$1
+	name=$2
+	cwd=$3
+	warden_agent_settings_node set-cwd "$settings_path" "$name" "$cwd"
+}
+
+warden_agent_settings_unset_cwd() {
+	settings_path=$1
+	name=$2
+	warden_agent_settings_node unset-cwd "$settings_path" "$name"
+}
+
+warden_agent_settings_format() {
+	settings_path=$1
+	warden_agent_settings_node format "$settings_path" _
+}
+
+warden_agent_settings_info_json() {
+	settings_path=$1
+	name=$2
+	agent_dir=$3
+	pi_bin=$4
+	pi_lens_dir=$5
+	warden_agent_settings_node info-json "$settings_path" "$name" "$agent_dir" "$pi_bin" "$pi_lens_dir"
+}
+
 warden_agent_prepare_npm_config() {
 	npm_prefix=$1
 	mkdir -p "$npm_prefix" || return 1
@@ -131,6 +397,225 @@ warden_agent_resolve_dir() {
 	warden_agent_dir "$agents_root" "$name"
 }
 
+warden_agent_require_existing_dir() {
+	name=$1
+	warden_agent_validate_name "$name" || return $?
+	agent_dir=$(warden_agent_resolve_dir "$name") || return 1
+	if [ ! -d "$agent_dir" ]; then
+		printf '%s\n' "warden: agent not found: $agent_dir" >&2
+		return 2
+	fi
+	printf '%s\n' "$agent_dir"
+}
+
+warden_agent_expand_cwd_value() {
+	cwd_value=$1
+	case "$cwd_value" in
+	"~")
+		printf '%s\n' "$HOME"
+		;;
+	"~/"*)
+		printf '%s/%s\n' "$HOME" "${cwd_value#\~/}"
+		;;
+	/*)
+		printf '%s\n' "$cwd_value"
+		;;
+	*)
+		printf '%s\n' "warden: cwd must be an absolute path or start with ~: $cwd_value" >&2
+		return 2
+		;;
+	esac
+}
+
+warden_agent_resolve_cwd_for_set() {
+	cwd_value=$1
+	expanded_cwd=$(warden_agent_expand_cwd_value "$cwd_value") || return $?
+	if [ ! -d "$expanded_cwd" ]; then
+		printf '%s\n' "warden: cwd is not an existing directory: $cwd_value" >&2
+		return 2
+	fi
+	(cd "$expanded_cwd" && pwd -P) || return 1
+}
+
+warden_agent_effective_cwd_for_display() {
+	cwd_value=${1:-}
+	if [ -z "$cwd_value" ]; then
+		printf '%s\n' "$(pwd -P)"
+		return 0
+	fi
+	expanded_cwd=$(warden_agent_expand_cwd_value "$cwd_value" 2>/dev/null) || {
+		printf '%s\n' "(invalid)"
+		return 0
+	}
+	if [ ! -d "$expanded_cwd" ]; then
+		printf '%s\n' "(missing)"
+		return 0
+	fi
+	(cd "$expanded_cwd" && pwd -P) || return 1
+}
+
+warden_agent_cwd_status_for_display() {
+	cwd_value=${1:-}
+	if [ -z "$cwd_value" ]; then
+		printf '%s\n' "unset"
+		return 0
+	fi
+	expanded_cwd=$(warden_agent_expand_cwd_value "$cwd_value" 2>/dev/null) || {
+		printf '%s\n' "invalid"
+		return 0
+	}
+	if [ -d "$expanded_cwd" ]; then
+		printf '%s\n' "ok"
+	else
+		printf '%s\n' "missing"
+	fi
+}
+
+warden_agent_cd_to_configured_cwd() {
+	name=$1
+	cwd_value=${2:-}
+	if [ -z "$cwd_value" ]; then
+		return 0
+	fi
+	expanded_cwd=$(warden_agent_expand_cwd_value "$cwd_value") || return $?
+	if [ ! -d "$expanded_cwd" ]; then
+		printf '%s\n' "warden: configured cwd is not an existing directory for agent '$name': $cwd_value" >&2
+		return 2
+	fi
+	resolved_cwd=$(cd "$expanded_cwd" && pwd -P) || return 1
+	cd "$resolved_cwd" || return 1
+}
+
+warden_agents_set() {
+	if [ $# -ne 3 ] || [ "${2:-}" != "cwd" ]; then
+		printf '%s\n' "usage: warden agents set NAME cwd DIR" >&2
+		return 2
+	fi
+	name=$1
+	cwd_value=$3
+	agent_dir=$(warden_agent_require_existing_dir "$name") || return $?
+	warden_agent_resolve_cwd_for_set "$cwd_value" >/dev/null || return $?
+	settings_path=$(warden_agent_settings_path "$agent_dir")
+	warden_agent_settings_set_cwd "$settings_path" "$name" "$cwd_value" || return 1
+	printf 'set %s cwd: %s\n' "$name" "$cwd_value"
+}
+
+warden_agents_unset() {
+	if [ $# -ne 2 ] || [ "${2:-}" != "cwd" ]; then
+		printf '%s\n' "usage: warden agents unset NAME cwd" >&2
+		return 2
+	fi
+	name=$1
+	agent_dir=$(warden_agent_require_existing_dir "$name") || return $?
+	settings_path=$(warden_agent_settings_path "$agent_dir")
+	warden_agent_settings_unset_cwd "$settings_path" "$name" || return 1
+	printf 'unset %s cwd\n' "$name"
+}
+
+warden_agents_show() {
+	if [ $# -lt 1 ] || [ $# -gt 2 ]; then
+		printf '%s\n' "usage: warden agents show NAME [--json]" >&2
+		return 2
+	fi
+	name=$1
+	json=0
+	if [ $# -eq 2 ]; then
+		if [ "$2" != "--json" ]; then
+			printf '%s\n' "usage: warden agents show NAME [--json]" >&2
+			return 2
+		fi
+		json=1
+	fi
+	agent_dir=$(warden_agent_require_existing_dir "$name") || return $?
+	pi_bin=$(warden_agent_pi_bin "$agent_dir")
+	pi_lens_dir=$(warden_agent_pi_lens_dir "$agent_dir")
+	settings_path=$(warden_agent_settings_path "$agent_dir")
+	configured_cwd=$(warden_agent_settings_get_cwd "$settings_path" "$name") || return 1
+	effective_cwd=$(warden_agent_effective_cwd_for_display "$configured_cwd") || return 1
+	cwd_status=$(warden_agent_cwd_status_for_display "$configured_cwd") || return 1
+
+	if [ "$json" -eq 1 ]; then
+		warden_agent_settings_info_json "$settings_path" "$name" "$agent_dir" "$pi_bin" "$pi_lens_dir"
+		return $?
+	fi
+
+	settings_json=$(warden_agent_settings_format "$settings_path") || return 1
+	printf 'name: %s\n' "$name"
+	printf 'agent dir: %s\n' "$agent_dir"
+	printf 'pi bin: %s\n' "$pi_bin"
+	printf 'pi-lens dir: %s\n' "$pi_lens_dir"
+	printf 'settings: %s\n' "$settings_path"
+	if [ -n "$configured_cwd" ]; then
+		printf 'configured cwd: %s\n' "$configured_cwd"
+	else
+		printf 'configured cwd: (unset)\n'
+	fi
+	printf 'effective cwd: %s\n' "$effective_cwd"
+	printf 'cwd status: %s\n' "$cwd_status"
+	if [ -x "$pi_bin" ]; then
+		printf 'pi executable: yes\n'
+	else
+		printf 'pi executable: no\n'
+	fi
+	printf '\nsettings.json:\n%s\n' "$settings_json"
+}
+
+warden_agents_list() {
+	if [ $# -gt 1 ]; then
+		printf '%s\n' "usage: warden agents list [--json]" >&2
+		return 2
+	fi
+	json=0
+	if [ $# -eq 1 ]; then
+		if [ "$1" != "--json" ]; then
+			printf '%s\n' "usage: warden agents list [--json]" >&2
+			return 2
+		fi
+		json=1
+	fi
+
+	agents_root=$(warden_agents_root)
+	if [ -d "$agents_root" ]; then
+		agents_root=$(cd "$agents_root" && pwd -P) || return 1
+	fi
+
+	if [ "$json" -eq 1 ]; then
+		warden_agent_settings_node list-json "$agents_root" _
+		return $?
+	fi
+
+	if [ ! -d "$agents_root" ]; then
+		printf 'no agents found in %s\n' "$agents_root"
+		return 0
+	fi
+
+	found=0
+	for agent_dir in "$agents_root"/* "$agents_root"/.[!.]* "$agents_root"/..?*; do
+		[ -d "$agent_dir" ] || continue
+		found=1
+		name=${agent_dir##*/}
+		pi_bin=$(warden_agent_pi_bin "$agent_dir")
+		settings_path=$(warden_agent_settings_path "$agent_dir")
+		configured_cwd=$(warden_agent_settings_get_cwd "$settings_path" "$name") || return 1
+		cwd_status=$(warden_agent_cwd_status_for_display "$configured_cwd") || return 1
+		if [ -n "$configured_cwd" ]; then
+			cwd_display=$configured_cwd
+		else
+			cwd_display="(unset)"
+		fi
+		if [ -x "$pi_bin" ]; then
+			pi_status=ok
+		else
+			pi_status=missing-pi
+		fi
+		printf '%s agent-dir=%s cwd=%s cwd-status=%s status=%s\n' "$name" "$agent_dir" "$cwd_display" "$cwd_status" "$pi_status"
+	done
+
+	if [ "$found" -eq 0 ]; then
+		printf 'no agents found in %s\n' "$agents_root"
+	fi
+}
+
 warden_pi() {
 	if [ $# -lt 1 ]; then
 		printf '%s\n' "usage: warden pi <name> [args...]" >&2
@@ -160,6 +645,11 @@ warden_pi() {
 		return 1
 	fi
 
-	mkdir -p "$agent_dir/pi-lens" || return 1
-	PI_CODING_AGENT_DIR="$agent_dir" PILENS_DATA_DIR="$agent_dir/pi-lens" exec "$pi_bin" "$@"
+	settings_path=$(warden_agent_settings_path "$agent_dir")
+	configured_cwd=$(warden_agent_settings_get_cwd "$settings_path" "$name") || return 1
+	warden_agent_cd_to_configured_cwd "$name" "$configured_cwd" || return $?
+
+	pi_lens_dir=$(warden_agent_pi_lens_dir "$agent_dir")
+	mkdir -p "$pi_lens_dir" || return 1
+	PI_CODING_AGENT_DIR="$agent_dir" PILENS_DATA_DIR="$pi_lens_dir" exec "$pi_bin" "$@"
 }
