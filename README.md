@@ -83,13 +83,7 @@ PI_CODING_AGENT_DIR="$WARDEN_AGENTS/<name>"
 PILENS_DATA_DIR="$WARDEN_AGENTS/<name>/pi-lens"
 ```
 
-Shell integration writes reversible guarded blocks only after consent:
-
-```sh
-# warden begin
-...
-# warden end
-```
+Shell integration changes startup files only after consent. `./warden shell install` detects the current shell, defaults that prompt to yes, and defaults additional shell prompts to no. Extra shell prompts are shown only when their config target already exists (`~/.bashrc`, zsh rc under `$ZDOTDIR` when present, or the fish config dir); missing shell environments are reported as skipped. Existing Warden bash/zsh guarded blocks or fish managed files are reported as already installed and not overwritten. Bash/zsh use reversible guarded blocks; fish writes managed files under `${XDG_CONFIG_HOME:-$HOME/.config}/fish/conf.d/plugin-warden.fish` and `functions/warden.fish`.
 
 ## Dev tests
 

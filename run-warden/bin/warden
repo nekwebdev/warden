@@ -29,7 +29,7 @@ commands:
   agents new [NAME]   create isolated Pi agent environment
   pi NAME [ARGS...]   run Pi inside an isolated agent environment
   shell status         show bash/zsh/fish integration status
-  shell install        append guarded shell integration blocks after consent
+  shell install        install selected shell integration after consent
   shell remove         remove guarded shell integration blocks
   shell snippet SHELL  print manual snippet for bash, zsh, or fish
   help                 show this help
