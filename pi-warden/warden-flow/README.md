@@ -8,8 +8,10 @@ It reduces repeated repo discovery by maintaining a small map tree, injecting on
 
 - `/skill:warden-map` — creates or refreshes repository map files.
 - `/skill:warden-commit` — plans safe, atomic local commits and can apply them after exact `Commit` confirmation.
+- `/warden:effort` — opens the Warden panel Effort pane for Warden skill thinking-level settings.
 - `extensions/warden-map` — injects map capsules and git context.
 - `extensions/warden-commit` — registers `warden_commit_snapshot` and `warden_commit_apply` for safe local commit planning and execution.
+- `extensions/warden-effort` — seeds Warden skill effort defaults and applies configured effort before `/skill:warden-*` expansion.
 - Session-start map injection — hidden root map capsule from `.warden/map.md`.
 - Scoped map injection — hidden scoped capsules from `.warden/maps/<scope>/map.md` appended to relevant tool results.
 - Git context injection — branch, short commit, and dirty state.
@@ -77,6 +79,32 @@ When git is available, the extension injects:
 
 Git context is cached and re-injected only when branch, commit, or dirty state changes.
 
+## Skill effort
+
+Warden Flow stores per-skill effort settings in Pi `settings.json`:
+
+```json
+{
+  "warden": {
+    "effort": {
+      "skills": {
+        "warden-map": "low",
+        "warden-commit": "medium"
+      }
+    }
+  }
+}
+```
+
+Current defaults seeded at session start:
+
+- `warden-map`: `low`
+- `warden-commit`: `medium`
+
+`/warden:effort` opens the Effort pane contributed through `@nekwebdev/warden-panel`. Space/Enter cycles a selected skill through `off`, `minimal`, `low`, `medium`, `high`, `xhigh` and writes immediately; there is no Apply step.
+
+Before Pi expands `/skill:warden-*`, `extensions/warden-effort` reads the configured level, calls Pi's public `setThinkingLevel()`, lets skill expansion continue, then restores the previous thinking level after the agent turn. Pi may clamp unsupported levels depending on the active model/provider.
+
 ## Commit helper
 
 `/skill:warden-commit` uses `warden_commit_snapshot` from `extensions/warden-commit` to plan local commits without token-heavy repeated git inspection.
@@ -89,7 +117,7 @@ It never pushes, pulls, fetches, rebases, resets, amends, tags, stashes, checks 
 
 ## Scope boundary
 
-This package owns Warden workflow/orientation Pi behavior, including `warden-map`, map capsule injection, `warden-commit`, and commit snapshot/apply tooling.
+This package owns Warden workflow/orientation Pi behavior, including `warden-map`, map capsule injection, `warden-commit`, commit snapshot/apply tooling, and Warden Flow skill effort settings.
 
 It does not own Warden runner workflows, Pi agent lifecycle commands, or sibling package installation workflows.
 

@@ -16,9 +16,10 @@ Repository guidance for coding agents working in `pi-warden/warden-flow/`.
 
 Package-owned areas:
 
-- shared map, git-context, and commit helper logic in `src/`;
+- shared map, git-context, commit helper, and effort setting logic in `src/`;
 - map injection extension in `extensions/warden-map/`;
 - commit snapshot/apply extension in `extensions/warden-commit/`;
+- effort panel/runtime extension in `extensions/warden-effort/`;
 - `warden-map` skill in `skills/warden-map/`;
 - `warden-commit` skill in `skills/warden-commit/`;
 - package tests in `tests/`;
@@ -34,6 +35,14 @@ This package does not own Warden runner workflows, agent lifecycle commands, sib
 - Every auto-injected map must come from the `<!-- warden-map:inject:start -->` / `<!-- warden-map:inject:end -->` capsule.
 - Never auto-inject full map files; inject path-only notices when capsules are missing or too large.
 
+## Effort settings
+
+- Maintain Warden Flow skill defaults in `src/effort.ts`.
+- New Warden Flow `warden-*` skills need a default effort entry unless there is a clear reason to leave them unmanaged.
+- Keep effort source of truth in Pi `settings.json` under `warden.effort.skills`; do not add effort frontmatter or description prefixes.
+- Update `extensions/warden-effort/` input-hook behavior when adding Warden Flow skills whose configured effort should apply before `/skill:warden-*` expansion.
+- Use Pi's public thinking-level API only; do not add provider-specific effort scales.
+
 ## Extension rules
 
 - Keep startup injection bounded: root capsule plus tiny git context only.
@@ -43,6 +52,7 @@ This package does not own Warden runner workflows, agent lifecycle commands, sib
 - `warden_commit_snapshot` must stay read-only.
 - `warden_commit_apply` may create local commits only after exact user confirmation and matching snapshot-hash validation; it must stage exact paths only and never push, pull, fetch, reset, rebase, amend, tag, stash, checkout, clean, restore, create PRs, or run remote git operations.
 - Do not add subagents, workflow runners, sibling package installers, or model override cascades to this package.
+- Runtime effort changes must restore the previous thinking level after the agent turn unless Pi exposes a safer verified non-persistent path.
 
 ## Testing
 

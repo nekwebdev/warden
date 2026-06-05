@@ -7,6 +7,9 @@ const tests = [
 	"tests/map.test.ts",
 	"tests/git.test.ts",
 	"tests/commit.test.ts",
+	"tests/effort.test.ts",
+	"tests/effort-pane.test.ts",
+	"tests/effort-runtime.test.ts",
 	"tests/extension.test.ts",
 ];
 

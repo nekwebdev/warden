@@ -65,6 +65,7 @@ Use only folders that fit the package.
   - Owns Warden workflow/orientation Pi behavior.
   - Owns `/skill:warden-map`, map capsule injection, scoped map loading, and git context injection.
   - Owns `/skill:warden-commit`, commit snapshot/apply tools, and local commit safety rules.
+  - Owns `/warden:effort` and per-skill effort defaults for Warden Flow skills.
   - Does not own general runner workflows or agent lifecycle commands.
 
 ## Scope rules
@@ -82,6 +83,8 @@ Use only folders that fit the package.
 - When adding or changing a skill, check whether repeated, safety-sensitive, or testable behavior belongs in package `src/` or a sibling extension.
 - Do not put deterministic behavior only in skill instructions when it can be implemented and tested.
 - Put reusable deterministic logic in package `src/`.
+- New `warden-*` skills need default effort settings seeded through the owning package code under `warden.effort.skills`.
+- Companion extension behavior should account for configured effort before the skill runs when skill runtime behavior depends on Pi thinking level.
 - Use sibling extensions only when Pi lifecycle, runtime, or context-injection behavior is actually involved.
 - Add or update package-local tests for deterministic package behavior when code changes.
 - Do not add extensions or folders just for ceremony.
