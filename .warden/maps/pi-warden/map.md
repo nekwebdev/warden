@@ -8,7 +8,7 @@ Parent map: .warden/map.md
 ## Agent Quick Context
 
 - Purpose: `pi-warden/` is Warden's Pi Agent package area. It is a container, not itself a Pi package.
-- Boundaries: Package manifests/source/tests live under direct child package folders. Current packages are `warden-panel` (`@nekwebdev/warden-panel`) and `warden-flow` (`@nekwebdev/warden-flow`, bundling the `warden-map` skill/extension). Runner-owned `warden agents` and `warden pi` workflows remain in `run-warden/`.
+- Boundaries: Package manifests/source/tests live under direct child package folders. Current packages are `warden-panel` (`@nekwebdev/warden-panel`) and `warden-flow` (`@nekwebdev/warden-flow`, bundling `warden-map` and `warden-commit` skills/extensions). Runner-owned `warden agents` and `warden pi` workflows remain in `run-warden/`.
 - Safe edits: Read `pi-warden/AGENTS.md` and package `AGENTS.md` before package edits. Do not place package manifests/source at `pi-warden/` root. Package behavior must not mutate root bootstrap or runner workflows unless explicitly scoped.
 - Verification: Run `mise run test:pi-warden`; package-specific checks are `npm test --prefix pi-warden/warden-panel` and `npm test --prefix pi-warden/warden-flow` after install.
 - Sharp edges: Package roots may contain ignored `node_modules/`. `warden-panel` absorbed former `warden-packages`; do not recreate `pi-warden/warden-packages`. Use live git context injection for current dirty-state details.
@@ -26,7 +26,7 @@ Parent map: .warden/map.md
 | `README.md` | Package-area docs | Lists current packages and package shape. |
 | `tests/smoke.bats` | Smoke tests | Checks package folders/manifests/resources and former package fold-in. |
 | `warden-panel/` | Pi package | Panel framework plus bundled panel/display/packages extensions. See scoped map. |
-| `warden-flow/` | Pi package | Workflow package currently bundling the `warden-map` repository-map skill and map/git injection extension. See scoped map. |
+| `warden-flow/` | Pi package | Workflow package currently bundling `warden-map` repository-map resources and `warden-commit` safe local commit resources. See scoped map. |
 
 Expected package shape from guidance:
 
@@ -80,7 +80,7 @@ Focused package commands:
 
 ## Recent Evolution from Git History
 
-Recent commits show Pi package work became active after bootstrap/runner groundwork: panel package added, packages extension package added, then former `warden-packages` folded into `warden-panel/extensions/warden-packages`. Current package set includes the newer `warden-flow` package, which currently bundles `warden-map` repository mapping and context injection resources.
+Recent commits show Pi package work became active after bootstrap/runner groundwork: panel package added, packages extension package added, then former `warden-packages` folded into `warden-panel/extensions/warden-packages`. Current package set includes the newer `warden-flow` package, which currently bundles `warden-map` repository mapping/context injection resources and `warden-commit` safe local commit resources.
 
 ## Open Questions
 

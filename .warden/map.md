@@ -29,7 +29,7 @@ The first-run promise is central: a user can clone anywhere, run `./warden`, cho
 | `run-warden/` | Delegated runner | Owns command dispatch, reusable shell libs, shell snippets, Pi agent environment commands, Bats tests. See `.warden/maps/run-warden/map.md`. |
 | `pi-warden/` | Pi package container | Holds package-area docs/tests and package roots. Not itself a Pi package. See `.warden/maps/pi-warden/map.md`. |
 | `pi-warden/warden-panel/` | Pi package | `@nekwebdev/warden-panel`; panel framework plus Display and Packages panes. See scoped map. |
-| `pi-warden/warden-flow/` | Pi package | `@nekwebdev/warden-flow`; workflow package currently bundling the `warden-map` skill and context injection extension. See scoped map. |
+| `pi-warden/warden-flow/` | Pi package | `@nekwebdev/warden-flow`; workflow package currently bundling `warden-map` and `warden-commit` skills plus map/git-context and commit-safety extensions. See scoped map. |
 | `nix-warden/` | Future NixOS/system package | Skeleton only; canonical active path after bootstrap is `$WARDEN_HOME/nix-warden`. |
 | `dev-warden/` | Future developer-environment package | Skeleton only; independently testable smoke boundary. |
 | `tests/root/` | Root bootstrap tests | Bats fixtures copy repo into temp dirs and verify first-run movement, no-overwrite safety, doctor, shell integration. |
@@ -57,7 +57,7 @@ The first-run promise is central: a user can clone anywhere, run `./warden`, cho
 
 - `WARDEN_HOME` is Warden clone/home. Default is `${XDG_DATA_HOME:-$HOME/.local/share}/warden`.
 - `WARDEN_AGENTS` overrides Pi agent root; otherwise agents live under `${XDG_CONFIG_HOME:-$HOME/.config}/pi-agents/<name>`.
-- Agent settings live in `$WARDEN_AGENTS/<name>/settings.json`. Runner stores `warden.agents.<name>.cwd` and preserves unrelated Pi settings.
+- Agent settings live in `$WARDEN_AGENTS/<name>/settings.json`. Runner stores canonical per-agent cwd at `warden.agent.cwd`, reads legacy `warden.agents.<name>.cwd` as fallback, and preserves unrelated Pi settings.
 - Warden panel reads/writes `$PI_CODING_AGENT_DIR/settings.json` or fallback Pi settings path, only under `settings.warden` keys it owns.
 - `.warden/map.md` and `.warden/maps/**/map.md` are durable orientation docs, not executable state or task plans.
 - `node_modules/`, `.pi/`, `.pi-lens/`, `pi-lens/`, build outputs, coverage, env files, and `*.warden-tmp` are ignored local/generated artifacts. Package `node_modules/` dirs are present in working tree but ignored.
@@ -77,7 +77,7 @@ The first-run promise is central: a user can clone anywhere, run `./warden`, cho
 - `run-warden/lib/pi-agents.sh` integrates registry package `@earendil-works/pi-coding-agent` into isolated agent npm prefixes.
 - `pi-warden/warden-panel` exposes a pane registry API from `@nekwebdev/warden-panel`; independently loaded Warden packages share pane/action state through `globalThis`.
 - `pi-warden/warden-panel/extensions/warden-packages` edits global Pi `packages` settings through Pi package-manager behavior and reports restart-required messages.
-- `pi-warden/warden-flow` bundles the `warden-map` skill and extension, which inject root/scoped map capsules and git context into Pi sessions. It never injects full map bodies.
+- `pi-warden/warden-flow` bundles the `warden-map` skill/extension, which injects root/scoped map capsules and git context into Pi sessions, plus `warden-commit` skill/extension for safe local commit planning and apply. It never injects full map bodies.
 - New Pi packages should follow `pi-warden/<package>/` shape with manifest, README, AGENTS, tests, scripts, and only needed asset folders.
 
 ## Recent Evolution from Git History
@@ -108,7 +108,7 @@ This map was generated during active `warden-flow` package work. Use live git co
 | `run-warden` | `.warden/maps/run-warden/map.md` | Distinct runner/CLI/shell/Pi-agent workflow boundary with Bats suite. |
 | `pi-warden` | `.warden/maps/pi-warden/map.md` | Package container with its own package rules, smoke tests, and child package conventions. |
 | `pi-warden/warden-panel` | `.warden/maps/pi-warden/warden-panel/map.md` | Independently testable Pi package with panel framework, extensions, settings, and package operations. |
-| `pi-warden/warden-flow` | `.warden/maps/pi-warden/warden-flow/map.md` | Independently testable Pi package that currently owns the `warden-map` skill and map/git injection extension. |
+| `pi-warden/warden-flow` | `.warden/maps/pi-warden/warden-flow/map.md` | Independently testable Pi package that currently owns `warden-map`, map/git injection, `warden-commit`, and commit safety tooling. |
 
 `nix-warden/` and `dev-warden/` are covered in root map only because current repo evidence marks them as skeleton boundaries.
 

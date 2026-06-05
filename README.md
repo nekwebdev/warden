@@ -131,17 +131,15 @@ Rejected names include:
 
 `warden agents new <name>` creates an isolated Pi environment and installs the Pi runtime into that agent's local npm prefix.
 
-`warden agents set <name> cwd <dir>` stores the launch cwd for that agent in its local settings file as `warden.agents.<name>.cwd`.
+`warden agents set <name> cwd <dir>` stores the launch cwd for that agent in its local settings file as `warden.agent.cwd`.
 
 Example settings shape:
 
 ```json
 {
   "warden": {
-    "agents": {
-      "sentinel": {
-        "cwd": "~/work/warden"
-      }
+    "agent": {
+      "cwd": "~/work/warden"
     }
   }
 }
@@ -207,7 +205,7 @@ pi-warden/warden-panel/
 pi-warden/warden-flow/
 ```
 
-`pi-warden/warden-flow/` contains Warden flow/orientation work, including the `warden-map` skill and related context-injection extension.
+`pi-warden/warden-flow/` contains Warden flow/orientation work, including the `warden-map` and `warden-commit` skills plus related map/git-context and commit-safety extensions.
 
 ### `nix-warden/`
 

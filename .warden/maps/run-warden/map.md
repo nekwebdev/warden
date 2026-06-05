@@ -9,7 +9,7 @@ Parent map: .warden/map.md
 
 - Purpose: `run-warden/` owns Warden command workflows after root `./warden` delegates through mise to `run-warden/bin/warden`.
 - Boundaries: Keep dispatch in `bin/warden`, shared behavior in `lib/*.sh`, shell snippets in `shell/`, and Bats in `tests/`. Do not move bootstrap location/consent logic here unless it follows root normalization contract.
-- Safe edits: Preserve consent gates for shell startup-file mutation, reversible bash/zsh guarded blocks, managed fish files, isolated Pi agent installs, and unknown agent settings. Prefer small POSIX shell changes.
+- Safe edits: Preserve consent gates for shell startup-file mutation, reversible bash/zsh guarded blocks, managed fish files, isolated Pi agent installs, canonical `warden.agent.cwd`, legacy cwd fallback, and unknown agent settings. Prefer small POSIX shell changes.
 - Verification: Run `mise run test:run-warden`; for root delegation interactions also run `mise run test:root` or full `mise run test`.
 - Sharp edges: `warden pi <name>` may create missing agents only after confirmation. Agent names reject `/`, `.`, `..`, empty, and unsupported chars. Node is required for settings JSON operations. `WARDEN_HOME`, `WARDEN_AGENTS`, `XDG_CONFIG_HOME`, and `HOME` affect paths.
 <!-- warden-map:inject:end -->
@@ -47,7 +47,7 @@ Parent map: .warden/map.md
 - `warden_fail` prints `warden: ...` and exits nonzero.
 - Reusable logic belongs in `lib/*.sh`; command dispatch stays thin in `bin/warden`.
 - Shell integration must be reversible. Bash/zsh use exact `# warden begin` / `# warden end` blocks; fish files contain `# warden fish ...` markers.
-- Agent JSON changes go through embedded Node helpers to preserve unrelated settings and validate shapes.
+- Agent JSON changes go through embedded Node helpers to preserve unrelated settings and validate shapes. Per-agent cwd is canonical at `warden.agent.cwd`; legacy `warden.agents.<name>.cwd` is read as fallback and normalized on writes.
 
 ## Dependencies and Integration Points
 

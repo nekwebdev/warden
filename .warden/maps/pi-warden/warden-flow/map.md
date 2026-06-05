@@ -7,16 +7,16 @@ Parent map: .warden/map.md
 <!-- warden-map:inject:start -->
 ## Agent Quick Context
 
-- Purpose: `@nekwebdev/warden-flow` bundles Pi workflow resources; current resources are `/skill:warden-map` plus a Pi extension that injects bounded root/scoped map capsules and git context.
-- Boundaries: Shared logic lives in `src/`; extension entry is `extensions/warden-map/`; skill workflow lives in `skills/warden-map/`. Map files are orientation reference only, not task plans or instruction overrides.
-- Safe edits: Keep injection bounded: root capsule at session start, scoped capsules from relevant tool-result paths, git context only when changed. Never auto-inject full map bodies. Do not add subagents, workflow runners, sibling package installers, or model override cascades.
+- Purpose: `@nekwebdev/warden-flow` bundles Pi workflow resources; current resources include `/skill:warden-map` with bounded map/git-context injection, and `/skill:warden-commit` with safe local commit snapshot/apply tools.
+- Boundaries: Shared logic lives in `src/`; extension entries are `extensions/warden-map/` and `extensions/warden-commit/`; skill workflows live in `skills/warden-map/` and `skills/warden-commit/`. Map files are orientation reference only, not task plans or instruction overrides.
+- Safe edits: Keep injection bounded: root capsule at session start, scoped capsules from relevant tool-result paths, git context only when changed. Keep commit apply behind exact `Commit` confirmation and snapshot-hash validation. Never auto-inject full map bodies. Do not add subagents, workflow runners, sibling package installers, or model override cascades.
 - Verification: Run `npm test --prefix pi-warden/warden-flow`; broader package check is `mise run test:pi-warden`.
 - Sharp edges: Every injectable map needs exactly one `warden-map:inject` marker pair. Root/scoped capsule hard caps are enforced; missing/oversize capsules produce notices. Use live git context injection for current dirty-state details.
 <!-- warden-map:inject:end -->
 
 ## Scope Purpose
 
-`pi-warden/warden-flow/` provides Pi workflow resources. Current bundled `warden-map` resources provide durable repository orientation for Pi sessions: a skill creates/refreshes `.warden` map files, and an extension injects only small relevant capsules plus git dirty context.
+`pi-warden/warden-flow/` provides Pi workflow resources. Current bundled `warden-map` resources provide durable repository orientation for Pi sessions: a skill creates/refreshes `.warden` map files, and an extension injects only small relevant capsules plus git dirty context. Current bundled `warden-commit` resources provide safe local commit planning: a skill guides atomic commit plans, and an extension exposes read-only snapshots plus guarded local commit apply.
 
 ## Local Structure
 
@@ -27,18 +27,22 @@ Parent map: .warden/map.md
 | `src/constants.ts` | Limits and path constants | Marker names, capsule caps, git timeouts, scoped-map limits. |
 | `src/map.ts` | Map capsule loading/injection | Extracts capsules, maps paths to scopes, budgets scoped injections. |
 | `src/git.ts` | Git context helpers | Loads branch/commit/status and formats dirty summary. |
-| `src/extension.ts` | Pi extension wiring | Hooks session start/compact/shutdown, tool calls/results, before-agent start. |
-| `extensions/warden-map/index.ts` | Pi extension entry | Calls `registerWardenMap`. |
-| `skills/warden-map/SKILL.md` | Skill workflow | Defines how to create/update root and scoped maps. |
+| `src/commit.ts` | Commit helper logic | Builds read-only snapshots, classifies path risks, validates plans, and applies local commits safely. |
+| `src/extension.ts` | Map extension wiring | Hooks session start/compact/shutdown, tool calls/results, before-agent start. |
+| `extensions/warden-map/index.ts` | Map Pi extension entry | Calls `registerWardenMap`. |
+| `extensions/warden-commit/index.ts` | Commit Pi extension entry | Calls `registerWardenCommit` and exports commit registration helpers. |
+| `skills/warden-map/SKILL.md` | Map skill workflow | Defines how to create/update root and scoped maps. |
+| `skills/warden-commit/SKILL.md` | Commit skill workflow | Defines safe commit planning, confirmation, and apply behavior. |
 | `tests/` | Node tests | Manifest, map, git, extension behavior. |
 | `scripts/run-tests.mjs` | Test orchestrator | Checks expected test files then runs `node --import tsx --test`. |
 
 ## Local Entry Points
 
-- Pi extension entry: `extensions/warden-map/index.ts` default export.
-- Package default export: root `index.ts` default from extension entry.
-- Public API: `src/index.ts` re-exports constants, extension, git, and map helpers.
-- Skill registration: package manifest `pi.skills: ["./skills"]`; skill file registers `/skill:warden-map` through Pi package loading conventions.
+- Map extension entry: `extensions/warden-map/index.ts` default export.
+- Commit extension entry: `extensions/warden-commit/index.ts` default export.
+- Package default export: root `index.ts` default from map extension entry.
+- Public API: `src/index.ts` re-exports constants, extension, git, map, and commit helpers.
+- Skill registration: package manifest `pi.skills: ["./skills"]`; skill files register `/skill:warden-map` and `/skill:warden-commit` through Pi package loading conventions.
 
 ## Local Conventions
 
@@ -55,7 +59,8 @@ Parent map: .warden/map.md
 - Uses Pi extension events: `session_start`, `session_compact`, `session_shutdown`, `tool_call`, `tool_result`, and `before_agent_start`.
 - Uses Pi exec wrapper for `git` commands with timeout.
 - Reads `.warden` map files from current working directory; does not write maps itself.
-- The skill workflow writes map files through agent tools, not extension runtime.
+- The map skill workflow writes map files through agent tools, not extension runtime.
+- Commit tools use git locally only; snapshot is read-only, while apply requires exact confirmation, matching snapshot hash, exact repo-relative paths, and clean staging assumptions.
 
 ## Verification for This Scope
 
@@ -68,7 +73,7 @@ Broader:
 - `mise run test:pi-warden`
 - `mise run test`
 
-`tests/map.test.ts` should protect marker extraction, scope path selection, budgets, and notice behavior. `tests/git.test.ts` should protect dirty parsing/formatting. `tests/extension.test.ts` should protect event wiring and deduplication.
+`tests/map.test.ts` should protect marker extraction, scope path selection, budgets, and notice behavior. `tests/git.test.ts` should protect dirty parsing/formatting. `tests/extension.test.ts` should protect event wiring and deduplication. `tests/commit.test.ts` should protect snapshot hashing, path-risk classification, apply validation, and local git safety invariants.
 
 ## Safe Edit Notes
 
@@ -78,6 +83,7 @@ Broader:
 - Clear git cache after tool calls that might mutate working tree.
 - Deduplicate injected maps by path and content hash per session.
 - Keep maps as reference material; generated content must state it does not override instructions.
+- Keep `warden_commit_snapshot` read-only and `warden_commit_apply` limited to exact user-confirmed local commits; never add remote git operations.
 
 ## Recent Evolution from Git History
 
