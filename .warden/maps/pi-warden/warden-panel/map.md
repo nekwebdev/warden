@@ -1,7 +1,9 @@
 # Warden Map: pi-warden/warden-panel
 
-Generated: 2026-06-04 10:24:45 -10
+Reviewed: 2026-06-05
 Scope: pi-warden/warden-panel
+Evidence basis: package README/AGENTS, `package.json`, public `src/`, bundled extensions, tests, existing map, bounded git history.
+Git basis: main@e604271
 Parent map: .warden/map.md
 
 <!-- warden-map:inject:start -->
@@ -80,7 +82,7 @@ Broader:
 
 ## Recent Evolution from Git History
 
-Recent history shows this is the hottest package area. `warden-panel` was added, then former `warden-packages` code/tests were renamed/folded into `warden-panel/extensions/warden-packages`. Former settings pane path was renamed to display pane.
+Recent history added `warden-panel`, added the former `warden-packages` package, then folded package management into `warden-panel/extensions/warden-packages` while preserving exact commands. Former settings pane path was renamed to Display. Later package-area work added `warden-flow`; no evidence moves runner-owned agent lifecycle into `warden-panel`.
 
 ## Open Questions
 

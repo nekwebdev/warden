@@ -1,7 +1,9 @@
 # Warden Map: pi-warden
 
-Generated: 2026-06-04 10:24:45 -10
+Reviewed: 2026-06-05
 Scope: pi-warden
+Evidence basis: `pi-warden/AGENTS.md`, `pi-warden/README.md`, package READMEs/AGENTS, package manifests, `pi-warden/tests/smoke.bats`, existing child maps, bounded git history.
+Git basis: main@e604271
 Parent map: .warden/map.md
 
 <!-- warden-map:inject:start -->
@@ -80,7 +82,7 @@ Focused package commands:
 
 ## Recent Evolution from Git History
 
-Recent commits show Pi package work became active after bootstrap/runner groundwork: panel package added, packages extension package added, then former `warden-packages` folded into `warden-panel/extensions/warden-packages`. Current package set includes the newer `warden-flow` package, which currently bundles `warden-map` repository mapping/context injection resources and `warden-commit` safe local commit resources.
+Recent git history shows the Pi package area shifted from panel-only to a workflow + panel package set. `warden-panel` added bundled panel extensions and folded former `warden-packages` into `extensions/warden-packages`. `warden-flow` was then added for durable maps/git context, gained `warden-commit` snapshot/apply tooling, and had its `warden-map` skill contract tightened. Package-area docs and smoke tests now name only `warden-panel` and `warden-flow`.
 
 ## Open Questions
 

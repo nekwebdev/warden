@@ -1,9 +1,9 @@
 # Warden Map
 
-Generated: 2026-06-04 10:24:45 -10
-Repository: warden (/home/oj/.local/share/warden)
-Git: main@0ee36f9 (dirty working tree)
+Reviewed: 2026-06-05
 Scope: repository root
+Evidence basis: root/subproject AGENTS and README files; `.mise.toml`; Bats/package test entry points; Pi package manifests; existing scoped maps; bounded git history.
+Git basis: main@e604271
 
 <!-- warden-map:inject:start -->
 ## Agent Quick Context
@@ -82,24 +82,17 @@ The first-run promise is central: a user can clone anywhere, run `./warden`, cho
 
 ## Recent Evolution from Git History
 
-Git history available. Current branch/commit from bounded inspection: `main@0ee36f9`.
+Git history available. Current bounded basis: `main@e604271`.
 
-Recent commits show staged growth:
+Orientation-relevant recent changes:
 
-- `0ee36f9` Bundle Warden Pi extensions into panel package.
-- `56d6ba7` Add Warden packages extension package.
-- `353f714` Add Warden panel extension package.
-- `ec92001` Add Pi agent settings commands.
-- `37f3b39` Update agent guidance.
-- `19cd31d` Improve shell integration install flow.
-- `874a56f` Use XDG data home for Warden state.
-- `f169941` Add Pi agent environments.
-- `1f18113` Rename delegated runner to warden.
-- `7fdcd56` Add bootstrap groundwork.
+- Runner/Pi-agent work remains active: recent commit `e604271` tightened cwd reading to canonical flattened `warden.agent.cwd`, following earlier Pi agent environment, settings, tmux-window, and shell integration work.
+- `warden-flow` became an established package: `add328e` added map resources, `0c0520c` added safe commit helper resources, `afc1c40` documented commit resources, and `ea22b8d` tightened the `warden-map` skill contract.
+- Map files were refreshed in `4a402a4`; map content should be treated as orientation, not current dirty-state source.
+- `warden-panel` earlier absorbed former `warden-packages` into `extensions/warden-packages` and remains panel framework plus bundled Display/Packages panes.
+- Skeleton `nix-warden/` and `dev-warden/` remained smoke-test-only boundaries in recent history.
 
-Recent changed-path clusters are concentrated in `pi-warden/warden-panel`, `run-warden`, former `pi-warden/warden-packages`, root tests, and package-area docs. Obvious renames folded `warden-packages` into `warden-panel/extensions/warden-packages`, moved Display pane from former settings pane path, and renamed delegated runner from `run-warden/bin/run-warden` to `run-warden/bin/warden`.
-
-This map was generated during active `warden-flow` package work. Use live git context injection for current dirty-state details rather than treating generated-time status as architecture.
+Recent changed-path clusters center on `run-warden/`, root/runner Bats tests, `.warden/` maps, `pi-warden/warden-flow`, and package-area docs. Use live git context injection for current branch, commit, dirty paths, and staging details.
 
 ## Scoped Maps
 

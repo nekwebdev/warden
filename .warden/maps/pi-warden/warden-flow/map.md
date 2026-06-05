@@ -1,7 +1,9 @@
 # Warden Map: pi-warden/warden-flow
 
-Generated: 2026-06-04 10:24:45 -10
+Reviewed: 2026-06-05
 Scope: pi-warden/warden-flow
+Evidence basis: package README/AGENTS, `package.json`, `src/`, extensions, skills, tests, existing map, bounded git history.
+Git basis: main@e604271
 Parent map: .warden/map.md
 
 <!-- warden-map:inject:start -->
@@ -87,7 +89,7 @@ Broader:
 
 ## Recent Evolution from Git History
 
-This package is new relative to the recent committed baseline, so package-specific committed history may be shallow until the first `warden-flow` commit lands. Root recent history shows Pi package infrastructure and panel package work are active.
+Recent history establishes this package in several steps: `add328e` added `warden-flow` with map skill/extension resources; `0c0520c` added `warden-commit` safe commit helper and tests; `afc1c40` updated package docs/smoke coverage for commit resources; and `ea22b8d` tightened the `warden-map` skill contract and related tests. Treat map and commit tooling as established package-owned behavior, not provisional uncommitted work.
 
 ## Open Questions
 
