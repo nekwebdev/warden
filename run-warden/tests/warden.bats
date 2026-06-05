@@ -6,6 +6,7 @@ setup() {
   FAKE_BIN="$BATS_TEST_TMPDIR/bin"
   mkdir -p "$TEST_HOME" "$FAKE_BIN"
   chmod +x "$RUN_WARDEN_ROOT/bin/warden"
+  unset TMUX TMUX_PANE
 
   cat > "$FAKE_BIN/npm" <<'SH'
 #!/usr/bin/env sh
@@ -42,6 +43,17 @@ if [ "$1" = "exec" ]; then shift; [ "$1" = "--" ] && shift; exec "$@"; fi
 exit 0
 SH
   chmod +x "$FAKE_BIN/mise"
+
+  cat > "$FAKE_BIN/tmux" <<'SH'
+#!/usr/bin/env sh
+if [ -n "${TMUX_LOG:-}" ]; then
+  printf 'argc=%s\n' "$#" >>"$TMUX_LOG"
+  for arg do printf 'arg=%s\n' "$arg" >>"$TMUX_LOG"; done
+fi
+[ -z "${TMUX_EXIT:-}" ] || exit "$TMUX_EXIT"
+exit 0
+SH
+  chmod +x "$FAKE_BIN/tmux"
 }
 
 @test "run-warden welcome prints WARDEN_HOME" {
@@ -168,6 +180,37 @@ SH
   grep -F "PILENS_DATA_DIR=$agents/ada/pi-lens" "$BATS_TEST_TMPDIR/pi.log"
   grep -F "arg=--flag" "$BATS_TEST_TMPDIR/pi.log"
   grep -F "arg=two words" "$BATS_TEST_TMPDIR/pi.log"
+}
+
+@test "pi renames tmux window to agent name before launch" {
+  agents="$BATS_TEST_TMPDIR/agents"
+  env HOME="$TEST_HOME" PATH="$FAKE_BIN:$PATH" WARDEN_AGENTS="$agents" NPM_LOG="$BATS_TEST_TMPDIR/npm.log" PI_LOG="$BATS_TEST_TMPDIR/install-pi.log" "$RUN_WARDEN_ROOT/bin/warden" agents new sentinel
+
+  run env HOME="$TEST_HOME" PATH="$FAKE_BIN:$PATH" WARDEN_AGENTS="$agents" PI_LOG="$BATS_TEST_TMPDIR/pi.log" TMUX=/tmp/tmux TMUX_LOG="$BATS_TEST_TMPDIR/tmux.log" "$RUN_WARDEN_ROOT/bin/warden" pi sentinel --flag
+  [ "$status" -eq 0 ]
+  grep -F "arg=rename-window" "$BATS_TEST_TMPDIR/tmux.log"
+  grep -F "arg=sentinel" "$BATS_TEST_TMPDIR/tmux.log"
+  grep -F "arg=--flag" "$BATS_TEST_TMPDIR/pi.log"
+}
+
+@test "pi skips tmux rename outside tmux" {
+  agents="$BATS_TEST_TMPDIR/agents"
+  env HOME="$TEST_HOME" PATH="$FAKE_BIN:$PATH" WARDEN_AGENTS="$agents" NPM_LOG="$BATS_TEST_TMPDIR/npm.log" PI_LOG="$BATS_TEST_TMPDIR/install-pi.log" "$RUN_WARDEN_ROOT/bin/warden" agents new sentinel
+
+  run env -u TMUX HOME="$TEST_HOME" PATH="$FAKE_BIN:$PATH" WARDEN_AGENTS="$agents" PI_LOG="$BATS_TEST_TMPDIR/pi.log" TMUX_LOG="$BATS_TEST_TMPDIR/tmux.log" "$RUN_WARDEN_ROOT/bin/warden" pi sentinel
+  [ "$status" -eq 0 ]
+  [ ! -e "$BATS_TEST_TMPDIR/tmux.log" ]
+  grep -F "PI_BIN=$agents/sentinel/npm/node_modules/.bin/pi" "$BATS_TEST_TMPDIR/pi.log"
+}
+
+@test "pi ignores tmux rename failures" {
+  agents="$BATS_TEST_TMPDIR/agents"
+  env HOME="$TEST_HOME" PATH="$FAKE_BIN:$PATH" WARDEN_AGENTS="$agents" NPM_LOG="$BATS_TEST_TMPDIR/npm.log" PI_LOG="$BATS_TEST_TMPDIR/install-pi.log" "$RUN_WARDEN_ROOT/bin/warden" agents new sentinel
+
+  run env HOME="$TEST_HOME" PATH="$FAKE_BIN:$PATH" WARDEN_AGENTS="$agents" PI_LOG="$BATS_TEST_TMPDIR/pi.log" TMUX=/tmp/tmux TMUX_LOG="$BATS_TEST_TMPDIR/tmux.log" TMUX_EXIT=9 "$RUN_WARDEN_ROOT/bin/warden" pi sentinel
+  [ "$status" -eq 0 ]
+  grep -F "arg=rename-window" "$BATS_TEST_TMPDIR/tmux.log"
+  grep -F "PI_BIN=$agents/sentinel/npm/node_modules/.bin/pi" "$BATS_TEST_TMPDIR/pi.log"
 }
 
 @test "pi update updates packages then Warden-managed Pi runtime" {
@@ -463,6 +506,7 @@ NODE
   grep -F "warden agents show <name> [--json]" "$repo_root/README.md"
   grep -F "warden agents list [--json]" "$repo_root/README.md"
   grep -F "warden pi <name>" "$repo_root/README.md"
+  grep -F "renames the current tmux window" "$repo_root/README.md"
   grep -F "WARDEN_AGENTS" "$repo_root/README.md"
   grep -F "warden.agents.<name>.cwd" "$repo_root/README.md"
 }

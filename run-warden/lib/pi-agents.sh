@@ -424,10 +424,10 @@ warden_agent_require_existing_dir() {
 warden_agent_expand_cwd_value() {
 	cwd_value=$1
 	case "$cwd_value" in
-	"~")
+	[~])
 		printf '%s\n' "$HOME"
 		;;
-	"~/"*)
+	[~]/*)
 		printf '%s/%s\n' "$HOME" "${cwd_value#\~/}"
 		;;
 	/*)
@@ -639,6 +639,13 @@ warden_agents_list() {
 	fi
 }
 
+warden_pi_rename_tmux_window() {
+	name=$1
+	[ -n "${TMUX:-}" ] || return 0
+	command -v tmux >/dev/null 2>&1 || return 0
+	tmux rename-window "$name" >/dev/null 2>&1 || return 0
+}
+
 warden_pi_update() {
 	name=$1
 	agent_dir=$2
@@ -778,6 +785,7 @@ warden_pi() {
 
 	pi_lens_dir=$(warden_agent_pi_lens_dir "$agent_dir")
 	mkdir -p "$pi_lens_dir" || return 1
+	warden_pi_rename_tmux_window "$name"
 	if [ "${1:-}" = "update" ]; then
 		warden_pi_update "$name" "$agent_dir" "$pi_bin" "$pi_lens_dir" "$@"
 		return $?

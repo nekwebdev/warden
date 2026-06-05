@@ -24,7 +24,7 @@ warden pi <name> ...
 
 `agents show` prints the agent dir, Pi executable, Pi Lens dir, settings path, effective cwd, and the complete formatted `settings.json`; `--json` emits the same information as JSON. `agents list` summarizes every agent directory; `--json` emits an array.
 
-`pi` reads the configured cwd from the agent-local settings file, changes to it when present, then runs the local executable with `PI_CODING_AGENT_DIR` and `PILENS_DATA_DIR` pointed inside the agent directory. Without a configured cwd, it preserves the caller's current working directory.
+`pi` reads the configured cwd from the agent-local settings file, changes to it when present, then runs the local executable with `PI_CODING_AGENT_DIR` and `PILENS_DATA_DIR` pointed inside the agent directory. Without a configured cwd, it preserves the caller's current working directory. Inside tmux, `pi` renames the current window to the agent name before launch; missing or failing tmux commands are ignored.
 
 ## Dev test
 
