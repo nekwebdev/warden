@@ -1,4 +1,5 @@
 PI_AGENT_PACKAGE="@earendil-works/pi-coding-agent"
+WARDEN_PI_TMUX_WINDOW_PREFIX="󱚤"
 
 warden_agents_root() {
 	if [ -n "${WARDEN_AGENTS:-}" ]; then
@@ -641,9 +642,67 @@ warden_agents_list() {
 
 warden_pi_rename_tmux_window() {
 	name=$1
+	WARDEN_PI_TMUX_WINDOW_RENAMED=0
+	WARDEN_PI_TMUX_WINDOW_NAME=
+	WARDEN_PI_TMUX_AUTOMATIC_RENAME=
 	[ -n "${TMUX:-}" ] || return 0
 	command -v tmux >/dev/null 2>&1 || return 0
-	tmux rename-window "$name" >/dev/null 2>&1 || return 0
+	WARDEN_PI_TMUX_WINDOW_NAME=$(tmux display-message -p '#W' 2>/dev/null || true)
+	WARDEN_PI_TMUX_AUTOMATIC_RENAME=$(tmux show-window-option -v automatic-rename 2>/dev/null || true)
+	tmux rename-window "$WARDEN_PI_TMUX_WINDOW_PREFIX $name" >/dev/null 2>&1 || return 0
+	WARDEN_PI_TMUX_WINDOW_RENAMED=1
+}
+
+warden_pi_reset_tmux_window() {
+	[ "${WARDEN_PI_TMUX_WINDOW_RENAMED:-0}" = "1" ] || return 0
+	WARDEN_PI_TMUX_WINDOW_RENAMED=0
+	[ -n "${TMUX:-}" ] || return 0
+	command -v tmux >/dev/null 2>&1 || return 0
+	if [ -n "${WARDEN_PI_TMUX_WINDOW_NAME:-}" ]; then
+		tmux rename-window "$WARDEN_PI_TMUX_WINDOW_NAME" >/dev/null 2>&1 || true
+	fi
+	if [ -n "${WARDEN_PI_TMUX_AUTOMATIC_RENAME:-}" ]; then
+		tmux set-window-option automatic-rename "$WARDEN_PI_TMUX_AUTOMATIC_RENAME" >/dev/null 2>&1 || true
+	fi
+}
+
+warden_pi_run_local() {
+	agent_dir=$1
+	pi_bin=$2
+	pi_lens_dir=$3
+	shift 3
+	if PI_CODING_AGENT_DIR="$agent_dir" PILENS_DATA_DIR="$pi_lens_dir" "$pi_bin" "$@"; then
+		pi_status=0
+	else
+		pi_status=$?
+	fi
+	return "$pi_status"
+}
+
+warden_pi_run_with_tmux_window() {
+	name=$1
+	agent_dir=$2
+	pi_bin=$3
+	pi_lens_dir=$4
+	shift 4
+	warden_pi_rename_tmux_window "$name"
+	trap 'warden_pi_reset_tmux_window' EXIT
+	if [ "${1:-}" = "update" ]; then
+		if warden_pi_update "$name" "$agent_dir" "$pi_bin" "$pi_lens_dir" "$@"; then
+			pi_status=0
+		else
+			pi_status=$?
+		fi
+	else
+		if warden_pi_run_local "$agent_dir" "$pi_bin" "$pi_lens_dir" "$@"; then
+			pi_status=0
+		else
+			pi_status=$?
+		fi
+	fi
+	trap - EXIT
+	warden_pi_reset_tmux_window
+	return "$pi_status"
 }
 
 warden_pi_update() {
@@ -741,7 +800,11 @@ warden_pi_update() {
 	fi
 
 	if [ "$update_invalid" -eq 1 ] || [ "$update_has_self" -eq 0 ]; then
-		PI_CODING_AGENT_DIR="$agent_dir" PILENS_DATA_DIR="$pi_lens_dir" exec "$pi_bin" "$@"
+		if warden_pi_run_local "$agent_dir" "$pi_bin" "$pi_lens_dir" "$@"; then
+			return 0
+		else
+			return $?
+		fi
 	fi
 
 	if [ "$update_has_extensions" -eq 1 ]; then
@@ -785,7 +848,10 @@ warden_pi() {
 
 	pi_lens_dir=$(warden_agent_pi_lens_dir "$agent_dir")
 	mkdir -p "$pi_lens_dir" || return 1
-	warden_pi_rename_tmux_window "$name"
+	if [ -n "${TMUX:-}" ]; then
+		warden_pi_run_with_tmux_window "$name" "$agent_dir" "$pi_bin" "$pi_lens_dir" "$@"
+		return $?
+	fi
 	if [ "${1:-}" = "update" ]; then
 		warden_pi_update "$name" "$agent_dir" "$pi_bin" "$pi_lens_dir" "$@"
 		return $?

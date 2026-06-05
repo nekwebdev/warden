@@ -51,6 +51,10 @@ if [ -n "${TMUX_LOG:-}" ]; then
   for arg do printf 'arg=%s\n' "$arg" >>"$TMUX_LOG"; done
 fi
 [ -z "${TMUX_EXIT:-}" ] || exit "$TMUX_EXIT"
+case "${1:-}" in
+  display-message) printf '%s\n' "${TMUX_WINDOW_NAME:-zsh}" ;;
+  show-window-option) printf '%s\n' "${TMUX_AUTOMATIC_RENAME:-on}" ;;
+esac
 exit 0
 SH
   chmod +x "$FAKE_BIN/tmux"
@@ -182,15 +186,29 @@ SH
   grep -F "arg=two words" "$BATS_TEST_TMPDIR/pi.log"
 }
 
-@test "pi renames tmux window to agent name before launch" {
+@test "pi prefixes tmux window and resets after launch" {
   agents="$BATS_TEST_TMPDIR/agents"
   env HOME="$TEST_HOME" PATH="$FAKE_BIN:$PATH" WARDEN_AGENTS="$agents" NPM_LOG="$BATS_TEST_TMPDIR/npm.log" PI_LOG="$BATS_TEST_TMPDIR/install-pi.log" "$RUN_WARDEN_ROOT/bin/warden" agents new sentinel
 
-  run env HOME="$TEST_HOME" PATH="$FAKE_BIN:$PATH" WARDEN_AGENTS="$agents" PI_LOG="$BATS_TEST_TMPDIR/pi.log" TMUX=/tmp/tmux TMUX_LOG="$BATS_TEST_TMPDIR/tmux.log" "$RUN_WARDEN_ROOT/bin/warden" pi sentinel --flag
+  run env HOME="$TEST_HOME" PATH="$FAKE_BIN:$PATH" WARDEN_AGENTS="$agents" PI_LOG="$BATS_TEST_TMPDIR/pi.log" TMUX=/tmp/tmux TMUX_LOG="$BATS_TEST_TMPDIR/tmux.log" TMUX_WINDOW_NAME=shell TMUX_AUTOMATIC_RENAME=on "$RUN_WARDEN_ROOT/bin/warden" pi sentinel --flag
   [ "$status" -eq 0 ]
   grep -F "arg=rename-window" "$BATS_TEST_TMPDIR/tmux.log"
-  grep -F "arg=sentinel" "$BATS_TEST_TMPDIR/tmux.log"
+  grep -F "arg=󱚤 sentinel" "$BATS_TEST_TMPDIR/tmux.log"
+  grep -F "arg=shell" "$BATS_TEST_TMPDIR/tmux.log"
+  grep -F "arg=set-window-option" "$BATS_TEST_TMPDIR/tmux.log"
+  grep -F "arg=automatic-rename" "$BATS_TEST_TMPDIR/tmux.log"
+  grep -F "arg=on" "$BATS_TEST_TMPDIR/tmux.log"
   grep -F "arg=--flag" "$BATS_TEST_TMPDIR/pi.log"
+}
+
+@test "pi resets tmux window after Pi failure" {
+  agents="$BATS_TEST_TMPDIR/agents"
+  env HOME="$TEST_HOME" PATH="$FAKE_BIN:$PATH" WARDEN_AGENTS="$agents" NPM_LOG="$BATS_TEST_TMPDIR/npm.log" PI_LOG="$BATS_TEST_TMPDIR/install-pi.log" "$RUN_WARDEN_ROOT/bin/warden" agents new sentinel
+
+  run env HOME="$TEST_HOME" PATH="$FAKE_BIN:$PATH" WARDEN_AGENTS="$agents" PI_LOG="$BATS_TEST_TMPDIR/pi.log" PI_EXIT=7 TMUX=/tmp/tmux TMUX_LOG="$BATS_TEST_TMPDIR/tmux.log" TMUX_WINDOW_NAME=shell "$RUN_WARDEN_ROOT/bin/warden" pi sentinel
+  [ "$status" -eq 7 ]
+  grep -F "arg=󱚤 sentinel" "$BATS_TEST_TMPDIR/tmux.log"
+  grep -F "arg=shell" "$BATS_TEST_TMPDIR/tmux.log"
 }
 
 @test "pi skips tmux rename outside tmux" {

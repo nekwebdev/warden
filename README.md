@@ -154,7 +154,7 @@ PI_CODING_AGENT_DIR="$AGENT_DIR"
 PILENS_DATA_DIR="$AGENT_DIR/pi-lens"
 ```
 
-If no cwd is configured, Warden preserves the caller's current working directory. When run inside tmux, `warden pi <name> ...` renames the current tmux window to `<name>` before launch; missing or failing tmux commands are ignored.
+If no cwd is configured, Warden preserves the caller's current working directory. When run inside tmux, `warden pi <name> ...` renames the current tmux window to `󱚤 <name>` before launch, then restores the previous window name and automatic rename setting after Pi exits; missing or failing tmux commands are ignored.
 
 ## Repository layout
 
