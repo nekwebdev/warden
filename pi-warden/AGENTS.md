@@ -71,7 +71,7 @@ Use only folders that fit the package.
 - Do not put package manifests, package source, package tests, package scripts, or package build systems directly under `pi-warden/`.
 - Do not mutate root `./warden` or `run-warden/` from package work unless the task explicitly scopes a cross-boundary contract.
 - Do not implement `warden agents ...` or `warden pi ...` behavior in local packages.
-- Keep Warden-managed Pi agent environment lifecycle behavior in `run-warden/`.
+- Keep Warden-managed Pi agent environment lifecycle behavior in `run-warden/`; package code owns package behavior, not the agent-environment bootstrap.
 - Keep package behavior independently installable and testable.
 - Keep package boundaries explicit when packages share APIs.
 
