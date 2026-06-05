@@ -183,6 +183,36 @@ describe("warden panel", () => {
 		});
 	});
 
+	it("keeps Apply hidden for panes with inline draft changes", async () => {
+		contributeWardenPane({
+			id: "inline",
+			label: "Inline",
+			order: 10,
+			showApplyControl: false,
+			itemCount: () => 1,
+			render: (ctx) => [
+				`${ctx.selectedIndex === 0 ? ">" : " "} Toggle inline setting`,
+			],
+			handleInput: (_data, ctx) => {
+				ctx.updateDraftSettings({ useNerdGlyphs: true });
+				return true;
+			},
+		});
+		await withTempSettings({ warden: { useNerdGlyphs: false } }, async () => {
+			const ui = testUI((component) => {
+				component.handleInput?.(" ");
+				const text = renderText(component);
+				assert.match(text, /Toggle inline setting/);
+				assert.doesNotMatch(text, /Apply/);
+				component.handleInput?.("\x1b");
+			});
+
+			assert.deepEqual(await showWardenPanel(ui, { initialPaneId: "inline" }), {
+				action: "close",
+			});
+		});
+	});
+
 	it("returns pane action results from pane input", async () => {
 		contributeWardenPane({
 			id: "packages",
@@ -279,6 +309,30 @@ describe("warden panel", () => {
 			});
 
 			assert.deepEqual(await showWardenPanel(ui), { action: "close" });
+		});
+	});
+
+	it("uses pane-specific footer hints when provided", async () => {
+		contributeWardenPane({
+			id: "effort",
+			label: "Effort",
+			order: 10,
+			footerHint:
+				"↑↓ navigate • Space/Enter cycle effort • Tab/Shift+Tab pane • Esc close",
+			itemCount: () => 1,
+			render: () => ["> warden-map low"],
+		});
+		await withTempSettings({ warden: { useNerdGlyphs: false } }, async () => {
+			const ui = testUI((component, resolve) => {
+				const text = renderText(component);
+				assert.match(text, /Space\/Enter cycle effort/);
+				assert.doesNotMatch(text, /Space\/Enter select/);
+				resolve({ action: "close" });
+			});
+
+			assert.deepEqual(await showWardenPanel(ui, { initialPaneId: "effort" }), {
+				action: "close",
+			});
 		});
 	});
 

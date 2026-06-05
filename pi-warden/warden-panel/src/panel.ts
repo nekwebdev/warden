@@ -235,7 +235,7 @@ export async function showWardenPanel(
 					);
 				};
 				const bottomBorder = () => {
-					const label = ` ${FOOTER} `;
+					const label = ` ${activePane()?.footerHint ?? FOOTER} `;
 					const remainingWidth = Math.max(0, innerWidth - visibleWidth(label));
 					const leftWidth = Math.floor(remainingWidth / 2);
 					return (

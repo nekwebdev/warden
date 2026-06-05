@@ -47,6 +47,7 @@ export type WardenPanelPane = {
 	readonly order?: number;
 	readonly command?: `warden:${string}`;
 	readonly showApplyControl?: boolean;
+	readonly footerHint?: string;
 	itemCount(ctx: WardenPanelPaneContext): number;
 	render(ctx: WardenPanelPaneContext, width: number, active: boolean): string[];
 	handleInput?(
