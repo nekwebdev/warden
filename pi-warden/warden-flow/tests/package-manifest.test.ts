@@ -20,15 +20,28 @@ const pkg = JSON.parse(
 	pi?: { extensions?: string[]; skills?: string[] };
 };
 
+function directoryNames(relativeDir: string): string[] {
+	return readdirSync(resolve(packageRoot, relativeDir), { withFileTypes: true })
+		.filter((dirent) => dirent.isDirectory())
+		.map((dirent) => dirent.name)
+		.sort();
+}
+
+function extensionEntries(): string[] {
+	return directoryNames("extensions").map((name) =>
+		join("extensions", name, "index.ts"),
+	);
+}
+
+function skillEntries(): string[] {
+	return directoryNames("skills").map((name) =>
+		join("skills", name, "SKILL.md"),
+	);
+}
+
 function advertisedExtensionEntries(): string[] {
 	return (pkg.pi?.extensions ?? []).flatMap((entry) => {
-		if (entry === "./extensions/*/index.ts") {
-			return readdirSync(resolve(packageRoot, "extensions"), {
-				withFileTypes: true,
-			})
-				.filter((dirent) => dirent.isDirectory())
-				.map((dirent) => join("extensions", dirent.name, "index.ts"));
-		}
+		if (entry === "./extensions/*/index.ts") return extensionEntries();
 		return [entry];
 	});
 }
@@ -62,7 +75,8 @@ describe("package pi resources", () => {
 	it("all advertised Pi resources and package exports exist", () => {
 		const entries = [
 			...advertisedExtensionEntries(),
-			resolve(packageRoot, "skills", "warden-map", "SKILL.md"),
+			...(pkg.pi?.skills ?? []),
+			...skillEntries(),
 			...(pkg.exports ? Object.values(pkg.exports) : []),
 		];
 		assert.ok(
@@ -78,10 +92,30 @@ describe("package pi resources", () => {
 		}
 	});
 
-	it("loads the bundled extension family", () => {
-		assert.deepEqual(advertisedExtensionEntries().sort(), [
-			"extensions/warden-map/index.ts",
-		]);
+	it("all extension directories expose index.ts", () => {
+		const entries = extensionEntries();
+		assert.ok(entries.length > 0, "expected at least one bundled extension");
+		assert.deepEqual(advertisedExtensionEntries().sort(), entries);
+		for (const entry of entries) {
+			assert.equal(
+				existsSync(resolve(packageRoot, entry)),
+				true,
+				`${entry} should exist`,
+			);
+		}
+	});
+
+	it("all skill directories contain SKILL.md with minimal frontmatter", () => {
+		const entries = skillEntries();
+		assert.ok(entries.length > 0, "expected at least one bundled skill");
+		for (const entry of entries) {
+			const target = resolve(packageRoot, entry);
+			assert.equal(existsSync(target), true, `${entry} should exist`);
+			const content = readFileSync(target, "utf-8");
+			assert.match(content, /^---\n[\s\S]*?\n---/);
+			assert.match(content, /^name:\s*\S+/m);
+			assert.match(content, /^license:\s*MIT/m);
+		}
 	});
 
 	it("package dry-run succeeds", () => {

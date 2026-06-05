@@ -5,6 +5,7 @@ const tests = [
 	"tests/package-manifest.test.ts",
 	"tests/map.test.ts",
 	"tests/git.test.ts",
+	"tests/commit.test.ts",
 	"tests/extension.test.ts",
 ];
 

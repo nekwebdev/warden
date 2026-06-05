@@ -16,9 +16,11 @@ Repository guidance for coding agents working in `pi-warden/warden-flow/`.
 
 Package-owned areas:
 
-- shared map and git-context logic in `src/`;
+- shared map, git-context, and commit helper logic in `src/`;
 - map injection extension in `extensions/warden-map/`;
+- commit snapshot/apply extension in `extensions/warden-commit/`;
 - `warden-map` skill in `skills/warden-map/`;
+- `warden-commit` skill in `skills/warden-commit/`;
 - package tests in `tests/`;
 - package scripts in `scripts/`.
 
@@ -38,6 +40,8 @@ This package does not own Warden runner workflows, agent lifecycle commands, sib
 - Keep scoped injection path-triggered from tool results so the model does not need extra map-reading tool calls.
 - Deduplicate injected maps by path and content hash per session.
 - Git context must include branch, short commit, and dirty state when git is available.
+- `warden_commit_snapshot` must stay read-only.
+- `warden_commit_apply` may create local commits only after exact user confirmation and matching snapshot-hash validation; it must stage exact paths only and never push, pull, fetch, reset, rebase, amend, tag, stash, checkout, clean, restore, create PRs, or run remote git operations.
 - Do not add subagents, workflow runners, sibling package installers, or model override cascades to this package.
 
 ## Testing

@@ -76,7 +76,9 @@ Warden's workflow and durable-orientation package for Pi skills and extensions.
 Provides:
 
 - `/skill:warden-map` — creates or refreshes repository map files;
+- `/skill:warden-commit` — plans safe, atomic local commits and can apply them after exact `Commit` confirmation;
 - `extensions/warden-map` — injects token-conscious map capsules and git context;
+- `extensions/warden-commit` — provides `warden_commit_snapshot` and `warden_commit_apply` for compact commit planning and safe local commit execution;
 - map layout and capsule conventions for reducing repeated repo discovery.
 
 Package docs:

@@ -7,7 +7,9 @@ It reduces repeated repo discovery by maintaining a small map tree and injecting
 ## What it provides
 
 - `/skill:warden-map` — creates or refreshes repository map files.
+- `/skill:warden-commit` — plans safe, atomic local commits and can apply them after exact `Commit` confirmation.
 - `extensions/warden-map` — injects map capsules and git context.
+- `extensions/warden-commit` — registers `warden_commit_snapshot` and `warden_commit_apply` for safe local commit planning and execution.
 - Session-start map injection — hidden root map capsule from `.warden/map.md`.
 - Scoped map injection — hidden scoped capsules from `.warden/maps/<scope>/map.md` appended to relevant tool results.
 - Git context injection — branch, short commit, and dirty state.
@@ -74,6 +76,16 @@ When git is available, the extension injects:
 ```
 
 Git context is cached and re-injected only when branch, commit, or dirty state changes.
+
+## Commit helper
+
+`/skill:warden-commit` uses `warden_commit_snapshot` from `extensions/warden-commit` to plan local commits without token-heavy repeated git inspection.
+
+`warden_commit_snapshot` is read-only. It reports compact git status, Warden boundaries, path risks, deterministic buckets, recent commit subjects, and a stable snapshot hash. It does not stage, commit, push, pull, fetch, rebase, reset, amend, tag, or create PRs.
+
+`warden_commit_apply` can create local commits only from an explicit plan after the user replies exactly `Commit`. It recomputes the snapshot, refuses when the hash changed, validates exact repo-relative paths, rejects risky/excluded paths by default, refuses mixed staged/unstaged or pre-existing staged changes, stages only exact paths, verifies the staged set before `git commit`, and returns commit hashes plus final `git status --short`.
+
+It never pushes, pulls, fetches, rebases, resets, amends, tags, stashes, checks out, cleans, restores, creates PRs, or runs remote git operations.
 
 ## Scope boundary
 
