@@ -15,7 +15,7 @@ This file is project guidance for any agent working in the repository. Role-spec
 - Root bootstrap ensures mise with consent and delegates through `mise exec` to `run-warden/bin/warden`.
 - `run-warden/` owns command workflows after bootstrap.
 - Current delegated CLI supports welcome/help, doctor checks, shell integration, Pi agent environment creation, and Pi launch through isolated agent dirs.
-- `pi-warden/` is a container for Pi package directories. Pi packages can bundle extensions, skills, prompts, and themes. Current package is `pi-warden/warden-panel/` (`@nekwebdev/warden-panel`).
+- `pi-warden/` is a container for Pi package directories. Pi packages can bundle extensions, skills, prompts, and themes. Current packages are `pi-warden/warden-panel/` (`@nekwebdev/warden-panel`) and `pi-warden/warden-flow/` (`@nekwebdev/warden-flow`, bundling the `warden-map` skill/extension).
 - `nix-warden/` and `dev-warden/` are current skeleton/product-boundary placeholders unless their own guidance says otherwise.
 
 ## Root bootstrap rules

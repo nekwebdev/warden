@@ -341,6 +341,7 @@ warden_agent_prepare_npm_config() {
 
 warden_agent_install_pi() {
 	agent_dir=$1
+	pi_package=${2:-$PI_AGENT_PACKAGE}
 	npm_prefix=$(warden_agent_npm_prefix "$agent_dir")
 	warden_agent_prepare_npm_config "$npm_prefix" || return 1
 	npm install \
@@ -348,7 +349,19 @@ warden_agent_install_pi() {
 		--cache "$npm_prefix/.npm-cache" \
 		--userconfig "$npm_prefix/.npmrc" \
 		--globalconfig "$npm_prefix/.npm-globalrc" \
-		"$PI_AGENT_PACKAGE"
+		"$pi_package"
+}
+
+warden_agent_update_pi() {
+	name=$1
+	agent_dir=$2
+	warden_agent_install_pi "$agent_dir" "${PI_AGENT_PACKAGE}@latest" || return $?
+	pi_bin=$(warden_agent_pi_bin "$agent_dir")
+	if [ ! -x "$pi_bin" ]; then
+		printf '%s\n' "warden: Pi update completed, but executable is missing: $pi_bin" >&2
+		return 1
+	fi
+	printf 'updated agent %s Pi: %s\n' "$name" "$pi_bin"
 }
 
 warden_agents_new() {
@@ -486,6 +499,16 @@ warden_agent_cd_to_configured_cwd() {
 	cd "$resolved_cwd" || return 1
 }
 
+warden_agents_update() {
+	if [ $# -ne 1 ]; then
+		printf '%s\n' "usage: warden agents update NAME" >&2
+		return 2
+	fi
+	name=$1
+	agent_dir=$(warden_agent_require_existing_dir "$name") || return $?
+	warden_agent_update_pi "$name" "$agent_dir"
+}
+
 warden_agents_set() {
 	if [ $# -ne 3 ] || [ "${2:-}" != "cwd" ]; then
 		printf '%s\n' "usage: warden agents set NAME cwd DIR" >&2
@@ -616,6 +639,110 @@ warden_agents_list() {
 	fi
 }
 
+warden_pi_update() {
+	name=$1
+	agent_dir=$2
+	pi_bin=$3
+	pi_lens_dir=$4
+	shift 4
+
+	update_source=
+	update_self_flag=0
+	update_extensions_flag=0
+	update_extension_flag=0
+	update_expect_extension_value=0
+	update_invalid=0
+	update_index=0
+
+	for update_arg in "$@"; do
+		if [ "$update_index" -eq 0 ]; then
+			update_index=1
+			continue
+		fi
+
+		if [ "$update_expect_extension_value" -eq 1 ]; then
+			case "$update_arg" in
+			"" | -*) update_invalid=1 ;;
+			esac
+			update_expect_extension_value=0
+			continue
+		fi
+
+		case "$update_arg" in
+		--self)
+			update_self_flag=1
+			;;
+		--extensions)
+			update_extensions_flag=1
+			;;
+		--extension)
+			update_extension_flag=1
+			update_expect_extension_value=1
+			;;
+		--force)
+			;;
+		-*)
+			update_invalid=1
+			;;
+		*)
+			if [ -n "$update_source" ]; then
+				update_invalid=1
+			else
+				update_source=$update_arg
+			fi
+			;;
+		esac
+	done
+
+	if [ "$update_expect_extension_value" -eq 1 ]; then
+		update_invalid=1
+	fi
+	if [ "$update_extension_flag" -eq 1 ] && { [ "$update_self_flag" -eq 1 ] || [ "$update_extensions_flag" -eq 1 ] || [ -n "$update_source" ]; }; then
+		update_invalid=1
+	fi
+
+	update_has_self=0
+	update_has_extensions=0
+	if [ "$update_invalid" -eq 0 ]; then
+		if [ -n "$update_source" ]; then
+			case "$update_source" in
+			self | pi)
+				update_has_self=1
+				if [ "$update_extensions_flag" -eq 1 ]; then
+					update_has_extensions=1
+				fi
+				;;
+			*)
+				if [ "$update_self_flag" -eq 1 ] || [ "$update_extensions_flag" -eq 1 ]; then
+					update_invalid=1
+				else
+					update_has_extensions=1
+				fi
+				;;
+			esac
+		elif [ "$update_self_flag" -eq 1 ] && [ "$update_extensions_flag" -eq 1 ]; then
+			update_has_self=1
+			update_has_extensions=1
+		elif [ "$update_self_flag" -eq 1 ]; then
+			update_has_self=1
+		elif [ "$update_extensions_flag" -eq 1 ] || [ "$update_extension_flag" -eq 1 ]; then
+			update_has_extensions=1
+		else
+			update_has_self=1
+			update_has_extensions=1
+		fi
+	fi
+
+	if [ "$update_invalid" -eq 1 ] || [ "$update_has_self" -eq 0 ]; then
+		PI_CODING_AGENT_DIR="$agent_dir" PILENS_DATA_DIR="$pi_lens_dir" exec "$pi_bin" "$@"
+	fi
+
+	if [ "$update_has_extensions" -eq 1 ]; then
+		PI_CODING_AGENT_DIR="$agent_dir" PILENS_DATA_DIR="$pi_lens_dir" "$pi_bin" update --extensions || return $?
+	fi
+	warden_agent_update_pi "$name" "$agent_dir"
+}
+
 warden_pi() {
 	if [ $# -lt 1 ]; then
 		printf '%s\n' "usage: warden pi <name> [args...]" >&2
@@ -651,5 +778,9 @@ warden_pi() {
 
 	pi_lens_dir=$(warden_agent_pi_lens_dir "$agent_dir")
 	mkdir -p "$pi_lens_dir" || return 1
+	if [ "${1:-}" = "update" ]; then
+		warden_pi_update "$name" "$agent_dir" "$pi_bin" "$pi_lens_dir" "$@"
+		return $?
+	fi
 	PI_CODING_AGENT_DIR="$agent_dir" PILENS_DATA_DIR="$pi_lens_dir" exec "$pi_bin" "$@"
 }

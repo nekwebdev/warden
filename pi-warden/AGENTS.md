@@ -31,12 +31,18 @@ Use only folders that fit the package.
 - Read `pi-warden/<package>/AGENTS.md` before editing inside a package.
 - Do not put package manifests or source files directly at `pi-warden/` root.
 - Keep each package independently installable/testable with `npm install --prefix pi-warden/<package>` and `npm test --prefix pi-warden/<package>` when it is TypeScript/npm-based.
-- `warden-panel` is the current Pi package. It bundles the Warden panel command, Display pane, and Packages pane extensions while keeping shared panel framework APIs in `src/`.
+- Current Pi packages:
+  - `warden-panel` bundles the Warden panel command, Display pane, and Packages pane extensions while keeping shared panel framework APIs in `src/`.
+  - `warden-flow` bundles `/skill:warden-map` plus the `warden-map` map/git context injection extension while keeping shared map-loading and git-context logic in `src/`.
 - `warden agents new` / `warden pi <name> ...` is a `run-warden` workflow that installs the registry Pi package into per-agent directories; it is not the agent-environment bootstrap for `pi-warden` and not a local `pi-warden` package install.
 - Do not mutate root `./warden` or `run-warden/` from package work unless a feature explicitly scopes that boundary change.
 
 ## Tests
 
 ```sh
+npm install --prefix pi-warden/warden-panel
+npm install --prefix pi-warden/warden-flow
+npm test --prefix pi-warden/warden-panel
+npm test --prefix pi-warden/warden-flow
 mise run test:pi-warden
 ```

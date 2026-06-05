@@ -1,0 +1,62 @@
+{
+  "name": "@nekwebdev/warden-flow",
+  "version": "0.1.0",
+  "description": "Warden Pi Agent workflow package bundling repository map skills and extensions",
+  "type": "module",
+  "files": [
+    "index.ts",
+    "src/**/*.ts",
+    "extensions/**/*.ts",
+    "skills/**",
+    "!**/*.test.ts",
+    "README.md",
+    "LICENSE"
+  ],
+  "keywords": [
+    "pi-package",
+    "pi",
+    "pi-agent",
+    "warden",
+    "warden-flow",
+    "warden-map",
+    "skills",
+    "repository-map",
+    "context"
+  ],
+  "author": "nekwebdev",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/nekwebdev/warden.git",
+    "directory": "pi-warden/warden-flow"
+  },
+  "homepage": "https://github.com/nekwebdev/warden#readme",
+  "bugs": {
+    "url": "https://github.com/nekwebdev/warden/issues"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "test": "node scripts/run-tests.mjs"
+  },
+  "peerDependencies": {
+    "@earendil-works/pi-coding-agent": "*"
+  },
+  "devDependencies": {
+    "@earendil-works/pi-coding-agent": "*",
+    "@types/node": "^25.9.1",
+    "tsx": "^4.20.0"
+  },
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "pi": {
+    "extensions": [
+      "./extensions/*/index.ts"
+    ],
+    "skills": [
+      "./skills"
+    ]
+  }
+}

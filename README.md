@@ -53,6 +53,7 @@ $WARDEN_HOME/nix-warden
 warden help                 # show command help after shell integration
 warden doctor               # readiness checks, including non-fatal Pi agent hints
 warden agents new [name]             # create isolated Pi agent environment
+warden agents update <name>          # update Warden-managed Pi runtime
 warden agents set <name> cwd <dir>   # pin Pi launch cwd for an agent
 warden agents unset <name> cwd       # remove pinned launch cwd
 warden agents show <name> [--json]   # show agent dirs and complete settings.json
@@ -66,6 +67,8 @@ warden shell snippet bash|zsh|fish
 ## Pi agent environments
 
 `warden agents new [name]` creates a local Pi agent environment under `WARDEN_AGENTS/<name>` when `WARDEN_AGENTS` is set; otherwise it uses `${XDG_CONFIG_HOME:-$HOME/.config}/pi-agents/<name>`. If `name` is omitted, Warden prompts for it interactively.
+
+`warden agents update <name>` installs `@earendil-works/pi-coding-agent@latest` into that existing agent's local npm prefix. `warden pi <name> update` updates Pi packages first, then uses the same Warden-managed runtime update path instead of Pi's global self-updater.
 
 Agent names may contain letters, numbers, `.`, `_`, and `-`; `/`, `.`, `..`, and empty names are rejected. Existing agent directories are not overwritten.
 
@@ -137,10 +140,10 @@ The root suite uses Bats with temp HOME/clone fixtures to verify bootstrap movem
 
 - `run-warden/` owns command workflows after root bootstrap.
 - `nix-warden/` will own NixOS/system configuration.
-- `pi-warden/` owns Pi Agent packages. It is a container: each package lives in its own folder. Current package `pi-warden/warden-panel/` (`@nekwebdev/warden-panel`) bundles multiple panel-related Pi extensions.
+- `pi-warden/` owns Pi Agent packages. It is a container: each package lives in its own folder. Current packages are `pi-warden/warden-panel/` (`@nekwebdev/warden-panel`) and `pi-warden/warden-flow/` (`@nekwebdev/warden-flow`, bundling the `warden-map` skill/extension).
 - `dev-warden/` will own developer-environment work.
 
-Current groundwork does not implement product features for `nix-warden` or `dev-warden`. `pi-warden/warden-panel/` contains the current scoped Pi Agent package; runner-owned agent environment workflows remain in `run-warden/`.
+Current groundwork does not implement product features for `nix-warden` or `dev-warden`. Pi Agent package code lives under `pi-warden/<package>/`; runner-owned agent environment workflows remain in `run-warden/`.
 
 ## Agent guidance
 

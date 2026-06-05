@@ -30,6 +30,7 @@ printf 'PILENS_DATA_DIR=%s\n' "$PILENS_DATA_DIR" >>"$PI_LOG"
 printf 'PWD=%s\n' "$(pwd)" >>"$PI_LOG"
 printf 'argc=%s\n' "$#" >>"$PI_LOG"
 for arg do printf 'arg=%s\n' "$arg" >>"$PI_LOG"; done
+[ -z "${PI_EXIT:-}" ] || exit "$PI_EXIT"
 PI
 chmod +x "$prefix/node_modules/.bin/pi"
 SH
@@ -61,10 +62,11 @@ SH
   [ "$status" -eq 2 ]
 }
 
-@test "run-warden help lists agents new" {
+@test "run-warden help lists agents commands" {
   run env HOME="$TEST_HOME" "$RUN_WARDEN_ROOT/bin/warden" help
   [ "$status" -eq 0 ]
   [[ "$output" == *"agents new [NAME]"* ]]
+  [[ "$output" == *"agents update NAME"* ]]
 }
 
 @test "agents new installs Pi into WARDEN_AGENTS local npm prefix" {
@@ -95,6 +97,30 @@ SH
   run env -u WARDEN_AGENTS -u XDG_CONFIG_HOME HOME="$TEST_HOME" PATH="$FAKE_BIN:$PATH" NPM_LOG="$BATS_TEST_TMPDIR/npm.log" "$RUN_WARDEN_ROOT/bin/warden" agents new ada
   [ "$status" -eq 0 ]
   [ -x "$TEST_HOME/.config/pi-agents/ada/npm/node_modules/.bin/pi" ]
+}
+
+@test "agents update reinstalls Warden-managed Pi runtime" {
+  agents="$BATS_TEST_TMPDIR/agents"
+  env HOME="$TEST_HOME" PATH="$FAKE_BIN:$PATH" WARDEN_AGENTS="$agents" NPM_LOG="$BATS_TEST_TMPDIR/install-npm.log" "$RUN_WARDEN_ROOT/bin/warden" agents new ada
+
+  run env HOME="$TEST_HOME" PATH="$FAKE_BIN:$PATH" WARDEN_AGENTS="$agents" NPM_LOG="$BATS_TEST_TMPDIR/update-npm.log" "$RUN_WARDEN_ROOT/bin/warden" agents update ada
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"updated agent ada Pi"* ]]
+  [ -x "$agents/ada/npm/node_modules/.bin/pi" ]
+  grep -F "arg=--prefix" "$BATS_TEST_TMPDIR/update-npm.log"
+  grep -F "arg=$agents/ada/npm" "$BATS_TEST_TMPDIR/update-npm.log"
+  grep -F "arg=@earendil-works/pi-coding-agent@latest" "$BATS_TEST_TMPDIR/update-npm.log"
+}
+
+@test "agents update requires an existing agent name" {
+  agents="$BATS_TEST_TMPDIR/agents"
+  run env HOME="$TEST_HOME" PATH="$FAKE_BIN:$PATH" WARDEN_AGENTS="$agents" "$RUN_WARDEN_ROOT/bin/warden" agents update
+  [ "$status" -eq 2 ]
+  [[ "$output" == *"usage: warden agents update NAME"* ]]
+
+  run env HOME="$TEST_HOME" PATH="$FAKE_BIN:$PATH" WARDEN_AGENTS="$agents" "$RUN_WARDEN_ROOT/bin/warden" agents update missing
+  [ "$status" -eq 2 ]
+  [[ "$output" == *"agent not found"* ]]
 }
 
 @test "agents new rejects unsafe agent names" {
@@ -142,6 +168,53 @@ SH
   grep -F "PILENS_DATA_DIR=$agents/ada/pi-lens" "$BATS_TEST_TMPDIR/pi.log"
   grep -F "arg=--flag" "$BATS_TEST_TMPDIR/pi.log"
   grep -F "arg=two words" "$BATS_TEST_TMPDIR/pi.log"
+}
+
+@test "pi update updates packages then Warden-managed Pi runtime" {
+  agents="$BATS_TEST_TMPDIR/agents"
+  env HOME="$TEST_HOME" PATH="$FAKE_BIN:$PATH" WARDEN_AGENTS="$agents" NPM_LOG="$BATS_TEST_TMPDIR/install-npm.log" PI_LOG="$BATS_TEST_TMPDIR/install-pi.log" "$RUN_WARDEN_ROOT/bin/warden" agents new ada
+
+  run env HOME="$TEST_HOME" PATH="$FAKE_BIN:$PATH" WARDEN_AGENTS="$agents" NPM_LOG="$BATS_TEST_TMPDIR/update-npm.log" PI_LOG="$BATS_TEST_TMPDIR/pi.log" "$RUN_WARDEN_ROOT/bin/warden" pi ada update
+  [ "$status" -eq 0 ]
+  grep -F "PI_BIN=$agents/ada/npm/node_modules/.bin/pi" "$BATS_TEST_TMPDIR/pi.log"
+  grep -F "argc=2" "$BATS_TEST_TMPDIR/pi.log"
+  grep -F "arg=update" "$BATS_TEST_TMPDIR/pi.log"
+  grep -F "arg=--extensions" "$BATS_TEST_TMPDIR/pi.log"
+  grep -F "arg=$agents/ada/npm" "$BATS_TEST_TMPDIR/update-npm.log"
+  grep -F "arg=@earendil-works/pi-coding-agent@latest" "$BATS_TEST_TMPDIR/update-npm.log"
+}
+
+@test "pi update self target updates only Warden-managed Pi runtime" {
+  agents="$BATS_TEST_TMPDIR/agents"
+  env HOME="$TEST_HOME" PATH="$FAKE_BIN:$PATH" WARDEN_AGENTS="$agents" NPM_LOG="$BATS_TEST_TMPDIR/install-npm.log" PI_LOG="$BATS_TEST_TMPDIR/install-pi.log" "$RUN_WARDEN_ROOT/bin/warden" agents new ada
+
+  run env HOME="$TEST_HOME" PATH="$FAKE_BIN:$PATH" WARDEN_AGENTS="$agents" NPM_LOG="$BATS_TEST_TMPDIR/update-npm.log" PI_LOG="$BATS_TEST_TMPDIR/pi.log" "$RUN_WARDEN_ROOT/bin/warden" pi ada update --self
+  [ "$status" -eq 0 ]
+  [ ! -e "$BATS_TEST_TMPDIR/pi.log" ]
+  grep -F "arg=$agents/ada/npm" "$BATS_TEST_TMPDIR/update-npm.log"
+  grep -F "arg=@earendil-works/pi-coding-agent@latest" "$BATS_TEST_TMPDIR/update-npm.log"
+}
+
+@test "pi update extensions target delegates only to Pi" {
+  agents="$BATS_TEST_TMPDIR/agents"
+  env HOME="$TEST_HOME" PATH="$FAKE_BIN:$PATH" WARDEN_AGENTS="$agents" NPM_LOG="$BATS_TEST_TMPDIR/install-npm.log" PI_LOG="$BATS_TEST_TMPDIR/install-pi.log" "$RUN_WARDEN_ROOT/bin/warden" agents new ada
+
+  run env HOME="$TEST_HOME" PATH="$FAKE_BIN:$PATH" WARDEN_AGENTS="$agents" NPM_LOG="$BATS_TEST_TMPDIR/update-npm.log" PI_LOG="$BATS_TEST_TMPDIR/pi.log" "$RUN_WARDEN_ROOT/bin/warden" pi ada update --extensions
+  [ "$status" -eq 0 ]
+  [ ! -e "$BATS_TEST_TMPDIR/update-npm.log" ]
+  grep -F "argc=2" "$BATS_TEST_TMPDIR/pi.log"
+  grep -F "arg=update" "$BATS_TEST_TMPDIR/pi.log"
+  grep -F "arg=--extensions" "$BATS_TEST_TMPDIR/pi.log"
+}
+
+@test "pi update skips runtime update when package update fails" {
+  agents="$BATS_TEST_TMPDIR/agents"
+  env HOME="$TEST_HOME" PATH="$FAKE_BIN:$PATH" WARDEN_AGENTS="$agents" NPM_LOG="$BATS_TEST_TMPDIR/install-npm.log" PI_LOG="$BATS_TEST_TMPDIR/install-pi.log" "$RUN_WARDEN_ROOT/bin/warden" agents new ada
+
+  run env HOME="$TEST_HOME" PATH="$FAKE_BIN:$PATH" WARDEN_AGENTS="$agents" NPM_LOG="$BATS_TEST_TMPDIR/update-npm.log" PI_LOG="$BATS_TEST_TMPDIR/pi.log" PI_EXIT=7 "$RUN_WARDEN_ROOT/bin/warden" pi ada update
+  [ "$status" -eq 7 ]
+  [ ! -e "$BATS_TEST_TMPDIR/update-npm.log" ]
+  grep -F "arg=--extensions" "$BATS_TEST_TMPDIR/pi.log"
 }
 
 @test "pi missing agent creates after consent and then runs" {
@@ -384,6 +457,7 @@ NODE
 @test "README documents Pi agent commands" {
   repo_root=$(cd "$RUN_WARDEN_ROOT/.." && pwd -P)
   grep -F "warden agents new [name]" "$repo_root/README.md"
+  grep -F "warden agents update <name>" "$repo_root/README.md"
   grep -F "warden agents set <name> cwd <dir>" "$repo_root/README.md"
   grep -F "warden agents unset <name> cwd" "$repo_root/README.md"
   grep -F "warden agents show <name> [--json]" "$repo_root/README.md"

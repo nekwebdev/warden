@@ -23,12 +23,15 @@ pi-warden/
     scripts/
 ```
 
-Current package:
+Current packages:
 
 - `warden-panel/` — package `@nekwebdev/warden-panel`, Warden's Pi Agent panel framework plus bundled panel extensions:
   - `warden-panel` registers `/warden` and opens the first available pane.
   - `warden-display` contributes the Display pane and `/warden:display`.
   - `warden-packages` contributes the Packages pane and `/warden:packages`.
+- `warden-flow/` — package `@nekwebdev/warden-flow`, Warden's workflow package for Pi skills and extensions:
+  - `warden-map` contributes `/skill:warden-map`.
+  - `warden-map` injects `.warden/map.md` capsules, scoped `.warden/maps/**/map.md` capsules, and current git dirty context.
 
 Future Pi packages should use the same shape: package manifest and package-specific docs/guidance at the package folder root, then code and assets in folders such as `src/`, `extensions/`, `skills/`, `prompts/`, `themes/`, `tests/`, `hooks/`, `docs/`, `bin/`, `configs/`, `scripts/`, or `web/` as needed.
 
@@ -42,6 +45,8 @@ Packages in this directory provide Pi Agent package behavior only after installe
 
 ```sh
 npm install --prefix pi-warden/warden-panel
+npm install --prefix pi-warden/warden-flow
 npm test --prefix pi-warden/warden-panel
+npm test --prefix pi-warden/warden-flow
 mise run test:pi-warden
 ```

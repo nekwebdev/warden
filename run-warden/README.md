@@ -8,6 +8,7 @@ The root `./warden` script stays tiny: it normalizes `WARDEN_HOME`, handles safe
 
 ```sh
 warden agents new [name]
+warden agents update <name>
 warden agents set <name> cwd <dir>
 warden agents unset <name> cwd
 warden agents show <name> [--json]
@@ -16,6 +17,8 @@ warden pi <name> ...
 ```
 
 `agents new` installs the registry Pi coding-agent package into the selected agent directory's local `npm/node_modules`.
+
+`agents update <name>` installs `@earendil-works/pi-coding-agent@latest` into that existing agent's local npm prefix. `pi <name> update` updates Pi packages first, then uses the same Warden-managed runtime update path instead of Pi's global self-updater.
 
 `agents set <name> cwd <dir>` writes `warden.agents.<name>.cwd` to the agent-local `$WARDEN_AGENTS/<name>/settings.json`, preserving unrelated Pi settings. `dir` must already exist and must be absolute or start with `~`.
 
