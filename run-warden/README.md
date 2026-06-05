@@ -61,7 +61,7 @@ functions/warden.fish
 
 `warden agents update <name>` installs `@earendil-works/pi-coding-agent@latest` into that existing agent's local npm prefix. `warden pi <name> update` updates Pi packages first, then uses the same Warden-managed runtime update path instead of Pi's global self-updater.
 
-`warden agents set <name> cwd <dir>` writes `warden.agents.<name>.cwd` to the agent-local `settings.json`, preserving unrelated Pi settings. `dir` must already exist and must be absolute or start with `~`.
+`warden agents set <name> cwd <dir>` writes `warden.agent.cwd` to the agent-local `settings.json`, preserving unrelated Pi settings. `dir` must already exist and must be absolute or start with `~`.
 
 `warden agents show` prints the agent dir, Pi executable, Pi Lens dir, settings path, effective cwd, and the complete formatted `settings.json`. `--json` emits the same information as JSON. `warden agents list --json` emits an array of agent summaries.
 

@@ -127,15 +127,67 @@ function ensureObject(value) {
   return value && typeof value === "object" && !Array.isArray(value);
 }
 
-function configuredCwd(settingsPath, settings, agentName) {
-  const cwd = settings.warden?.agents?.[agentName]?.cwd;
+function hasOwn(object, key) {
+  return Object.prototype.hasOwnProperty.call(object, key);
+}
+
+function readCwdSetting(settingsPath, label, cwd) {
   if (cwd === undefined || cwd === null || cwd === "") {
     return "";
   }
   if (typeof cwd !== "string") {
-    fail(`failed to read agent settings: ${settingsPath}: warden.agents.${agentName}.cwd must be a string`);
+    fail(`failed to read agent settings: ${settingsPath}: ${label} must be a string`);
   }
   return cwd;
+}
+
+function configuredCwd(settingsPath, settings, agentName) {
+  const warden = ensureObject(settings.warden) ? settings.warden : undefined;
+  if (warden && ensureObject(warden.agent) && hasOwn(warden.agent, "cwd")) {
+    return readCwdSetting(settingsPath, "warden.agent.cwd", warden.agent.cwd);
+  }
+  if (warden && ensureObject(warden.agents) && ensureObject(warden.agents[agentName]) && hasOwn(warden.agents[agentName], "cwd")) {
+    return readCwdSetting(settingsPath, `warden.agents.${agentName}.cwd`, warden.agents[agentName].cwd);
+  }
+  return "";
+}
+
+function normalizeLegacyCwd(settings, agentName) {
+  if (!ensureObject(settings.warden) || !ensureObject(settings.warden.agents) || !ensureObject(settings.warden.agents[agentName])) {
+    return false;
+  }
+  if (!hasOwn(settings.warden.agents[agentName], "cwd")) {
+    return false;
+  }
+  delete settings.warden.agents[agentName].cwd;
+  if (Object.keys(settings.warden.agents[agentName]).length === 0) {
+    delete settings.warden.agents[agentName];
+  }
+  if (Object.keys(settings.warden.agents).length === 0) {
+    delete settings.warden.agents;
+  }
+  return true;
+}
+
+function removeConfiguredCwd(settings, agentName) {
+  if (!ensureObject(settings.warden)) {
+    return false;
+  }
+  let changed = false;
+  if (ensureObject(settings.warden.agent) && hasOwn(settings.warden.agent, "cwd")) {
+    delete settings.warden.agent.cwd;
+    changed = true;
+    if (Object.keys(settings.warden.agent).length === 0) {
+      delete settings.warden.agent;
+    }
+  }
+  if (normalizeLegacyCwd(settings, agentName)) {
+    changed = true;
+  }
+  if (Object.keys(settings.warden).length === 0) {
+    delete settings.warden;
+  }
+  return changed;
 }
 
 function expandCwd(cwd) {
@@ -231,13 +283,11 @@ switch (op) {
     if (!ensureObject(settings.warden)) {
       settings.warden = {};
     }
-    if (!ensureObject(settings.warden.agents)) {
-      settings.warden.agents = {};
+    if (!ensureObject(settings.warden.agent)) {
+      settings.warden.agent = {};
     }
-    if (!ensureObject(settings.warden.agents[name])) {
-      settings.warden.agents[name] = {};
-    }
-    settings.warden.agents[name].cwd = cwd;
+    settings.warden.agent.cwd = cwd;
+    normalizeLegacyCwd(settings, name);
     writeSettingsFile(settingsPath, settings);
     break;
   }
@@ -247,17 +297,7 @@ switch (op) {
       break;
     }
     const settings = readSettingsFile(settingsPath);
-    if (ensureObject(settings.warden) && ensureObject(settings.warden.agents) && ensureObject(settings.warden.agents[name])) {
-      delete settings.warden.agents[name].cwd;
-      if (Object.keys(settings.warden.agents[name]).length === 0) {
-        delete settings.warden.agents[name];
-      }
-      if (Object.keys(settings.warden.agents).length === 0) {
-        delete settings.warden.agents;
-      }
-      if (Object.keys(settings.warden).length === 0) {
-        delete settings.warden;
-      }
+    if (removeConfiguredCwd(settings, name)) {
       writeSettingsFile(settingsPath, settings);
     }
     break;

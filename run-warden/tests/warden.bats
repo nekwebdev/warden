@@ -312,12 +312,12 @@ SH
   [[ "$output" == *"usage: warden pi <name> [args...]"* ]]
 }
 
-@test "agents set cwd writes nested agent settings and preserves existing settings" {
+@test "agents set cwd writes root agent settings and normalizes legacy cwd" {
   agents="$BATS_TEST_TMPDIR/agents"
   project="$BATS_TEST_TMPDIR/project"
   mkdir -p "$agents/sentinel" "$project"
   cat > "$agents/sentinel/settings.json" <<'JSON'
-{"theme":"dark","warden":{"keep":true,"agents":{"other":{"cwd":"/tmp/other"},"sentinel":{"note":"keep"}}}}
+{"lastChangelogVersion":"1.2.3","packages":{"keep":true},"theme":"dark","defaultThinkingLevel":"high","warden":{"keep":true,"useNerdGlyphs":true,"agents":{"other":{"cwd":"/tmp/other"},"sentinel":{"cwd":"/tmp/old","note":"keep"}}}}
 JSON
 
   run env HOME="$TEST_HOME" PATH="$FAKE_BIN:$PATH" WARDEN_AGENTS="$agents" "$RUN_WARDEN_ROOT/bin/warden" agents set sentinel cwd "$project"
@@ -327,15 +327,20 @@ JSON
 const fs = require('fs');
 const [path, expected] = process.argv.slice(2);
 const settings = JSON.parse(fs.readFileSync(path, 'utf8'));
+if (settings.lastChangelogVersion !== '1.2.3') process.exit(1);
+if (settings.packages.keep !== true) process.exit(1);
 if (settings.theme !== 'dark') process.exit(1);
+if (settings.defaultThinkingLevel !== 'high') process.exit(1);
 if (settings.warden.keep !== true) process.exit(1);
+if (settings.warden.useNerdGlyphs !== true) process.exit(1);
+if (settings.warden.agent.cwd !== expected) process.exit(1);
 if (settings.warden.agents.other.cwd !== '/tmp/other') process.exit(1);
 if (settings.warden.agents.sentinel.note !== 'keep') process.exit(1);
-if (settings.warden.agents.sentinel.cwd !== expected) process.exit(1);
+if ('cwd' in settings.warden.agents.sentinel) process.exit(1);
 NODE
 }
 
-@test "agents set cwd accepts tilde paths and stores original input" {
+@test "agents set cwd creates root agent settings and stores original input" {
   agents="$BATS_TEST_TMPDIR/agents"
   mkdir -p "$agents/sentinel" "$TEST_HOME/project"
 
@@ -344,7 +349,8 @@ NODE
   node - "$agents/sentinel/settings.json" <<'NODE'
 const fs = require('fs');
 const settings = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'));
-if (settings.warden.agents.sentinel.cwd !== '~/project') process.exit(1);
+if (settings.warden.agent.cwd !== '~/project') process.exit(1);
+if ('agents' in settings.warden) process.exit(1);
 NODE
 }
 
@@ -369,7 +375,7 @@ NODE
   agents="$BATS_TEST_TMPDIR/agents"
   mkdir -p "$agents/sentinel"
   cat > "$agents/sentinel/settings.json" <<'JSON'
-{"theme":"dark","warden":{"agents":{"sentinel":{"cwd":"/tmp/old","note":"keep"},"other":{"cwd":"/tmp/other"}}}}
+{"theme":"dark","warden":{"useNerdGlyphs":true,"agent":{"cwd":"/tmp/old","note":"keep"},"agents":{"sentinel":{"cwd":"/tmp/legacy","note":"legacy"},"other":{"cwd":"/tmp/other"}}}}
 JSON
 
   run env HOME="$TEST_HOME" PATH="$FAKE_BIN:$PATH" WARDEN_AGENTS="$agents" "$RUN_WARDEN_ROOT/bin/warden" agents unset sentinel cwd
@@ -379,8 +385,11 @@ JSON
 const fs = require('fs');
 const settings = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'));
 if (settings.theme !== 'dark') process.exit(1);
+if (settings.warden.useNerdGlyphs !== true) process.exit(1);
+if ('cwd' in settings.warden.agent) process.exit(1);
+if (settings.warden.agent.note !== 'keep') process.exit(1);
 if ('cwd' in settings.warden.agents.sentinel) process.exit(1);
-if (settings.warden.agents.sentinel.note !== 'keep') process.exit(1);
+if (settings.warden.agents.sentinel.note !== 'legacy') process.exit(1);
 if (settings.warden.agents.other.cwd !== '/tmp/other') process.exit(1);
 NODE
 }
@@ -392,7 +401,7 @@ NODE
   touch "$agents/sentinel/npm/node_modules/.bin/pi"
   chmod +x "$agents/sentinel/npm/node_modules/.bin/pi"
   cat > "$agents/sentinel/settings.json" <<JSON
-{"warden":{"agents":{"sentinel":{"cwd":"$project"}}}}
+{"warden":{"agent":{"cwd":"$project"}}}
 JSON
 
   run env HOME="$TEST_HOME" PATH="$FAKE_BIN:$PATH" WARDEN_AGENTS="$agents" "$RUN_WARDEN_ROOT/bin/warden" agents show sentinel
@@ -423,6 +432,39 @@ JSON
   printf '%s' "$output" | node -e 'const expected = process.argv[1]; let data=""; process.stdin.on("data", c => data += c); process.stdin.on("end", () => { const parsed = JSON.parse(data); if (parsed.name !== "sentinel") process.exit(1); if (!parsed.settingsPath.endsWith("/settings.json")) process.exit(1); if (parsed.effectiveCwd !== expected) process.exit(1); });' "$expected_cwd"
 }
 
+@test "agents show reads legacy nested cwd" {
+  agents="$BATS_TEST_TMPDIR/agents"
+  project="$BATS_TEST_TMPDIR/project"
+  mkdir -p "$agents/sentinel/npm/node_modules/.bin" "$project"
+  touch "$agents/sentinel/npm/node_modules/.bin/pi"
+  chmod +x "$agents/sentinel/npm/node_modules/.bin/pi"
+  cat > "$agents/sentinel/settings.json" <<JSON
+{"warden":{"agents":{"sentinel":{"cwd":"$project"}}}}
+JSON
+
+  run env HOME="$TEST_HOME" PATH="$FAKE_BIN:$PATH" WARDEN_AGENTS="$agents" "$RUN_WARDEN_ROOT/bin/warden" agents show sentinel
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"configured cwd: $project"* ]]
+  [[ "$output" == *"effective cwd: $project"* ]]
+}
+
+@test "agents show prefers root agent cwd over legacy nested cwd" {
+  agents="$BATS_TEST_TMPDIR/agents"
+  project="$BATS_TEST_TMPDIR/project"
+  legacy="$BATS_TEST_TMPDIR/legacy"
+  mkdir -p "$agents/sentinel/npm/node_modules/.bin" "$project" "$legacy"
+  touch "$agents/sentinel/npm/node_modules/.bin/pi"
+  chmod +x "$agents/sentinel/npm/node_modules/.bin/pi"
+  cat > "$agents/sentinel/settings.json" <<JSON
+{"warden":{"agent":{"cwd":"$project"},"agents":{"sentinel":{"cwd":"$legacy"}}}}
+JSON
+
+  run env HOME="$TEST_HOME" PATH="$FAKE_BIN:$PATH" WARDEN_AGENTS="$agents" "$RUN_WARDEN_ROOT/bin/warden" agents show sentinel
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"configured cwd: $project"* ]]
+  [[ "$output" != *"configured cwd: $legacy"* ]]
+}
+
 @test "agents list prints agents and list json emits valid array" {
   agents="$BATS_TEST_TMPDIR/agents"
   project="$BATS_TEST_TMPDIR/project"
@@ -430,7 +472,7 @@ JSON
   touch "$agents/ada/npm/node_modules/.bin/pi"
   chmod +x "$agents/ada/npm/node_modules/.bin/pi"
   cat > "$agents/sentinel/settings.json" <<JSON
-{"warden":{"agents":{"sentinel":{"cwd":"$project"}}}}
+{"warden":{"agent":{"cwd":"$project"}}}
 JSON
 
   run env HOME="$TEST_HOME" PATH="$FAKE_BIN:$PATH" WARDEN_AGENTS="$agents" "$RUN_WARDEN_ROOT/bin/warden" agents list
@@ -484,7 +526,7 @@ JSON
   node - "$agents/ada/settings.json" "$BATS_TEST_TMPDIR/missing" <<'NODE'
 const fs = require('fs');
 const [path, cwd] = process.argv.slice(2);
-fs.writeFileSync(path, JSON.stringify({ warden: { agents: { ada: { cwd } } } }));
+fs.writeFileSync(path, JSON.stringify({ warden: { agent: { cwd } } }));
 NODE
 
   run env HOME="$TEST_HOME" PATH="$FAKE_BIN:$PATH" WARDEN_AGENTS="$agents" PI_LOG="$BATS_TEST_TMPDIR/pi-missing.log" "$RUN_WARDEN_ROOT/bin/warden" pi ada
@@ -526,7 +568,7 @@ NODE
   grep -F "warden pi <name>" "$repo_root/README.md"
   grep -F "renames the current tmux window" "$repo_root/README.md"
   grep -F "WARDEN_AGENTS" "$repo_root/README.md"
-  grep -F "warden.agents.<name>.cwd" "$repo_root/README.md"
+  grep -F "warden.agent.cwd" "$repo_root/README.md"
 }
 
 @test "pi-warden docs keep runner bootstrap out of package scope" {
