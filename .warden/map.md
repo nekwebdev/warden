@@ -57,7 +57,7 @@ The first-run promise is central: a user can clone anywhere, run `./warden`, cho
 
 - `WARDEN_HOME` is Warden clone/home. Default is `${XDG_DATA_HOME:-$HOME/.local/share}/warden`.
 - `WARDEN_AGENTS` overrides Pi agent root; otherwise agents live under `${XDG_CONFIG_HOME:-$HOME/.config}/pi-agents/<name>`.
-- Agent settings live in `$WARDEN_AGENTS/<name>/settings.json`. Runner stores canonical per-agent cwd at `warden.agent.cwd`, reads legacy `warden.agents.<name>.cwd` as fallback, and preserves unrelated Pi settings.
+- Agent settings live in `$WARDEN_AGENTS/<name>/settings.json`. Runner stores per-agent cwd only at `warden.agent.cwd` and preserves unrelated Pi settings.
 - Warden panel reads/writes `$PI_CODING_AGENT_DIR/settings.json` or fallback Pi settings path, only under `settings.warden` keys it owns.
 - `.warden/map.md` and `.warden/maps/**/map.md` are durable orientation docs, not executable state or task plans.
 - `node_modules/`, `.pi/`, `.pi-lens/`, `pi-lens/`, build outputs, coverage, env files, and `*.warden-tmp` are ignored local/generated artifacts. Package `node_modules/` dirs are present in working tree but ignored.

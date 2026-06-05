@@ -27,7 +27,7 @@ Repository guidance for coding agents working in `run-warden/`.
 - Keep fish integration reversible with managed `conf.d/plugin-warden.fish` and `functions/warden.fish` files.
 - Preserve non-interactive safety and clear failure messages.
 - Keep Pi agent installs isolated under `WARDEN_AGENTS/<name>` or `${XDG_CONFIG_HOME:-$HOME/.config}/pi-agents/<name>`.
-- Store the per-agent launch cwd canonically as `warden.agent.cwd`; read legacy `warden.agents.<name>.cwd` only as fallback and normalize on writes.
+- Store the per-agent launch cwd only as `warden.agent.cwd`.
 - Preserve unknown agent settings when writing Warden-owned settings keys.
 
 ## Testing

@@ -141,35 +141,15 @@ function readCwdSetting(settingsPath, label, cwd) {
   return cwd;
 }
 
-function configuredCwd(settingsPath, settings, agentName) {
+function configuredCwd(settingsPath, settings) {
   const warden = ensureObject(settings.warden) ? settings.warden : undefined;
   if (warden && ensureObject(warden.agent) && hasOwn(warden.agent, "cwd")) {
     return readCwdSetting(settingsPath, "warden.agent.cwd", warden.agent.cwd);
   }
-  if (warden && ensureObject(warden.agents) && ensureObject(warden.agents[agentName]) && hasOwn(warden.agents[agentName], "cwd")) {
-    return readCwdSetting(settingsPath, `warden.agents.${agentName}.cwd`, warden.agents[agentName].cwd);
-  }
   return "";
 }
 
-function normalizeLegacyCwd(settings, agentName) {
-  if (!ensureObject(settings.warden) || !ensureObject(settings.warden.agents) || !ensureObject(settings.warden.agents[agentName])) {
-    return false;
-  }
-  if (!hasOwn(settings.warden.agents[agentName], "cwd")) {
-    return false;
-  }
-  delete settings.warden.agents[agentName].cwd;
-  if (Object.keys(settings.warden.agents[agentName]).length === 0) {
-    delete settings.warden.agents[agentName];
-  }
-  if (Object.keys(settings.warden.agents).length === 0) {
-    delete settings.warden.agents;
-  }
-  return true;
-}
-
-function removeConfiguredCwd(settings, agentName) {
+function removeConfiguredCwd(settings) {
   if (!ensureObject(settings.warden)) {
     return false;
   }
@@ -180,9 +160,6 @@ function removeConfiguredCwd(settings, agentName) {
     if (Object.keys(settings.warden.agent).length === 0) {
       delete settings.warden.agent;
     }
-  }
-  if (normalizeLegacyCwd(settings, agentName)) {
-    changed = true;
   }
   if (Object.keys(settings.warden).length === 0) {
     delete settings.warden;
@@ -254,7 +231,7 @@ function cwdStatus(cwd) {
 
 function buildInfo(settingsPath, agentName, agentDir, piBin, piLensDir) {
   const settings = readSettingsFile(settingsPath);
-  const cwd = configuredCwd(settingsPath, settings, agentName);
+  const cwd = configuredCwd(settingsPath, settings);
   return {
     name: agentName,
     agentDir,
@@ -273,7 +250,7 @@ switch (op) {
   case "get-cwd": {
     const settingsPath = first;
     const settings = readSettingsFile(settingsPath);
-    process.stdout.write(configuredCwd(settingsPath, settings, name));
+    process.stdout.write(configuredCwd(settingsPath, settings));
     break;
   }
   case "set-cwd": {
@@ -287,7 +264,6 @@ switch (op) {
       settings.warden.agent = {};
     }
     settings.warden.agent.cwd = cwd;
-    normalizeLegacyCwd(settings, name);
     writeSettingsFile(settingsPath, settings);
     break;
   }
@@ -297,7 +273,7 @@ switch (op) {
       break;
     }
     const settings = readSettingsFile(settingsPath);
-    if (removeConfiguredCwd(settings, name)) {
+    if (removeConfiguredCwd(settings)) {
       writeSettingsFile(settingsPath, settings);
     }
     break;
