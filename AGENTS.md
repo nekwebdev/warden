@@ -1,63 +1,110 @@
 # Warden Agent Guidance
 
-## Mission
+Repository guidance for any coding agent working in Warden. Keep agent identity, role behavior, and personal workflow preferences outside the repo in the agent environment config.
 
-Keep Warden's first-run monorepo experience safe, boring, testable, and easy for specialist agents to extend.
+## Instruction order
 
-This file is project guidance for any agent working in the repository. Role-specific identity, operating style, or long-lived agent duties belong outside the repo in that agent's own config, not here.
+- Read this file before changing repo files.
+- Before editing a subproject, read the nearest nested `AGENTS.md`.
+- Nested guidance overrides root guidance for that subtree.
+- Use nearby `map.md` files for orientation only.
+- Do not treat `map.md` as a task plan, issue tracker, implementation diary, or current-work source of truth.
 
-## Current architecture
+## Repository boundaries
 
-- Warden is a federated monorepo for OS config, framework tooling, dotfiles, runners, Pi Agent packages, dev environments, and related automation.
-- Root `./warden` is bootstrap shim only.
-- Default `WARDEN_HOME` is `${XDG_DATA_HOME:-$HOME/.local/share}/warden` unless `WARDEN_HOME` is set.
-- First run may move the clone into canonical `WARDEN_HOME` after consent, then re-exec from there.
-- Root bootstrap ensures mise with consent and delegates through `mise exec` to `run-warden/bin/warden`.
-- `run-warden/` owns command workflows after bootstrap.
-- Current delegated CLI supports welcome/help, doctor checks, shell integration, Pi agent environment creation, and Pi launch through isolated agent dirs.
-- `pi-warden/` is a container for Pi package directories. Pi packages can bundle extensions, skills, prompts, and themes. Current packages are `pi-warden/warden-panel/` (`@nekwebdev/warden-panel`) and `pi-warden/warden-flow/` (`@nekwebdev/warden-flow`, bundling the `warden-map` skill/extension).
-- `nix-warden/` and `dev-warden/` are current skeleton/product-boundary placeholders unless their own guidance says otherwise.
+Warden is a federated monorepo.
 
-## Root bootstrap rules
+- `./warden`
+  - Root bootstrap shim only.
+  - May require `HOME`, choose/normalize `WARDEN_HOME`, move/re-exec from canonical `WARDEN_HOME` after consent, ensure `mise` after consent, export `run-warden/bin` on `PATH`, then exec `run-warden/bin/warden`.
+  - Must not grow product workflows.
 
-- Keep `./warden` tiny.
-- Root bootstrap may require `HOME`, resolve/choose `WARDEN_HOME`, move/re-exec, ensure mise with consent, export `run-warden/bin` on PATH for delegation, and exec `run-warden/bin/warden`.
-- Put workflow growth in `run-warden`, not root shell code.
-- Never silently overwrite existing unknown `WARDEN_HOME` contents.
-- Empty target `WARDEN_HOME` may be removed before move; non-empty unrelated target must fail with clear message.
-- Ask consent before external installers, repository moves, or shell startup-file mutations.
-- Preserve non-interactive safety: no TTY or declined consent must fail cleanly unless explicit env opts allow action.
+- `run-warden/`
+  - Owns post-bootstrap command workflows.
+  - Owns runner dispatch, doctor checks, shell integration, Pi agent environment lifecycle commands, and Pi launch plumbing.
 
-## Runner rules
+- `pi-warden/`
+  - Container for independently installable/testable Pi Agent packages.
+  - Package code belongs under `pi-warden/<package>/`, never directly under `pi-warden/`.
 
-- Keep command dispatch in `run-warden/bin/warden`.
+- `nix-warden/`
+  - Future NixOS/system-configuration area.
+  - Treat as skeleton-only unless nested guidance or the task explicitly says otherwise.
+
+- `dev-warden/`
+  - Future developer-environment area.
+  - Treat as skeleton-only unless nested guidance or the task explicitly says otherwise.
+
+## Safety invariants
+
+Preserve Warden's first-run promise:
+
+- Safe by default.
+- Consent-driven for invasive actions.
+- No surprise overwrites.
+- Clear failure messages.
+- Easy rollback where practical.
+
+Rules:
+
+- Never silently overwrite unknown user files or unrelated Warden state.
+- Ask consent before external installers, repo moves, or shell startup-file mutation.
+- Preserve non-interactive safety: no TTY or declined consent must fail cleanly unless an explicit environment opt-in allows the action.
+- Empty target `WARDEN_HOME` may be removed before a move.
+- Non-empty unrelated target `WARDEN_HOME` must fail with a clear message.
+- Preserve MIT license text.
+
+## Runner and shell rules
+
+- Keep delegated dispatch in `run-warden/bin/warden`.
 - Put reusable shell behavior in `run-warden/lib/*.sh`.
 - Put shell-specific snippets in `run-warden/shell/`.
-- Keep bash/zsh integration reversible with `# warden begin` / `# warden end` guarded blocks.
+- Keep bash/zsh shell integration reversible with `# warden begin` and `# warden end` guarded blocks.
 - Keep fish integration reversible with managed `conf.d/plugin-warden.fish` and `functions/warden.fish` files.
-- Shell integration must require consent before mutating startup files and must avoid overwriting existing managed state unexpectedly.
-- Pi agent commands must keep agent installs isolated under `WARDEN_AGENTS/<name>` or `${XDG_CONFIG_HOME:-$HOME/.config}/pi-agents/<name>`.
+- Shell integration must require consent before mutating startup files.
+
+## Pi agent environment rules
+
+- Pi agent environment lifecycle commands belong in `run-warden/`.
+- Pi package implementation belongs in `pi-warden/<package>/`.
+- Do not confuse Warden-managed Pi agent environments with local `pi-warden` package development.
+- Pi agent installs must remain isolated under `WARDEN_AGENTS/<name>` or `${XDG_CONFIG_HOME:-$HOME/.config}/pi-agents/<name>`.
 - `warden pi <name> ...` must run agent-local Pi with `PI_CODING_AGENT_DIR` and `PILENS_DATA_DIR` pointed inside that agent directory.
-- Pi package code belongs under `pi-warden/<package>/`, never directly under `pi-warden/` root.
 
 ## Testing
 
-- Use dev-only Bats tests through mise tasks.
-- Prefer temp HOME/clone fixtures for bootstrap behavior.
-- Keep subproject tests independently runnable.
-- Add Bats coverage for every new command surface.
-- Relevant tasks:
-  - `mise run test`
-  - `mise run test:root`
-  - `mise run test:run-warden`
-  - `mise run test:nix-warden`
-  - `mise run test:pi-warden`
-  - `mise run test:dev-warden`
+Use mise tasks for development-only test suites:
 
-## Scope boundaries
+    mise run test
+    mise run test:root
+    mise run test:run-warden
+    mise run test:nix-warden
+    mise run test:pi-warden
+    mise run test:dev-warden
 
-- Do not implement `nix-warden` or `dev-warden` product features during bootstrap/runner groundwork.
-- Keep `pi-warden/` top-level as Pi package container; package-specific product code goes in `pi-warden/<package>/` with its own `AGENTS.md`.
-- Do not add package release/build systems until later feature explicitly asks for them.
-- Preserve MIT license text.
-- Read subproject `AGENTS.md` before editing inside that subproject, plus package `AGENTS.md` before editing inside `pi-warden/<package>/`.
+Expectations:
+
+- Add or update Bats coverage for new root bootstrap behavior.
+- Add or update Bats coverage for new `run-warden` command surfaces.
+- Use temporary `HOME`, temporary clone fixtures, and isolated agent dirs where relevant.
+- Keep subproject test suites independently runnable.
+- Run the narrowest relevant test first.
+- Run broader tests when a change crosses boundaries.
+- If tooling is unavailable, report exactly what could not be run and why.
+
+## Scope and docs
+
+- Do not implement `nix-warden` or `dev-warden` product behavior during bootstrap or runner groundwork.
+- Do not put package manifests, package source, package tests, or package build systems directly under `pi-warden/`.
+- Do not mutate root `./warden` or `run-warden/` from package work unless the task explicitly scopes that boundary change.
+- Keep cross-component interfaces explicit.
+
+Update durable docs only when existing guidance becomes stale:
+
+- `README.md` for human-facing usage, setup, commands, and project explanation.
+- `AGENTS.md` for agent-facing rules, commands, conventions, and safety boundaries.
+- Nested `AGENTS.md` for subtree-specific rules.
+- `map.md` for durable folder orientation and architecture navigation.
+- ADRs only for decisions that are hard to reverse, surprising, or likely to be re-litigated.
+
+Do not add active task state, issue tracking, speculative TODO forests, or implementation diaries to `README.md`, `AGENTS.md`, or `map.md`.

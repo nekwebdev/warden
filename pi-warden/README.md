@@ -1,52 +1,157 @@
 # pi-warden
 
-`pi-warden` owns Warden's Pi Agent package work.
+`pi-warden` is Warden's Pi Agent package area.
 
-This directory is a container for Pi packages. A Pi package can bundle multiple extensions, skills, prompts, and themes. Each package lives in its own child folder:
+This directory is a container for independently installable and testable Pi packages. It is not itself a Pi package.
+
+Pi packages may bundle:
+
+- extensions;
+- skills;
+- prompts;
+- themes;
+- hooks;
+- shared package APIs;
+- package-specific docs and tests.
+
+## Package model
+
+Each package lives in its own direct child folder:
 
 ```text
 pi-warden/
-  README.md
-  AGENTS.md
-  tests/
-  warden-panel/
-    package.json
-    README.md
-    AGENTS.md
-    index.ts       # aggregate local-path loader for bundled extensions
-    src/           # shared panel framework/public API
-    extensions/
-      warden-panel/
-      warden-display/
-      warden-packages/
-    tests/
-    scripts/
+├── README.md
+├── AGENTS.md
+├── tests/
+├── warden-panel/
+└── warden-flow/
 ```
 
-Current packages:
+Package manifests, source, tests, scripts, extensions, skills, prompts, themes, docs, configs, and web assets belong under the individual package folder:
 
-- `warden-panel/` — package `@nekwebdev/warden-panel`, Warden's Pi Agent panel framework plus bundled panel extensions:
-  - `warden-panel` registers `/warden` and opens the first available pane.
-  - `warden-display` contributes the Display pane and `/warden:display`.
-  - `warden-packages` contributes the Packages pane and `/warden:packages`.
-- `warden-flow/` — package `@nekwebdev/warden-flow`, Warden's workflow package for Pi skills and extensions:
-  - `warden-map` contributes `/skill:warden-map`.
-  - `warden-map` injects `.warden/map.md` capsules, scoped `.warden/maps/**/map.md` capsules, and current git dirty context.
+```text
+pi-warden/<package>/
+├── package.json
+├── README.md
+├── AGENTS.md
+├── src/
+├── extensions/
+├── skills/
+├── prompts/
+├── themes/
+├── tests/
+└── scripts/
+```
 
-Future Pi packages should use the same shape: package manifest and package-specific docs/guidance at the package folder root, then code and assets in folders such as `src/`, `extensions/`, `skills/`, `prompts/`, `themes/`, `tests/`, `hooks/`, `docs/`, `bin/`, `configs/`, `scripts/`, or `web/` as needed.
+Use only the folders that fit the package. Do not create ceremony just to make the tree look important. Trees have enough problems.
+
+## Current packages
+
+### `warden-panel/`
+
+Package: `@nekwebdev/warden-panel`
+
+Warden's Pi Agent panel framework and bundled panel extensions.
+
+Provides:
+
+- `/warden` — opens the Warden panel on the first available pane;
+- `/warden:display` — opens the Display pane;
+- `/warden:packages` — opens the Packages pane;
+- shared panel framework APIs for other Warden packages.
+
+Package docs:
+
+```text
+pi-warden/warden-panel/README.md
+pi-warden/warden-panel/AGENTS.md
+```
+
+### `warden-flow/`
+
+Package: `@nekwebdev/warden-flow`
+
+Warden's workflow and durable-orientation package for Pi skills and extensions.
+
+Provides:
+
+- `/skill:warden-map` — creates or refreshes repository map files;
+- `extensions/warden-map` — injects token-conscious map capsules and git context;
+- map layout and capsule conventions for reducing repeated repo discovery.
+
+Package docs:
+
+```text
+pi-warden/warden-flow/README.md
+pi-warden/warden-flow/AGENTS.md
+```
 
 ## Scope boundary
 
-`run-warden/` owns `warden agents new` and `warden pi <name> ...`. Those commands install and launch registry Pi Agent in isolated agent directories. They are not implemented by local `pi-warden` packages.
+`pi-warden` packages provide Pi Agent package behavior after they are installed or loaded by Pi.
 
-Packages in this directory provide Pi Agent package behavior only after installed/loaded by Pi. They must not mutate root bootstrap or runner workflows unless a feature explicitly scopes that change.
+They do not own Warden runner workflows.
 
-## Dev test
+These belong to `run-warden/`:
+
+```sh
+warden agents new <name>
+warden agents update <name>
+warden agents set <name> cwd <dir>
+warden agents show <name>
+warden agents list
+warden pi <name> ...
+```
+
+Do not mutate root `./warden` or `run-warden/` from package work unless the task explicitly scopes a cross-boundary contract.
+
+## Local package development
+
+From the Warden repo root:
 
 ```sh
 npm install --prefix pi-warden/warden-panel
 npm install --prefix pi-warden/warden-flow
+
 npm test --prefix pi-warden/warden-panel
 npm test --prefix pi-warden/warden-flow
+
 mise run test:pi-warden
 ```
+
+Package-local commands should remain independently runnable.
+
+## Loading packages in Pi
+
+From the Warden repo root, local packages can be loaded temporarily during development:
+
+```sh
+pi -e ./pi-warden/warden-panel
+pi -e ./pi-warden/warden-flow
+```
+
+Or installed locally into a Pi environment:
+
+```sh
+pi install ./pi-warden/warden-panel
+pi install ./pi-warden/warden-flow
+```
+
+Warden-managed Pi agent environments are created and launched by `run-warden/`, not by local package code in this directory.
+
+## Agent guidance
+
+Before editing in this area:
+
+1. read the repo root `AGENTS.md`;
+2. read `pi-warden/AGENTS.md`;
+3. read the package-local `AGENTS.md` before editing inside `pi-warden/<package>/`;
+4. use nearby `map.md` files for orientation only.
+
+Role identity for specialist agents belongs in their Pi environment config, not in this repository.
+
+## Durable orientation
+
+`map.md` files are durable orientation context. They are not task plans, issue trackers, implementation diaries, or current-work state.
+
+Update package READMEs, package `AGENTS.md`, and nearby maps only when package structure, commands, behavior, or durable orientation changes.

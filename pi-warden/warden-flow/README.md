@@ -1,8 +1,8 @@
 # warden-flow
 
-`@nekwebdev/warden-flow` bundles Pi workflow skills and extensions. Current bundled resources are the `warden-map` skill and extension for durable repository orientation.
+`@nekwebdev/warden-flow` is Warden's Pi Agent workflow and durable-orientation package.
 
-Goal: reduce repeated repo discovery by maintaining a small map tree and injecting only token-efficient capsules when relevant.
+It reduces repeated repo discovery by maintaining a small map tree and injecting only token-conscious capsules when relevant.
 
 ## What it provides
 
@@ -16,10 +16,10 @@ Goal: reduce repeated repo discovery by maintaining a small map tree and injecti
 
 ```text
 .warden/
-  map.md
-  maps/
-    <repo-relative-scope>/
-      map.md
+├── map.md
+└── maps/
+    └── <repo-relative-scope>/
+        └── map.md
 ```
 
 Examples:
@@ -75,24 +75,28 @@ When git is available, the extension injects:
 
 Git context is cached and re-injected only when branch, commit, or dirty state changes.
 
-## Install locally
+## Scope boundary
 
-From Warden repo root:
+This package owns Warden workflow/orientation Pi behavior, including `warden-map` and map capsule injection.
 
-```sh
-pi install ./pi-warden/warden-flow
-```
+It does not own Warden runner workflows, Pi agent lifecycle commands, or sibling package installation workflows.
 
-Or load temporarily:
-
-```sh
-pi -e ./pi-warden/warden-flow
-```
-
-## Development
+## Local development
 
 ```sh
 npm install --prefix pi-warden/warden-flow
 npm test --prefix pi-warden/warden-flow
 mise run test:pi-warden
+```
+
+From the Warden repo root, load temporarily during development:
+
+```sh
+pi -e ./pi-warden/warden-flow
+```
+
+Or install locally into a Pi environment:
+
+```sh
+pi install ./pi-warden/warden-flow
 ```

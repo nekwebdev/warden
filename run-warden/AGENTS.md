@@ -1,22 +1,48 @@
 # run-warden Agent Guidance
 
-`run-warden` owns Warden commands after root bootstrap delegates to `bin/warden` through mise.
+Repository guidance for coding agents working in `run-warden/`.
 
-## Rules
+`run-warden/` owns Warden command workflows after root `./warden` delegates to `run-warden/bin/warden` through `mise`.
 
-- Keep command dispatch in `bin/warden`.
-- Put reusable behavior in `lib/*.sh`.
+## Instruction order
+
+- Read the repo root `AGENTS.md` first.
+- Read this file before changing files under `run-warden/`.
+- Use `.warden/maps/run-warden/map.md` for orientation when needed.
+- Do not treat `map.md` files as task plans, issue trackers, implementation diaries, or current-work state.
+
+## Boundary
+
+- Keep delegated command dispatch in `bin/warden`.
+- Put reusable shell behavior in `lib/*.sh`.
 - Put shell-specific activation snippets in `shell/`.
-- Keep bash/zsh integration reversible with `# warden begin` / `# warden end` guarded blocks; keep fish integration reversible with managed `conf.d/plugin-warden.fish` and `functions/warden.fish` files.
-- Keep consent gates before shell startup-file mutation.
-- Avoid moving bootstrap-location logic back into root `./warden` unless it is part of normalization/delegation.
+- Put Bats coverage in `tests/`.
+- Keep root `./warden` focused on bootstrap normalization, consent gates, `mise`, and delegation.
+- Keep Pi package implementation under `pi-warden/<package>/`, not in runner code.
 
-## Tests
+## Safety rules
 
-Run:
+- Preserve consent gates before shell startup-file mutation.
+- Keep bash/zsh integration reversible with `# warden begin` and `# warden end` guarded blocks.
+- Keep fish integration reversible with managed `conf.d/plugin-warden.fish` and `functions/warden.fish` files.
+- Preserve non-interactive safety and clear failure messages.
+- Keep Pi agent installs isolated under `WARDEN_AGENTS/<name>` or `${XDG_CONFIG_HOME:-$HOME/.config}/pi-agents/<name>`.
+- Preserve unknown agent settings when writing Warden-owned settings keys.
+
+## Testing
 
 ```sh
 mise run test:run-warden
 ```
 
-Add Bats coverage for every new command surface.
+Expectations:
+
+- Add or update Bats coverage for new command surfaces.
+- Run `mise run test:root` too when a change touches root delegation or bootstrap contracts.
+- Report unavailable tooling or skipped checks exactly.
+
+## Documentation
+
+- `run-warden/README.md` explains runner commands and behavior for humans.
+- `run-warden/AGENTS.md` contains local agent rules and safety boundaries.
+- Do not add active task state or implementation diaries to README, AGENTS, or map files.

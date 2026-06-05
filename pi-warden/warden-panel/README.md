@@ -18,7 +18,7 @@ The panel uses draft state while open. Space/Enter toggles displayed preference,
 
 ## Packages pane
 
-The Packages pane reads global Pi packages from `$PI_CODING_AGENT_DIR/settings.json` (`packages` array). V1 intentionally ignores project-local `.pi/settings.json` packages.
+The Packages pane reads global Pi packages from `$PI_CODING_AGENT_DIR/settings.json` (`packages` array). Project-local `.pi/settings.json` packages are outside this pane's scope.
 
 Supported package entries match Pi settings:
 
@@ -39,11 +39,13 @@ Supported package entries match Pi settings:
 }
 ```
 
-The first option is `Install new package`, which opens a text prompt and accepts any one-line package source; Pi's package manager validates the source. A blank line separates install from the package list section. The package list section says `Select packages to remove` until rows are selected, then `Remove selected` replaces that line and opens a confirmation dialog listing the exact sources. Rows display exact package sources only. Space/Enter toggles installed rows for removal.
+The first option is `Install new package`, which opens a text prompt and accepts any one-line package source. Pi's package manager validates the source.
+
+A blank line separates install from the package list section. The package list section says `Select packages to remove` until rows are selected, then `Remove selected` replaces that line and opens a confirmation dialog listing exact sources. Rows display exact package sources only. Space/Enter toggles installed rows for removal.
 
 After install/remove, the extension writes a concise chat report and tells the user to restart Pi to load package changes. It does not auto-reload Pi.
 
-## Pane framework
+## Pane framework API
 
 ```ts
 import {
@@ -75,30 +77,17 @@ Duplicate pane IDs are rejected. Pane registry and action-handler state is share
 
 ```text
 warden-panel/
-  package.json
-  README.md
-  AGENTS.md
-  index.ts       # aggregate local-path loader for bundled extensions
-  src/
-    index.ts     # public panel framework API
-    commands.ts
-    panel.ts
-    registry.ts
-    settings.ts
-    glyphs.ts
-  extensions/
-    warden-panel/
-      index.ts
-    warden-display/
-      index.ts
-      pane.ts
-    warden-packages/
-      index.ts
-      operations.ts
-      packages.ts
-      pane.ts
-  tests/
-  scripts/
+├── package.json
+├── README.md
+├── AGENTS.md
+├── index.ts       # aggregate local-path loader for bundled extensions
+├── src/           # public panel framework API
+├── extensions/
+│   ├── warden-panel/
+│   ├── warden-display/
+│   └── warden-packages/
+├── tests/
+└── scripts/
 ```
 
 `package.json` advertises bundled extensions with:
@@ -115,12 +104,26 @@ warden-panel/
 
 ## Scope boundary
 
-This package owns panel-related Pi behavior: panel framework, Display pane, Packages pane, and pane action dispatch. It does not own Warden runner workflows. `warden agents new` and `warden pi <name> ...` remain owned by `run-warden/`.
+This package owns panel-related Pi behavior: panel framework, Display pane, Packages pane, and pane action dispatch.
 
-## Dev test
+It does not own Warden runner workflows. `warden agents ...` and `warden pi ...` remain owned by `run-warden/`.
+
+## Local development
 
 ```sh
 npm install --prefix pi-warden/warden-panel
 npm test --prefix pi-warden/warden-panel
 mise run test:pi-warden
+```
+
+From the Warden repo root, load temporarily during development:
+
+```sh
+pi -e ./pi-warden/warden-panel
+```
+
+Or install locally into a Pi environment:
+
+```sh
+pi install ./pi-warden/warden-panel
 ```

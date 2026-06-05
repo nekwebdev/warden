@@ -1,10 +1,10 @@
 # dev-warden
 
-`dev-warden` is the future developer-environment package area for Warden.
+`dev-warden/` is Warden's future developer-environment area.
 
-Current status: skeleton only. This groundwork slice creates the directory, test boundary, and agent guidance without implementing dev-environment product behavior.
+Current scope: skeleton/product boundary. It keeps the subproject location, local guidance, and smoke-test surface ready for future developer-environment work; no product workflow is implemented here yet.
 
-## Dev test
+## Development tests
 
 ```sh
 mise run test:dev-warden

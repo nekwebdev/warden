@@ -1,25 +1,23 @@
-# warden
+# Warden
 
-Warden is a federated monorepo for a complete operating-environment workflow: OS config, framework tooling, dotfiles, runners, Pi Agent packages, dev environments, and related automation.
+Warden is a federated monorepo for operating-environment automation, runner tooling, Pi Agent packages, developer environments, and future system configuration.
 
-The primary experience is the whole monorepo: clone anywhere, run `./warden`, and let bootstrap normalize the clone into canonical `WARDEN_HOME`. Each `*-warden` subproject stays independently testable and packageable over time.
+The main experience is the whole repo:
 
-## Bootstrap quick start
+1. Clone Warden anywhere.
+2. Run `./warden`.
+3. Let bootstrap normalize the clone into canonical `WARDEN_HOME`.
+4. Use the delegated `warden` CLI for workflows after bootstrap.
+
+Each `*-warden` subproject should stay independently testable and packageable over time.
+
+## Quick start
 
 ```sh
-git clone <repo-url> warden
+git clone https://github.com/nekwebdev/warden.git
 cd warden
 ./warden
 ```
-
-On first run, `./warden`:
-
-1. Shows default `WARDEN_HOME`.
-2. Moves the clone into `WARDEN_HOME` after consent.
-3. Refuses to overwrite unrelated existing target directories.
-4. Installs mise with consent when missing using `curl https://mise.run | sh`.
-5. Delegates to `run-warden/bin/warden` through `mise exec`.
-6. Prints welcome output.
 
 Default `WARDEN_HOME`:
 
@@ -33,100 +31,209 @@ Use a custom home:
 WARDEN_HOME=/path/to/warden ./warden
 ```
 
-## NixOS active location
+## First run
 
-After bootstrap, the owner/operator NixOS config anchor is:
+`./warden` is the root bootstrap shim.
 
-```sh
-$WARDEN_HOME/nix-warden
-```
+On first run it may:
 
-`nix-warden` is skeleton-only in this groundwork slice; actual NixOS product behavior comes later.
+1. show the selected `WARDEN_HOME`;
+2. move the clone into canonical `WARDEN_HOME` after consent;
+3. refuse to overwrite unrelated existing target directories;
+4. install `mise` after consent when missing;
+5. delegate through `mise exec` to `run-warden/bin/warden`;
+6. show the delegated Warden welcome/help output.
+
+Bootstrap is intentionally small. Product workflows belong in `run-warden/`, not in root `./warden`.
 
 ## Commands
 
-`./warden` is the root bootstrap shim. It delegates to `run-warden/bin/warden` through mise. After shell integration, `run-warden/bin` is on PATH and the delegated CLI is `warden`:
+Before shell integration, run commands through the root shim:
 
 ```sh
-./warden                    # bootstrap if needed, then show welcome
-./warden shell install      # install PATH/shell integration before `warden` is available
-warden help                 # show command help after shell integration
-warden doctor               # readiness checks, including non-fatal Pi agent hints
-warden agents new [name]             # create isolated Pi agent environment
-warden agents update <name>          # update Warden-managed Pi runtime
-warden agents set <name> cwd <dir>   # pin Pi launch cwd for an agent
-warden agents unset <name> cwd       # remove pinned launch cwd
-warden agents show <name> [--json]   # show agent dirs and complete settings.json
-warden agents list [--json]          # list agent environments
-warden pi <name> ...                 # run Pi from that isolated agent environment
-warden shell status                  # show shell integration state
-warden shell remove
-warden shell snippet bash|zsh|fish
+./warden
+./warden help
+./warden doctor
+./warden shell install
 ```
+
+After shell integration, `run-warden/bin` is on `PATH` and the delegated CLI is available as `warden`:
+
+```sh
+warden help
+warden doctor
+warden shell status
+warden shell remove
+warden shell snippet bash
+warden shell snippet zsh
+warden shell snippet fish
+```
+
+Pi agent environment commands:
+
+```sh
+warden agents new [name]
+warden agents update <name>
+warden agents set <name> cwd <dir>
+warden agents unset <name> cwd
+warden agents show <name> [--json]
+warden agents list [--json]
+warden pi <name> ...
+```
+
+## Shell integration
+
+Shell integration is consent-driven and reversible.
+
+Bash and zsh use guarded blocks:
+
+```sh
+# warden begin
+# ...
+# warden end
+```
+
+Fish uses managed files under:
+
+```sh
+${XDG_CONFIG_HOME:-$HOME/.config}/fish/conf.d/plugin-warden.fish
+${XDG_CONFIG_HOME:-$HOME/.config}/fish/functions/warden.fish
+```
+
+Warden must not mutate shell startup files without consent.
 
 ## Pi agent environments
 
-`warden agents new [name]` creates a local Pi agent environment under `WARDEN_AGENTS/<name>` when `WARDEN_AGENTS` is set; otherwise it uses `${XDG_CONFIG_HOME:-$HOME/.config}/pi-agents/<name>`. If `name` is omitted, Warden prompts for it interactively.
+Warden-managed Pi agent environments are isolated from repo package development.
 
-`warden agents update <name>` installs `@earendil-works/pi-coding-agent@latest` into that existing agent's local npm prefix. `warden pi <name> update` updates Pi packages first, then uses the same Warden-managed runtime update path instead of Pi's global self-updater.
-
-Agent names may contain letters, numbers, `.`, `_`, and `-`; `/`, `.`, `..`, and empty names are rejected. Existing agent directories are not overwritten.
-
-Warden installs the registry package `@earendil-works/pi-coding-agent` with agent-local npm settings:
+Agent directories live under:
 
 ```sh
-npm install \
-  --prefix "$WARDEN_AGENTS/<name>/npm" \
-  --cache "$WARDEN_AGENTS/<name>/npm/.npm-cache" \
-  --userconfig "$WARDEN_AGENTS/<name>/npm/.npmrc" \
-  --globalconfig "$WARDEN_AGENTS/<name>/npm/.npm-globalrc" \
-  @earendil-works/pi-coding-agent
+$WARDEN_AGENTS/<name>
 ```
 
-`warden agents set <name> cwd <dir>` stores the agent launch working directory in the agent-local Pi settings file:
+or, when `WARDEN_AGENTS` is not set:
+
+```sh
+${XDG_CONFIG_HOME:-$HOME/.config}/pi-agents/<name>
+```
+
+Agent names may contain letters, numbers, `.`, `_`, and `-`.
+
+Rejected names include:
+
+```text
+/
+.
+..
+<empty>
+```
+
+`warden agents new <name>` creates an isolated Pi environment and installs the Pi runtime into that agent's local npm prefix.
+
+`warden agents set <name> cwd <dir>` stores the launch cwd for that agent in its local settings file as `warden.agents.<name>.cwd`.
+
+Example settings shape:
 
 ```json
 {
   "warden": {
     "agents": {
-      "<name>": {
-        "cwd": "~/work/project"
+      "sentinel": {
+        "cwd": "~/work/warden"
       }
     }
   }
 }
 ```
 
-The file lives at `$WARDEN_AGENTS/<name>/settings.json` (for example `${XDG_CONFIG_HOME:-$HOME/.config}/pi-agents/sentinel/settings.json`). `cwd` must be an existing absolute path or a `~` path. Warden preserves unrelated Pi settings when setting or unsetting this key.
-
-Useful inspection commands:
+`warden pi <name> ...` runs the agent-local Pi executable with agent-local data paths:
 
 ```sh
-warden agents show <name>
-warden agents show <name> --json
-warden agents list
-warden agents list --json
+PI_CODING_AGENT_DIR="$AGENT_DIR"
+PILENS_DATA_DIR="$AGENT_DIR/pi-lens"
 ```
 
-`warden agents show` prints the agent dir, Pi executable, Pi Lens dir, settings path, effective cwd, and the complete formatted `settings.json`.
+If no cwd is configured, Warden preserves the caller's current working directory. When run inside tmux, `warden pi <name> ...` renames the current tmux window to `<name>` before launch; missing or failing tmux commands are ignored.
 
-`warden pi <name> ...` resolves `$WARDEN_AGENTS/<name>/settings.json`, reads `warden.agents.<name>.cwd`, changes to that directory when configured, then runs `$WARDEN_AGENTS/<name>/npm/node_modules/.bin/pi` with:
+## Repository layout
 
-```sh
-PI_CODING_AGENT_DIR="$WARDEN_AGENTS/<name>"
-PILENS_DATA_DIR="$WARDEN_AGENTS/<name>/pi-lens"
+```text
+.
+├── warden          # root bootstrap shim
+├── run-warden/    # delegated runner and command workflows
+├── pi-warden/     # Pi Agent package container
+├── nix-warden/    # future NixOS/system configuration area
+├── dev-warden/    # future developer-environment area
+├── AGENTS.md      # repo-wide agent guidance
+├── README.md      # human-facing project entrypoint
+└── .mise.toml     # dev tool and test task definitions
 ```
 
-If no cwd is configured, Warden preserves the caller's current working directory.
+## Subproject boundaries
 
-Shell integration changes startup files only after consent. `./warden shell install` detects the current shell, defaults that prompt to yes, and defaults additional shell prompts to no. Extra shell prompts are shown only when their config target already exists (`~/.bashrc`, zsh rc under `$ZDOTDIR` when present, or the fish config dir); missing shell environments are reported as skipped. Existing Warden bash/zsh guarded blocks or fish managed files are reported as already installed and not overwritten. Bash/zsh use reversible guarded blocks; fish writes managed files under `${XDG_CONFIG_HOME:-$HOME/.config}/fish/conf.d/plugin-warden.fish` and `functions/warden.fish`.
+### `./warden`
 
-## Dev tests
+Root bootstrap shim only.
+
+It may choose/normalize `WARDEN_HOME`, move/re-exec after consent, ensure `mise` after consent, and delegate to `run-warden/bin/warden`.
+
+It must stay small.
+
+### `run-warden/`
+
+Owns workflows after root bootstrap:
+
+- delegated command dispatch;
+- doctor checks;
+- shell integration;
+- Pi agent environment lifecycle commands;
+- Pi launch plumbing.
+
+### `pi-warden/`
+
+Container for independently installable and testable Pi Agent packages.
+
+Package code belongs under:
+
+```text
+pi-warden/<package>/
+```
+
+Current package areas include:
+
+```text
+pi-warden/warden-panel/
+pi-warden/warden-flow/
+```
+
+`pi-warden/warden-flow/` contains Warden flow/orientation work, including the `warden-map` skill and related context-injection extension.
+
+### `nix-warden/`
+
+Future NixOS/system-configuration area.
+
+Currently treat as a skeleton/product boundary unless its own guidance or the current task says otherwise.
+
+### `dev-warden/`
+
+Future developer-environment area.
+
+Currently treat as a skeleton/product boundary unless its own guidance or the current task says otherwise.
+
+## Development tests
 
 Tests are for development, not required for first-time bootstrap users.
 
+Run all available suites:
+
 ```sh
 mise run test
+```
+
+Run focused suites:
+
+```sh
 mise run test:root
 mise run test:run-warden
 mise run test:nix-warden
@@ -134,20 +241,23 @@ mise run test:pi-warden
 mise run test:dev-warden
 ```
 
-The root suite uses Bats with temp HOME/clone fixtures to verify bootstrap movement, no-overwrite safety, doctor output, and shell integration. Subproject suites are independently runnable smoke tests.
+The root and runner suites use Bats where present.
 
-## Subproject boundaries
-
-- `run-warden/` owns command workflows after root bootstrap.
-- `nix-warden/` will own NixOS/system configuration.
-- `pi-warden/` owns Pi Agent packages. It is a container: each package lives in its own folder. Current packages are `pi-warden/warden-panel/` (`@nekwebdev/warden-panel`) and `pi-warden/warden-flow/` (`@nekwebdev/warden-flow`, bundling the `warden-map` skill/extension).
-- `dev-warden/` will own developer-environment work.
-
-Current groundwork does not implement product features for `nix-warden` or `dev-warden`. Pi Agent package code lives under `pi-warden/<package>/`; runner-owned agent environment workflows remain in `run-warden/`.
+The `pi-warden` task runs package test suites for package folders that contain `package.json`.
 
 ## Agent guidance
 
-Read `AGENTS.md` at repo root and within each subproject before editing. Guidance files define bootstrap boundaries, test expectations, and product-scope exclusions.
+Before editing, agents should read:
+
+1. root `AGENTS.md`;
+2. the nearest nested `AGENTS.md` for the subtree being changed;
+3. nearby `map.md` files when orientation is needed.
+
+`AGENTS.md` files define agent-facing project rules, safety boundaries, conventions, and test expectations.
+
+`map.md` files are durable orientation context. They are not task plans, issue trackers, implementation diaries, or current-work state.
+
+Role identity and long-lived agent behavior belong outside the repo in each agent environment config.
 
 ## License
 

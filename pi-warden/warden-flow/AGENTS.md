@@ -1,15 +1,28 @@
 # warden-flow Agent Guidance
 
-`warden-flow` is package `@nekwebdev/warden-flow`, Warden's Pi Agent workflow package. It currently bundles the `warden-map` repository-map skill and token-efficient map injection extension.
+Repository guidance for coding agents working in `pi-warden/warden-flow/`.
 
-## Package boundaries
+## Instruction order
 
-- Package root is `pi-warden/warden-flow/`.
-- Shared extension logic lives in `src/`.
-- Bundled Pi extension lives in `extensions/warden-map/`.
-- Bundled skill lives in `skills/warden-map/` and registers `/skill:warden-map`.
-- Tests live in `tests/`.
-- Package scripts live in `scripts/`.
+- Read the repo root `AGENTS.md` first.
+- Read `pi-warden/AGENTS.md` before package edits.
+- Read this file before changing files under `pi-warden/warden-flow/`.
+- Use nearby `map.md` files for orientation only.
+- Do not treat `map.md` files as task plans, issue trackers, implementation diaries, or current-work state.
+
+## Boundary
+
+`warden-flow/` is package `@nekwebdev/warden-flow`. It owns Warden workflow/orientation Pi behavior.
+
+Package-owned areas:
+
+- shared map and git-context logic in `src/`;
+- map injection extension in `extensions/warden-map/`;
+- `warden-map` skill in `skills/warden-map/`;
+- package tests in `tests/`;
+- package scripts in `scripts/`.
+
+This package does not own Warden runner workflows, agent lifecycle commands, sibling package installers, subagents, or model override cascades.
 
 ## Map model
 
@@ -27,10 +40,18 @@
 - Git context must include branch, short commit, and dirty state when git is available.
 - Do not add subagents, workflow runners, sibling package installers, or model override cascades to this package.
 
-## Tests
+## Testing
 
 ```sh
 npm install --prefix pi-warden/warden-flow
 npm test --prefix pi-warden/warden-flow
 mise run test:pi-warden
 ```
+
+Run package-local tests for package changes. Run `mise run test:pi-warden` when shared Pi package assumptions or package-area behavior change. Report unavailable tooling or skipped checks exactly.
+
+## Documentation
+
+- `README.md` explains package behavior, commands, map contracts, and local development for humans.
+- `AGENTS.md` contains package-specific agent rules and boundaries.
+- Do not add active task state or implementation diaries to README, AGENTS, or map files.

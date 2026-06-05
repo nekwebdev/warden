@@ -1,16 +1,16 @@
 # nix-warden
 
-`nix-warden` is the future NixOS and system-configuration package for Warden.
+`nix-warden/` is Warden's future NixOS and system-configuration area.
 
-Current status: skeleton only. This groundwork slice creates the directory, test boundary, and agent guidance without implementing NixOS product behavior.
+Current scope: skeleton/product boundary. It preserves the canonical config location and smoke-test surface for future system-configuration work; no NixOS product workflow is implemented here yet.
 
-Canonical active path after bootstrap:
+Canonical future active path after bootstrap:
 
 ```sh
 $WARDEN_HOME/nix-warden
 ```
 
-## Dev test
+## Development tests
 
 ```sh
 mise run test:nix-warden
