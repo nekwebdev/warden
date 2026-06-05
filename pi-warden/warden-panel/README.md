@@ -12,7 +12,7 @@ Pi command names are exact matches. This package does not register `/warden:sett
 
 ## Display pane
 
-The Display pane manages `warden.useNerdGlyphs` in `$PI_CODING_AGENT_DIR/settings.json`. Writes preserve unrelated root keys and existing `warden` keys such as `warden.agents.<name>.cwd`.
+The Display pane manages `warden.useNerdGlyphs` in `$PI_CODING_AGENT_DIR/settings.json`. Writes preserve unrelated root keys and existing `warden` keys such as `warden.agent.cwd`.
 
 The panel uses draft state while open. Space/Enter toggles displayed preference, Apply appears only when changes are pending and writes settings, and Esc exits without writing draft changes.
 

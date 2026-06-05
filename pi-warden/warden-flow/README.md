@@ -1,8 +1,8 @@
 # warden-flow
 
-`@nekwebdev/warden-flow` is Warden's Pi Agent workflow and durable-orientation package.
+`@nekwebdev/warden-flow` is Warden's Pi Agent workflow, durable-orientation, and commit-safety package.
 
-It reduces repeated repo discovery by maintaining a small map tree and injecting only token-conscious capsules when relevant.
+It reduces repeated repo discovery by maintaining a small map tree, injecting only token-conscious capsules when relevant, and providing safe local commit planning tools.
 
 ## What it provides
 
@@ -89,7 +89,7 @@ It never pushes, pulls, fetches, rebases, resets, amends, tags, stashes, checks 
 
 ## Scope boundary
 
-This package owns Warden workflow/orientation Pi behavior, including `warden-map` and map capsule injection.
+This package owns Warden workflow/orientation Pi behavior, including `warden-map`, map capsule injection, `warden-commit`, and commit snapshot/apply tooling.
 
 It does not own Warden runner workflows, Pi agent lifecycle commands, or sibling package installation workflows.
 

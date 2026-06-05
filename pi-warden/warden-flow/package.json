@@ -1,7 +1,7 @@
 {
   "name": "@nekwebdev/warden-flow",
   "version": "0.1.0",
-  "description": "Warden Pi Agent workflow package bundling repository map skills and extensions",
+  "description": "Warden Pi Agent workflow package bundling repository map and safe commit skills and extensions",
   "type": "module",
   "files": [
     "index.ts",
@@ -19,8 +19,12 @@
     "warden",
     "warden-flow",
     "warden-map",
+    "warden-commit",
     "skills",
+    "workflow",
     "repository-map",
+    "git",
+    "commit",
     "context"
   ],
   "author": "nekwebdev",

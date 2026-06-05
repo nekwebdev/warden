@@ -12,7 +12,9 @@ setup() { PROJECT_ROOT=$(cd "$BATS_TEST_DIRNAME/.." && pwd -P); }
   [ -d "$PROJECT_ROOT/warden-flow" ]
   [ -f "$PROJECT_ROOT/warden-flow/package.json" ]
   [ -d "$PROJECT_ROOT/warden-flow/extensions/warden-map" ]
+  [ -d "$PROJECT_ROOT/warden-flow/extensions/warden-commit" ]
   [ -d "$PROJECT_ROOT/warden-flow/skills/warden-map" ]
+  [ -d "$PROJECT_ROOT/warden-flow/skills/warden-commit" ]
 }
 
 @test "warden-panel declares package and bundled extension manifest" {
@@ -23,7 +25,7 @@ setup() { PROJECT_ROOT=$(cd "$BATS_TEST_DIRNAME/.." && pwd -P); }
   [ "$status" -eq 0 ]
 }
 
-@test "warden-flow declares package and bundled warden-map resources" {
+@test "warden-flow declares package and bundled flow resources" {
   run grep -F '"name": "@nekwebdev/warden-flow"' "$PROJECT_ROOT/warden-flow/package.json"
   [ "$status" -eq 0 ]
 

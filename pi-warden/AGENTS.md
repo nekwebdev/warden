@@ -64,6 +64,7 @@ Use only folders that fit the package.
 - `warden-flow/`
   - Owns Warden workflow/orientation Pi behavior.
   - Owns `/skill:warden-map`, map capsule injection, scoped map loading, and git context injection.
+  - Owns `/skill:warden-commit`, commit snapshot/apply tools, and local commit safety rules.
   - Does not own general runner workflows or agent lifecycle commands.
 
 ## Scope rules
