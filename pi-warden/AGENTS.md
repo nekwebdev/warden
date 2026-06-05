@@ -75,6 +75,16 @@ Use only folders that fit the package.
 - Keep package behavior independently installable and testable.
 - Keep package boundaries explicit when packages share APIs.
 
+## Skill implementation rules
+
+- Keep skills thin: model-facing workflow guidance, usage instructions, acceptance behavior, and verification expectations.
+- When adding or changing a skill, check whether repeated, safety-sensitive, or testable behavior belongs in package `src/` or a sibling extension.
+- Do not put deterministic behavior only in skill instructions when it can be implemented and tested.
+- Put reusable deterministic logic in package `src/`.
+- Use sibling extensions only when Pi lifecycle, runtime, or context-injection behavior is actually involved.
+- Add or update package-local tests for deterministic package behavior when code changes.
+- Do not add extensions or folders just for ceremony.
+
 ## Testing
 
 From the repo root:

@@ -45,6 +45,18 @@ pi-warden/<package>/
 
 Use only the folders that fit the package. Do not create ceremony just to make the tree look important. Trees have enough problems.
 
+## Skill, extension, and code split
+
+Skills are thin model-facing workflow entrypoints. Deterministic behavior that can be implemented, tested, reused, or constrained belongs in package-owned code, not only in skill prose.
+
+Use:
+
+- `src/` for reusable deterministic logic and package APIs;
+- `extensions/` for Pi runtime integration such as startup injection, tool-result hooks, scoped context injection, and ambient behavior;
+- `skills/` for workflow guidance, usage instructions, acceptance behavior, and verification expectations.
+
+Do not add extensions or folders just for ceremony. Add them when package behavior needs them.
+
 ## Current packages
 
 ### `warden-panel/`
