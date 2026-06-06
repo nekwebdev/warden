@@ -1,0 +1,14 @@
+{
+  "name": "warden",
+  "private": true,
+  "type": "module",
+  "description": "Federated monorepo for Warden operating-environment workflow",
+  "scripts": {
+    "test": "mise run test",
+    "test:root": "mise run test:root",
+    "test:run-warden": "mise run test:run-warden",
+    "test:pi-warden": "mise run test:pi-warden",
+    "test:nix-warden": "mise run test:nix-warden",
+    "test:dev-warden": "mise run test:dev-warden"
+  }
+}
