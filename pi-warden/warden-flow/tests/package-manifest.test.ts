@@ -40,11 +40,26 @@ function skillEntries(): string[] {
 	);
 }
 
+const expectedSkillEntries = [
+	join("skills", "warden-commit", "SKILL.md"),
+	join("skills", "warden-grill", "SKILL.md"),
+	join("skills", "warden-map", "SKILL.md"),
+	join("skills", "warden-start", "SKILL.md"),
+	join("skills", "warden-tdd", "SKILL.md"),
+];
+
 function advertisedExtensionEntries(): string[] {
 	return (pkg.pi?.extensions ?? []).flatMap((entry) => {
 		if (entry === "./extensions/*/index.ts") return extensionEntries();
 		return [entry];
 	});
+}
+
+function skillContent(skillName: string): string {
+	return readFileSync(
+		resolve(packageRoot, "skills", skillName, "SKILL.md"),
+		"utf-8",
+	);
 }
 
 describe("package pi resources", () => {
@@ -75,6 +90,10 @@ describe("package pi resources", () => {
 		assert.equal(pkg.files?.includes("extensions/**/*.ts"), true);
 		assert.equal(pkg.files?.includes("skills/**"), true);
 		assert.equal(pkg.files?.includes("!**/*.test.ts"), true);
+	});
+
+	it("includes expected Warden Flow skill resources", () => {
+		assert.deepEqual(skillEntries(), expectedSkillEntries);
 	});
 
 	it("all advertised Pi resources and package exports exist", () => {
@@ -108,6 +127,22 @@ describe("package pi resources", () => {
 				`${entry} should exist`,
 			);
 		}
+	});
+
+	it("warden-grill supports optional manual feedback evidence", () => {
+		const content = skillContent("warden-grill");
+
+		assert.match(
+			content,
+			/^argument-hint:\s*\[work packet\.md path, manual feedback\]$/m,
+		);
+		assert.match(
+			content,
+			/remaining argument text as optional manual feedback evidence/,
+		);
+		assert.match(content, /ask_user_question/);
+		assert.match(content, /Grill packet alone/);
+		assert.match(content, /Status: Packet solid for TDD/);
 	});
 
 	it("all skill directories contain SKILL.md with minimal frontmatter", () => {

@@ -8,7 +8,7 @@ It reduces repeated repo discovery by maintaining a small map tree, injecting on
 
 - `/skill:warden-map` — creates or refreshes repository map files.
 - `/skill:warden-start` — turns rough intent into one small `.warden/work/<slug>/packet.md` work packet for a lean dev cycle.
-- `/skill:warden-grill` — pressure-tests a work packet through a question/update loop until it is solid for TDD.
+- `/skill:warden-grill` — pressure-tests a work packet or manual feedback through a question/update loop until it is solid for TDD.
 - `/skill:warden-tdd` — implements one grilled work packet slice with strict test-first workflow.
 - `/skill:warden-commit` — plans safe, atomic local commits and can apply them after exact `Commit` confirmation.
 - `/warden:effort` — opens the Warden panel Effort pane for Warden skill thinking-level settings through `@nekwebdev/warden-panel`.

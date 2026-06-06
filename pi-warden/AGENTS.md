@@ -99,7 +99,7 @@ Future Warden skills should start from this shape. Keep every body tag present, 
 ---
 name: warden-example
 description: Specific workflow description plus when to use it.
-argument-hint: [expected arguments]
+argument-hint: [type of argument 1, type of argument 2, ...]
 license: MIT
 ---
 
@@ -134,7 +134,8 @@ license: MIT
 
 - `name`, `description`, and `license` follow the Agent Skills frontmatter shape used by `warden-grill`.
 - `argument-hint` documents expected `/skill:<name>` arguments. Pi currently treats it as metadata for skills; do not rely on autocomplete display unless Pi adds skill support.
-- Add package-specific body tags only when the skill truly needs them.
+- Add extra body tags only when the skill truly needs them; any clear tag name may be used when it captures relevant, repeated structure for that skill.
+- Good optional tag candidates include `<inputs>`, `<state-files>`, `<decision-points>`, `<handoff>`, and `<failure-modes>`.
 - Keep deterministic, repeated, safety-sensitive, or testable behavior in package code instead of only in template prose.
 
 ## Testing
