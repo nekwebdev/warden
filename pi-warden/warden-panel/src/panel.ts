@@ -123,7 +123,13 @@ export async function showWardenPanel(
 			}
 
 			function updateDraftSettings(patch: WardenSettings): void {
-				draftSettings = { ...draftSettings, ...patch };
+				draftSettings = {
+					...draftSettings,
+					...patch,
+					...(patch.effort
+						? { effort: { ...draftSettings.effort, ...patch.effort } }
+						: {}),
+				};
 			}
 
 			function contextFor(pane: WardenPanelPane): WardenPanelPaneContext {
@@ -357,7 +363,7 @@ function hasPendingSettingsChanges(
 	settings: WardenSettings,
 	draft: WardenSettings,
 ): boolean {
-	return (settings.useNerdGlyphs === true) !== (draft.useNerdGlyphs === true);
+	return JSON.stringify(settings) !== JSON.stringify(draft);
 }
 
 function isPaneAction(

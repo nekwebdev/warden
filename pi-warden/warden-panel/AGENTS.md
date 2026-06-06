@@ -34,13 +34,13 @@ This package does not own Warden runner workflows. `warden agents ...` and `ward
 
 - Keep Pi manifest pointed at `./extensions/*/index.ts`.
 - Keep package export pointed at `./src/index.ts`.
-- Keep public pane registry and `showWardenPanel` exports importable from `@nekwebdev/warden-panel`.
-- Keep pane registry and action-handler state shared through `globalThis` so separately loaded Warden packages see one registry.
+- Keep public pane registry, Display setting contribution registry, and `showWardenPanel` exports importable from `@nekwebdev/warden-panel`.
+- Keep pane registry, Display setting registry, and action-handler state shared through `globalThis` so separately loaded Warden packages see one registry.
 - Register `/warden` as the main exact Pi command and make it open the first available pane.
 - Register `/warden:display` and `/warden:packages` as exact Pi commands.
 - Do not register `/warden:settings`.
 - Persist only Warden panel preferences under `settings.warden`; preserve unknown root keys and unknown `warden` keys.
-- Display pane changes stay draft-only until Apply; show Apply only when changes are pending; Esc must not write.
+- Display pane changes, including contributed Display settings from sibling packages, write inline without Apply. Esc must not roll back already toggled Display settings.
 - Keep package-manager behavior in `extensions/warden-packages/`, not in core `src/` panel framework.
 - Do not change root bootstrap or `run-warden/` agent workflows from this package.
 

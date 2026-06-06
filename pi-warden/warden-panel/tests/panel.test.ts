@@ -12,6 +12,7 @@ import { dirname, join } from "node:path";
 import { afterEach, beforeEach, describe, it, mock } from "node:test";
 import {
 	clearWardenPanesForTests,
+	contributeWardenDisplaySetting,
 	contributeWardenPane,
 } from "../src/registry.js";
 import { registerDisplayPane } from "../extensions/warden-display/pane.js";
@@ -261,7 +262,64 @@ describe("warden panel", () => {
 		});
 	});
 
-	it("toggles draft Nerd Glyphs without writing until Apply", async () => {
+	it("toggles contributed display settings inline", async () => {
+		contributeWardenDisplaySetting({
+			id: "skill-status",
+			order: 20,
+			itemCount: () => 1,
+			render: (ctx, _width, active) => [
+				`${active ? ">" : " "} Skill status ${ctx.draftSettings.effort?.showSkillStatus === true ? "on" : "off"}`,
+			],
+			handleInput: (_data, ctx) => {
+				ctx.updateDraftSettings({
+					effort: {
+						...ctx.draftSettings.effort,
+						showSkillStatus: ctx.draftSettings.effort?.showSkillStatus !== true,
+					},
+				});
+				ctx.requestRender();
+				return true;
+			},
+		});
+		await withTempSettings(
+			{
+				warden: {
+					effort: {
+						profiles: { careful: true },
+						showSkillStatus: false,
+					},
+				},
+			},
+			async () => {
+				const ui = testUI((component) => {
+					component.handleInput?.("\x1b[B");
+					component.handleInput?.(" ");
+					assert.equal(
+						JSON.parse(readFileSync(getPiAgentSettingsPath(), "utf-8")).warden
+							.effort.showSkillStatus,
+						true,
+					);
+					component.handleInput?.("\x1b");
+				});
+
+				assert.deepEqual(
+					await showWardenPanel(ui, { initialPaneId: "display" }),
+					{ action: "close" },
+				);
+				assert.deepEqual(
+					JSON.parse(readFileSync(getPiAgentSettingsPath(), "utf-8")).warden,
+					{
+						effort: {
+							profiles: { careful: true },
+							showSkillStatus: true,
+						},
+					},
+				);
+			},
+		);
+	});
+
+	it("toggles Nerd Glyphs inline", async () => {
 		await withTempSettings(
 			{
 				warden: {
@@ -275,17 +333,15 @@ describe("warden panel", () => {
 					assert.equal(
 						JSON.parse(readFileSync(getPiAgentSettingsPath(), "utf-8")).warden
 							.useNerdGlyphs,
-						false,
+						true,
 					);
-					component.handleInput?.("\x1b[B");
-					component.handleInput?.("\r");
+					component.handleInput?.("\x1b");
 				});
 
-				const result = await showWardenPanel(ui, { initialPaneId: "display" });
-				assert.deepEqual(result, {
-					action: "applied",
-					settings: { useNerdGlyphs: true },
-				});
+				assert.deepEqual(
+					await showWardenPanel(ui, { initialPaneId: "display" }),
+					{ action: "close" },
+				);
 				assert.deepEqual(
 					JSON.parse(readFileSync(getPiAgentSettingsPath(), "utf-8")).warden,
 					{
@@ -336,10 +392,9 @@ describe("warden panel", () => {
 		});
 	});
 
-	it("closes on Escape without writing", async () => {
+	it("closes on Escape without changes", async () => {
 		await withTempSettings({ warden: { useNerdGlyphs: false } }, async () => {
 			const ui = testUI((component) => {
-				component.handleInput?.(" ");
 				component.handleInput?.("\x1b");
 			});
 

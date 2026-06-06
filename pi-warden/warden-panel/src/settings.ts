@@ -9,8 +9,15 @@ import {
 import { homedir } from "node:os";
 import { dirname, join } from "node:path";
 
+export interface WardenEffortSettings {
+	readonly showSkillStatus?: boolean;
+	readonly [key: string]: unknown;
+}
+
 export interface WardenSettings {
 	readonly useNerdGlyphs?: boolean;
+	readonly effort?: WardenEffortSettings;
+	readonly [key: string]: unknown;
 }
 
 export type PiAgentSettingsErrorKind =
@@ -117,11 +124,16 @@ export function getWardenSettings(
 ): WardenSettings {
 	if (!settings || !isPlainObject(settings.warden)) return {};
 	const warden = settings.warden;
-	return {
-		...(typeof warden.useNerdGlyphs === "boolean"
-			? { useNerdGlyphs: warden.useNerdGlyphs }
-			: {}),
-	};
+	const displaySettings: Record<string, unknown> = { ...warden };
+	if (typeof warden.useNerdGlyphs !== "boolean") {
+		delete displaySettings.useNerdGlyphs;
+	}
+	if (isPlainObject(warden.effort)) {
+		displaySettings.effort = { ...warden.effort };
+	} else {
+		delete displaySettings.effort;
+	}
+	return displaySettings;
 }
 
 export function writeWardenSettings(

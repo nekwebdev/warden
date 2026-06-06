@@ -122,13 +122,29 @@ describe("Warden settings", () => {
 		});
 	});
 
-	it("reads warden.useNerdGlyphs only when boolean", () => {
+	it("reads Warden display settings", () => {
 		assert.deepEqual(getWardenSettings({ warden: { useNerdGlyphs: true } }), {
 			useNerdGlyphs: true,
 		});
 		assert.deepEqual(getWardenSettings({ warden: { useNerdGlyphs: false } }), {
 			useNerdGlyphs: false,
 		});
+		assert.deepEqual(
+			getWardenSettings({
+				warden: {
+					effort: {
+						profiles: { careful: true },
+						showSkillStatus: true,
+					},
+				},
+			}),
+			{
+				effort: {
+					profiles: { careful: true },
+					showSkillStatus: true,
+				},
+			},
+		);
 		assert.deepEqual(
 			getWardenSettings({ warden: { useNerdGlyphs: "yes" } }),
 			{},
@@ -148,7 +164,10 @@ describe("Warden settings", () => {
 				},
 			},
 			() => {
-				const result = writeWardenSettings({ useNerdGlyphs: true });
+				const result = writeWardenSettings({
+					effort: { showSkillStatus: true },
+					useNerdGlyphs: true,
+				});
 				assert.deepEqual(result, { ok: true });
 				assert.deepEqual(
 					JSON.parse(readFileSync(getPiAgentSettingsPath(), "utf-8")),
@@ -157,6 +176,7 @@ describe("Warden settings", () => {
 						other: { keep: true },
 						warden: {
 							agents: { sentinel: { cwd: "~/work/project" } },
+							effort: { showSkillStatus: true },
 							existing: "value",
 							useNerdGlyphs: true,
 						},

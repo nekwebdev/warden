@@ -2,9 +2,12 @@ import assert from "node:assert/strict";
 import { afterEach, beforeEach, describe, it } from "node:test";
 import {
 	clearWardenPanesForTests,
+	contributeWardenDisplaySetting,
 	contributeWardenPane,
+	getWardenDisplaySettings,
 	getWardenPane,
 	getWardenPanes,
+	hasWardenDisplaySetting,
 	type WardenPanelPane,
 } from "../src/registry.js";
 
@@ -74,5 +77,39 @@ describe("warden pane registry", () => {
 		contributeWardenPane(pane);
 		assert.equal(getWardenPane("settings"), pane);
 		assert.equal(getWardenPane("missing"), undefined);
+	});
+
+	it("returns display settings sorted by order then id", () => {
+		contributeWardenDisplaySetting({
+			id: "zed",
+			order: 20,
+			itemCount: () => 0,
+			render: () => [],
+		});
+		contributeWardenDisplaySetting({
+			id: "alpha",
+			order: 10,
+			itemCount: () => 0,
+			render: () => [],
+		});
+
+		assert.equal(hasWardenDisplaySetting("alpha"), true);
+		assert.deepEqual(
+			getWardenDisplaySettings().map((setting) => setting.id),
+			["alpha", "zed"],
+		);
+	});
+
+	it("rejects duplicate display setting ids", () => {
+		const setting = {
+			id: "toggle",
+			itemCount: () => 0,
+			render: () => [],
+		};
+		contributeWardenDisplaySetting(setting);
+		assert.throws(
+			() => contributeWardenDisplaySetting(setting),
+			/Duplicate Warden display setting: toggle/,
+		);
 	});
 });

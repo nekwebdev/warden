@@ -12,9 +12,9 @@ Pi command names are exact matches. This package does not register `/warden:sett
 
 ## Display pane
 
-The Display pane manages `warden.useNerdGlyphs` in `$PI_CODING_AGENT_DIR/settings.json`. Writes preserve unrelated root keys and existing `warden` keys such as `warden.agent.cwd`.
+The Display pane manages `warden.useNerdGlyphs` in `$PI_CODING_AGENT_DIR/settings.json`. Other Warden packages may contribute additional Display settings through `contributeWardenDisplaySetting()`. Writes preserve unrelated root keys and existing `warden` keys such as `warden.agent.cwd`.
 
-The panel uses draft state while open. Space/Enter toggles displayed preference, Apply appears only when changes are pending and writes settings, and Esc exits without writing draft changes.
+Display pane settings write inline. Space/Enter toggles displayed preferences immediately, and Esc exits without rolling back already toggled Display settings.
 
 ## Packages pane
 
@@ -49,6 +49,7 @@ After install/remove, the extension writes a concise chat report and tells the u
 
 ```ts
 import {
+  contributeWardenDisplaySetting,
   contributeWardenPane,
   contributeWardenPaneActionHandler,
 } from "@nekwebdev/warden-panel";
@@ -71,9 +72,25 @@ contributeWardenPane({
 contributeWardenPaneActionHandler("example", async (action, ctx) => {
   if (action.action === "run") ctx.commandContext.ui.notify("Ran action", "info");
 });
+
+contributeWardenDisplaySetting({
+  id: "example.toggle",
+  order: 50,
+  itemCount: () => 1,
+  render: (ctx, _width, active) => [
+    `${active ? ctx.glyphs.pointer : "  "}${ctx.draftSettings.exampleEnabled ? "[x]" : "[ ]"} Example toggle`,
+  ],
+  handleInput: (_data, ctx) => {
+    ctx.updateDraftSettings({
+      exampleEnabled: ctx.draftSettings.exampleEnabled !== true,
+    });
+    ctx.requestRender();
+    return true;
+  },
+});
 ```
 
-Duplicate pane IDs are rejected. Pane registry and action-handler state is shared through `globalThis` so independently loaded Warden packages can contribute panes to the same panel. `showWardenPanel()` is exported for package commands that open the panel on a contributed pane. Pane render context includes `maxPaneLines` for scroll-window calculations. Optional `footerHint?: string` overrides the default panel footer text for a pane-specific keyboard/action hint.
+Duplicate pane IDs and duplicate Display setting IDs are rejected. Pane registry, Display setting registry, and action-handler state are shared through `globalThis` so independently loaded Warden packages can contribute to the same panel. `showWardenPanel()` is exported for package commands that open the panel on a contributed pane. Pane render context includes `maxPaneLines` for scroll-window calculations. Optional `footerHint?: string` overrides the default panel footer text for a pane-specific keyboard/action hint.
 
 ## Package layout
 

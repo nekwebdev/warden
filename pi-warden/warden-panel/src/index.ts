@@ -1,4 +1,5 @@
 export type {
+	WardenDisplaySettingContribution,
 	WardenPanelPane,
 	WardenPanelPaneAction,
 	WardenPanelPaneActionContext,
@@ -8,11 +9,14 @@ export type {
 	WardenPanelTheme,
 } from "./registry.js";
 export {
+	contributeWardenDisplaySetting,
 	contributeWardenPane,
 	contributeWardenPaneActionHandler,
+	getWardenDisplaySettings,
 	getWardenPane,
 	getWardenPanes,
 	handleWardenPaneAction,
+	hasWardenDisplaySetting,
 } from "./registry.js";
 export type {
 	ShowWardenPanelOptions,
