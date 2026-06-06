@@ -19,12 +19,18 @@ Plan local commits from a Warden snapshot. Create local commits only through `wa
    - exact subject/body;
    - exact repo-relative paths;
    - warnings, excluded files, and whether diffs were inspected.
-6. Ask user to choose. If an `ask_user_question` tool, questionnaire extension, or equivalent structured choice UI is available, use it for this final choice instead of plain text. Present exactly these labels and meanings:
-   - `Commit` — apply exact plan;
-   - `Adjust` — revise plan;
-   - `Review` — inspect targeted diffs/files;
-   - `Abort` — stop.
-   Treat only a selected option or free-form reply that is exactly `Commit` as commit confirmation. Custom answers, paraphrases, or lowercase variants are not confirmation.
+6. Ask user to choose with a two-part confirmation pattern:
+   1. First send the full plan as normal assistant text. Do not put the plan inside the structured question body.
+   2. Then use `ask_user_question`, questionnaire extension, or equivalent structured choice UI for the final choice when available. Use exactly one question, no option previews, and concise text:
+      - header: `Commit?`
+      - question: `Apply this exact commit plan?`
+      - options:
+        - `Commit` — apply exact plan;
+        - `Adjust` — revise plan;
+        - `Review` — inspect targeted diffs/files;
+        - `Abort` — stop.
+   If no structured choice UI is available, ask the same concise question in plain text after the plan.
+   Treat only a selected option or free-form reply that is exactly `Commit` as commit confirmation. Custom answers, paraphrases, lowercase variants, and echoed plan text are not confirmation.
 7. Only if user replies or selects exactly `Commit`, call `warden_commit_apply` with:
    - `snapshotHash` from reviewed snapshot;
    - `confirmedUserIntent: "Commit"`;
