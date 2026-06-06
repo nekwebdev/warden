@@ -21,6 +21,7 @@ Package-owned areas:
 - commit snapshot/apply extension in `extensions/warden-commit/`;
 - effort panel/runtime extension in `extensions/warden-effort/`, which uses the public `@nekwebdev/warden-panel` API;
 - `warden-map` skill in `skills/warden-map/`;
+- `warden-start` skill in `skills/warden-start/`;
 - `warden-commit` skill in `skills/warden-commit/`;
 - package tests in `tests/`;
 - package scripts in `scripts/`.
@@ -32,6 +33,7 @@ This package does not own Warden runner workflows, agent lifecycle commands, sib
 - Root map path: `.warden/map.md`.
 - Scoped map path: `.warden/maps/<repo-relative-scope>/map.md`.
 - Map files are repository orientation context, not task plans or implementation artifacts.
+- Only `warden-map` updates `.warden/map.md` and `.warden/maps/**/map.md`; other skills treat maps as possibly stale orientation hints.
 - Every auto-injected map must come from the `<!-- warden-map:inject:start -->` / `<!-- warden-map:inject:end -->` capsule.
 - Never auto-inject full map files; inject path-only notices when capsules are missing or too large.
 

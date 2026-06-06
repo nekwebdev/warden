@@ -7,6 +7,7 @@ It reduces repeated repo discovery by maintaining a small map tree, injecting on
 ## What it provides
 
 - `/skill:warden-map` — creates or refreshes repository map files.
+- `/skill:warden-start` — turns rough intent into one small `.warden/work/<slug>/packet.md` work packet for a lean dev cycle.
 - `/skill:warden-commit` — plans safe, atomic local commits and can apply them after exact `Commit` confirmation.
 - `/warden:effort` — opens the Warden panel Effort pane for Warden skill thinking-level settings through `@nekwebdev/warden-panel`.
 - `extensions/warden-map` — injects map capsules and git context.

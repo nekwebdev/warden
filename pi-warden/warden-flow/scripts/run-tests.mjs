@@ -4,6 +4,7 @@ import { existsSync } from "node:fs";
 const tests = [
 	"tests/package-manifest.test.ts",
 	"tests/warden-map-skill.test.ts",
+	"tests/warden-start-skill.test.ts",
 	"tests/map.test.ts",
 	"tests/git.test.ts",
 	"tests/commit.test.ts",
