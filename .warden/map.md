@@ -3,7 +3,7 @@
 Reviewed: 2026-06-05
 Scope: repository root
 Evidence basis: root/subproject AGENTS and README files; `.mise.toml`; Bats/package test entry points; Pi package manifests; existing scoped maps; bounded git history.
-Git basis: main@e604271
+Git basis: main@d68a1de
 
 <!-- warden-map:inject:start -->
 ## Agent Quick Context
@@ -29,7 +29,7 @@ The first-run promise is central: a user can clone anywhere, run `./warden`, cho
 | `run-warden/` | Delegated runner | Owns command dispatch, reusable shell libs, shell snippets, Pi agent environment commands, Bats tests. See `.warden/maps/run-warden/map.md`. |
 | `pi-warden/` | Pi package container | Holds package-area docs/tests and package roots. Not itself a Pi package. See `.warden/maps/pi-warden/map.md`. |
 | `pi-warden/warden-panel/` | Pi package | `@nekwebdev/warden-panel`; panel framework plus Display and Packages panes. See scoped map. |
-| `pi-warden/warden-flow/` | Pi package | `@nekwebdev/warden-flow`; workflow package currently bundling `warden-map` and `warden-commit` skills plus map/git-context and commit-safety extensions. See scoped map. |
+| `pi-warden/warden-flow/` | Pi package | `@nekwebdev/warden-flow`; workflow package bundling `warden-map`, `warden-start`, `warden-grill`, and `warden-commit` skills plus map/git-context, effort, and commit-safety extensions. See scoped map. |
 | `nix-warden/` | Future NixOS/system package | Skeleton only; canonical active path after bootstrap is `$WARDEN_HOME/nix-warden`. |
 | `dev-warden/` | Future developer-environment package | Skeleton only; independently testable smoke boundary. |
 | `tests/root/` | Root bootstrap tests | Bats fixtures copy repo into temp dirs and verify first-run movement, no-overwrite safety, doctor, shell integration. |
@@ -77,22 +77,22 @@ The first-run promise is central: a user can clone anywhere, run `./warden`, cho
 - `run-warden/lib/pi-agents.sh` integrates registry package `@earendil-works/pi-coding-agent` into isolated agent npm prefixes.
 - `pi-warden/warden-panel` exposes a pane registry API from `@nekwebdev/warden-panel`; independently loaded Warden packages share pane/action state through `globalThis`.
 - `pi-warden/warden-panel/extensions/warden-packages` edits global Pi `packages` settings through Pi package-manager behavior and reports restart-required messages.
-- `pi-warden/warden-flow` bundles the `warden-map` skill/extension, which injects root/scoped map capsules and git context into Pi sessions, plus `warden-commit` skill/extension for safe local commit planning and apply. It never injects full map bodies.
+- `pi-warden/warden-flow` bundles `warden-map`, `warden-start`, `warden-grill`, and `warden-commit` skills; map/git-context, effort, and commit-safety extensions; and an Effort pane contribution through `@nekwebdev/warden-panel`. It never injects full map bodies.
 - New Pi packages should follow `pi-warden/<package>/` shape with manifest, README, AGENTS, tests, scripts, and only needed asset folders.
 
 ## Recent Evolution from Git History
 
-Git history available. Current bounded basis: `main@e604271`.
+Git history available. Current bounded basis: `main@d68a1de`.
 
 Orientation-relevant recent changes:
 
-- Runner/Pi-agent work remains active: recent commit `e604271` tightened cwd reading to canonical flattened `warden.agent.cwd`, following earlier Pi agent environment, settings, tmux-window, and shell integration work.
-- `warden-flow` became an established package: `add328e` added map resources, `0c0520c` added safe commit helper resources, `afc1c40` documented commit resources, and `ea22b8d` tightened the `warden-map` skill contract.
-- Map files were refreshed in `4a402a4`; map content should be treated as orientation, not current dirty-state source.
-- `warden-panel` earlier absorbed former `warden-packages` into `extensions/warden-packages` and remains panel framework plus bundled Display/Packages panes.
-- Skeleton `nix-warden/` and `dev-warden/` remained smoke-test-only boundaries in recent history.
+- `warden-flow` expanded beyond map/commit helpers: recent commits added `warden-start`, `warden-grill`, skill effort defaults, active skill effort status, Display-pane skill status toggle, and commit confirmation prompt clarification.
+- `warden-panel` added contributed Display settings so sibling packages can add inline Display toggles through the public pane API, while keeping bundled Display/Packages pane ownership.
+- Earlier runner/Pi-agent work tightened cwd reading to canonical flattened `warden.agent.cwd`, following Pi agent environment, settings, tmux-window, and shell integration work.
+- Map files were refreshed in earlier history; map content should be treated as orientation, not current dirty-state source.
+- Skeleton `nix-warden/` and `dev-warden/` remained smoke-test-only boundaries.
 
-Recent changed-path clusters center on `run-warden/`, root/runner Bats tests, `.warden/` maps, `pi-warden/warden-flow`, and package-area docs. Use live git context injection for current branch, commit, dirty paths, and staging details.
+Recent changed-path clusters center on `pi-warden/warden-flow`, `pi-warden/warden-panel`, root/runner Bats tests, `run-warden/`, and `.warden/` maps. Use live git context injection for current branch, commit, dirty paths, and staging details.
 
 ## Scoped Maps
 
@@ -101,7 +101,7 @@ Recent changed-path clusters center on `run-warden/`, root/runner Bats tests, `.
 | `run-warden` | `.warden/maps/run-warden/map.md` | Distinct runner/CLI/shell/Pi-agent workflow boundary with Bats suite. |
 | `pi-warden` | `.warden/maps/pi-warden/map.md` | Package container with its own package rules, smoke tests, and child package conventions. |
 | `pi-warden/warden-panel` | `.warden/maps/pi-warden/warden-panel/map.md` | Independently testable Pi package with panel framework, extensions, settings, and package operations. |
-| `pi-warden/warden-flow` | `.warden/maps/pi-warden/warden-flow/map.md` | Independently testable Pi package that currently owns `warden-map`, map/git injection, `warden-commit`, and commit safety tooling. |
+| `pi-warden/warden-flow` | `.warden/maps/pi-warden/warden-flow/map.md` | Independently testable Pi package that owns Warden workflow skills, map/git injection, effort settings/status, and commit safety tooling. |
 
 `nix-warden/` and `dev-warden/` are covered in root map only because current repo evidence marks them as skeleton boundaries.
 

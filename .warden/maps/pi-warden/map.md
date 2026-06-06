@@ -3,14 +3,14 @@
 Reviewed: 2026-06-05
 Scope: pi-warden
 Evidence basis: `pi-warden/AGENTS.md`, `pi-warden/README.md`, package READMEs/AGENTS, package manifests, `pi-warden/tests/smoke.bats`, existing child maps, bounded git history.
-Git basis: main@e604271
+Git basis: main@d68a1de
 Parent map: .warden/map.md
 
 <!-- warden-map:inject:start -->
 ## Agent Quick Context
 
 - Purpose: `pi-warden/` is Warden's Pi Agent package area. It is a container, not itself a Pi package.
-- Boundaries: Package manifests/source/tests live under direct child package folders. Current packages are `warden-panel` (`@nekwebdev/warden-panel`) and `warden-flow` (`@nekwebdev/warden-flow`, bundling `warden-map` and `warden-commit` skills/extensions). Runner-owned `warden agents` and `warden pi` workflows remain in `run-warden/`.
+- Boundaries: Package manifests/source/tests live under direct child package folders. Current packages are `warden-panel` (`@nekwebdev/warden-panel`) and `warden-flow` (`@nekwebdev/warden-flow`, bundling Warden workflow skills, map/git injection, effort settings/status, and commit safety tools). Runner-owned `warden agents` and `warden pi` workflows remain in `run-warden/`.
 - Safe edits: Read `pi-warden/AGENTS.md` and package `AGENTS.md` before package edits. Do not place package manifests/source at `pi-warden/` root. Package behavior must not mutate root bootstrap or runner workflows unless explicitly scoped.
 - Verification: Run `mise run test:pi-warden`; package-specific checks are `npm test --prefix pi-warden/warden-panel` and `npm test --prefix pi-warden/warden-flow` after install.
 - Sharp edges: Package roots may contain ignored `node_modules/`. `warden-panel` absorbed former `warden-packages`; do not recreate `pi-warden/warden-packages`. Use live git context injection for current dirty-state details.
@@ -28,7 +28,7 @@ Parent map: .warden/map.md
 | `README.md` | Package-area docs | Lists current packages and package shape. |
 | `tests/smoke.bats` | Smoke tests | Checks package folders/manifests/resources and former package fold-in. |
 | `warden-panel/` | Pi package | Panel framework plus bundled panel/display/packages extensions. See scoped map. |
-| `warden-flow/` | Pi package | Workflow package currently bundling `warden-map` repository-map resources and `warden-commit` safe local commit resources. See scoped map. |
+| `warden-flow/` | Pi package | Workflow package bundling `warden-map`, `warden-start`, `warden-grill`, `warden-commit`, map/git context, effort settings/status, and commit safety tools. See scoped map. |
 
 Expected package shape from guidance:
 
@@ -43,7 +43,7 @@ Expected package shape from guidance:
 - `mise run test:pi-warden` runs package-area smoke tests and each package's `npm test` via `.mise.toml` package loop.
 - Package manifests advertise Pi resources:
   - `warden-panel/package.json` has `pi.extensions: ["./extensions/*/index.ts"]`.
-  - `warden-flow/package.json` has `pi.extensions` and `pi.skills: ["./skills"]`.
+  - `warden-flow/package.json` has `pi.extensions`, `pi.skills: ["./skills"]`, and a package dependency on `@nekwebdev/warden-panel` for Effort pane contribution.
 - Pi can load packages by install or local path depending on Pi workflow outside this repo.
 
 ## Local Conventions
@@ -58,6 +58,7 @@ Expected package shape from guidance:
 
 - `run-warden/` creates/launches Pi agent environments, but does not implement package behavior in this scope.
 - Packages depend on Pi APIs through peer/dev dependencies such as `@earendil-works/pi-coding-agent` and, for panel TUI, `@earendil-works/pi-tui`.
+- `warden-flow` imports `@nekwebdev/warden-panel` public APIs to contribute the Effort pane and Display skill-status toggle.
 - Package tests use Node's test runner with `tsx` through package-local `scripts/run-tests.mjs`.
 
 ## Verification for This Scope
@@ -82,7 +83,7 @@ Focused package commands:
 
 ## Recent Evolution from Git History
 
-Recent git history shows the Pi package area shifted from panel-only to a workflow + panel package set. `warden-panel` added bundled panel extensions and folded former `warden-packages` into `extensions/warden-packages`. `warden-flow` was then added for durable maps/git context, gained `warden-commit` snapshot/apply tooling, and had its `warden-map` skill contract tightened. Package-area docs and smoke tests now name only `warden-panel` and `warden-flow`.
+Recent git history shows the Pi package area shifted from panel-only to a workflow + panel package set. `warden-panel` added bundled panel extensions, folded former `warden-packages` into `extensions/warden-packages`, and added contributed Display settings. `warden-flow` added durable maps/git context, `warden-commit` snapshot/apply tooling, `warden-start`, `warden-grill`, per-skill effort defaults, active skill effort status, and an Effort pane/Display toggle through `warden-panel`. Package-area docs and smoke tests now name only `warden-panel` and `warden-flow`.
 
 ## Open Questions
 
