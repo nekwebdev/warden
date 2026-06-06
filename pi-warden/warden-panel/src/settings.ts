@@ -154,23 +154,41 @@ export function writeWardenSettings(
 	};
 
 	const settingsPath = getPiAgentSettingsPath();
-	let tempPath: string | undefined;
+	const tempPath = nextSettingsTempPath(settingsPath);
 	try {
-		mkdirSync(dirname(settingsPath), { recursive: true });
-		tempPath = `${settingsPath}.${process.pid}.${Date.now()}.tmp`;
-		writeFileSync(tempPath, `${JSON.stringify(next, null, 2)}\n`, "utf-8");
-		renameSync(tempPath, settingsPath);
+		writeSettingsDocument(settingsPath, tempPath, next);
 		return { ok: true };
 	} catch (error) {
-		if (tempPath) rmSync(tempPath, { force: true });
-		return {
-			ok: false,
-			settingsError: {
-				ok: false,
-				kind: "unreadable",
-				path: settingsPath,
-				message: toErrorMessage(error),
-			},
-		};
+		rmSync(tempPath, { force: true });
+		return unreadableSettingsWriteError(settingsPath, error);
 	}
+}
+
+function nextSettingsTempPath(settingsPath: string): string {
+	return `${settingsPath}.${process.pid}.${Date.now()}.tmp`;
+}
+
+function writeSettingsDocument(
+	settingsPath: string,
+	tempPath: string,
+	settings: Record<string, unknown>,
+): void {
+	mkdirSync(dirname(settingsPath), { recursive: true });
+	writeFileSync(tempPath, `${JSON.stringify(settings, null, 2)}\n`, "utf-8");
+	renameSync(tempPath, settingsPath);
+}
+
+function unreadableSettingsWriteError(
+	settingsPath: string,
+	error: unknown,
+): PiAgentSettingsWriteResult {
+	return {
+		ok: false,
+		settingsError: {
+			ok: false,
+			kind: "unreadable",
+			path: settingsPath,
+			message: toErrorMessage(error),
+		},
+	};
 }

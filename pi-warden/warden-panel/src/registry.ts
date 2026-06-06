@@ -99,11 +99,13 @@ export function contributeWardenPane(pane: WardenPanelPane): void {
 }
 
 export function hasWardenPane(id: string): boolean {
-	return panes.has(id);
+	const normalizedId = id.trim();
+	return normalizedId.length > 0 && panes.has(normalizedId);
 }
 
 export function getWardenPane(id: string): WardenPanelPane | undefined {
-	return panes.get(id);
+	const normalizedId = id.trim();
+	return normalizedId.length > 0 ? panes.get(normalizedId) : undefined;
 }
 
 export function getWardenPanes(): WardenPanelPane[] {
@@ -140,7 +142,8 @@ export function contributeWardenDisplaySetting(
 }
 
 export function hasWardenDisplaySetting(id: string): boolean {
-	return displaySettings.has(id);
+	const normalizedId = id.trim();
+	return normalizedId.length > 0 && displaySettings.has(normalizedId);
 }
 
 export function getWardenDisplaySettings(): WardenDisplaySettingContribution[] {

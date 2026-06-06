@@ -29,41 +29,13 @@ export function createDisplayPane(): WardenPanelPane {
 				0,
 			),
 		render(ctx, width, activePane) {
-			const lines: string[] = [];
-			let offset = 0;
-			for (const setting of displaySettings()) {
-				const itemCount = setting.itemCount(ctx);
-				const selected =
-					ctx.selectedIndex >= offset && ctx.selectedIndex < offset + itemCount;
-				lines.push(
-					...setting.render(
-						contextWithSelectedIndex(ctx, ctx.selectedIndex - offset),
-						width,
-						activePane && selected,
-					),
-				);
-				offset += itemCount;
-			}
-			return lines;
+			return renderDisplaySettings(displaySettings(), ctx, width, {
+				activePane,
+			});
 		},
 		handleInput(data, ctx) {
 			if (!isActivation(data)) return false;
-			let offset = 0;
-			for (const setting of displaySettings()) {
-				const itemCount = setting.itemCount(ctx);
-				if (
-					ctx.selectedIndex >= offset &&
-					ctx.selectedIndex < offset + itemCount
-				) {
-					return handleDisplaySettingInput(
-						setting,
-						data,
-						contextWithSelectedIndex(ctx, ctx.selectedIndex - offset),
-					);
-				}
-				offset += itemCount;
-			}
-			return false;
+			return handleSelectedDisplaySetting(displaySettings(), data, ctx);
 		},
 	};
 }
@@ -75,6 +47,55 @@ export function registerDisplayPane(): void {
 
 function displaySettings(): WardenDisplaySettingContribution[] {
 	return [createNerdGlyphsSetting(), ...getWardenDisplaySettings()];
+}
+
+function renderDisplaySettings(
+	settings: WardenDisplaySettingContribution[],
+	ctx: WardenPanelPaneContext,
+	width: number,
+	activity: { readonly activePane: boolean },
+): string[] {
+	return displaySettingSelections(settings, ctx).flatMap((selection) =>
+		selection.setting.render(
+			contextWithSelectedIndex(ctx, selection.selectedIndex),
+			width,
+			activity.activePane && selection.active,
+		),
+	);
+}
+
+function handleSelectedDisplaySetting(
+	settings: WardenDisplaySettingContribution[],
+	data: string,
+	ctx: WardenPanelPaneContext,
+): ReturnType<NonNullable<WardenDisplaySettingContribution["handleInput"]>> {
+	const selection = displaySettingSelections(settings, ctx).find(
+		(item) => item.active,
+	);
+	if (!selection) return false;
+	return handleDisplaySettingInput(
+		selection.setting,
+		data,
+		contextWithSelectedIndex(ctx, selection.selectedIndex),
+	);
+}
+
+function displaySettingSelections(
+	settings: WardenDisplaySettingContribution[],
+	ctx: WardenPanelPaneContext,
+): Array<{
+	readonly setting: WardenDisplaySettingContribution;
+	readonly selectedIndex: number;
+	readonly active: boolean;
+}> {
+	let offset = 0;
+	return settings.map((setting) => {
+		const itemCount = setting.itemCount(ctx);
+		const selectedIndex = ctx.selectedIndex - offset;
+		const active = selectedIndex >= 0 && selectedIndex < itemCount;
+		offset += itemCount;
+		return { setting, selectedIndex, active };
+	});
 }
 
 function createNerdGlyphsSetting(): WardenDisplaySettingContribution {

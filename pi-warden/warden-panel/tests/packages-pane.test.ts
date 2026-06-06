@@ -53,7 +53,7 @@ describe("packages pane", () => {
 			new Set(),
 			context(0),
 			80,
-			true,
+			{ activePane: true },
 		);
 
 		assert.equal(lines[0], "> Install new package");
@@ -115,13 +115,9 @@ describe("packages pane", () => {
 		const entries = Array.from({ length: 10 }, (_, index) =>
 			entry(index, `npm:p${index}`),
 		);
-		const lines = renderPackagesPane(
-			entries,
-			new Set(),
-			context(9, 7),
-			80,
-			true,
-		).join("\n");
+		const lines = renderPackagesPane(entries, new Set(), context(9, 7), 80, {
+			activePane: true,
+		}).join("\n");
 
 		assert.doesNotMatch(lines, /npm:p0/);
 		assert.match(lines, /npm:p7/);

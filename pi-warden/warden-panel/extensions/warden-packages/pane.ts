@@ -18,6 +18,10 @@ type PackagesPaneDependencies = {
 	readonly readEntries?: () => PackageEntry[];
 };
 
+type PaneActivity = { readonly activePane: boolean };
+type RowActivity = { readonly active: boolean };
+type PackageRowOptions = RowActivity & { readonly selected: boolean };
+
 export type RemovePackagesPayload = {
 	readonly sources: string[];
 };
@@ -56,7 +60,9 @@ export function createPackagesPane(
 		},
 		render(ctx, width, activePane) {
 			const current = entries();
-			return renderPackagesPane(current, selectedIds, ctx, width, activePane);
+			return renderPackagesPane(current, selectedIds, ctx, width, {
+				activePane,
+			});
 		},
 		handleInput(data, ctx) {
 			if (!isActivation(data)) return false;
@@ -84,7 +90,7 @@ export function renderPackagesPane(
 	selectedIds: ReadonlySet<string>,
 	ctx: WardenPanelPaneContext,
 	_width: number,
-	activePane: boolean,
+	activity: PaneActivity,
 ): string[] {
 	const selectedCount = entries.filter((entry) =>
 		selectedIds.has(entry.id),
@@ -94,7 +100,7 @@ export function renderPackagesPane(
 		renderActionRow(
 			PACKAGES_ACTION_INSTALL,
 			selectedCount,
-			activePane && ctx.selectedIndex === 0,
+			{ active: activity.activePane && ctx.selectedIndex === 0 },
 			ctx,
 		),
 	);
@@ -104,13 +110,16 @@ export function renderPackagesPane(
 			renderActionRow(
 				PACKAGES_ACTION_REMOVE,
 				selectedCount,
-				activePane && ctx.selectedIndex === 1,
+				{ active: activity.activePane && ctx.selectedIndex === 1 },
 				ctx,
 			),
 		);
 	} else {
 		lines.push(
-			renderSelectPackagesRow(activePane && ctx.selectedIndex === 1, ctx),
+			renderSelectPackagesRow(
+				{ active: activity.activePane && ctx.selectedIndex === 1 },
+				ctx,
+			),
 		);
 	}
 	lines.push("");
@@ -123,42 +132,7 @@ export function renderPackagesPane(
 			),
 		);
 	} else {
-		const maxPaneLines = finitePaneLines(ctx.maxPaneLines);
-		const packageIndexOffset = 2;
-		const needsScrollProbe = entries.length > Math.max(1, maxPaneLines - 5);
-		const fixedLines = 5 + (needsScrollProbe ? 1 : 0);
-		const listBudget = Math.max(1, maxPaneLines - fixedLines);
-		const selectedPackageIndex = clamp(
-			ctx.selectedIndex - packageIndexOffset,
-			0,
-			entries.length - 1,
-		);
-		const window = visibleWindow(
-			entries.length,
-			selectedPackageIndex,
-			listBudget,
-		);
-		for (let index = window.start; index < window.end; index++) {
-			const entry = entries[index];
-			if (entry) {
-				lines.push(
-					renderPackageRow(
-						entry,
-						selectedIds.has(entry.id),
-						activePane && ctx.selectedIndex === packageIndexOffset + index,
-						ctx,
-					),
-				);
-			}
-		}
-		if (window.end - window.start < entries.length) {
-			lines.push(
-				ctx.theme.fg(
-					"dim",
-					`Showing ${window.start + 1}-${window.end} of ${entries.length}`,
-				),
-			);
-		}
+		appendPackageRows(lines, entries, selectedIds, ctx, activity);
 	}
 	lines.push("");
 
@@ -172,52 +146,97 @@ export function sourcesFromRemovePayload(payload: unknown): string[] {
 	);
 }
 
+function appendPackageRows(
+	lines: string[],
+	entries: readonly PackageEntry[],
+	selectedIds: ReadonlySet<string>,
+	ctx: WardenPanelPaneContext,
+	activity: PaneActivity,
+): void {
+	const packageIndexOffset = 2;
+	const window = packageWindow(entries.length, ctx);
+	for (let index = window.start; index < window.end; index++) {
+		const entry = entries[index];
+		if (!entry) continue;
+		lines.push(
+			renderPackageRow(
+				entry,
+				{
+					selected: selectedIds.has(entry.id),
+					active:
+						activity.activePane &&
+						ctx.selectedIndex === packageIndexOffset + index,
+				},
+				ctx,
+			),
+		);
+	}
+	if (window.end - window.start >= entries.length) return;
+	lines.push(
+		ctx.theme.fg(
+			"dim",
+			`Showing ${window.start + 1}-${window.end} of ${entries.length}`,
+		),
+	);
+}
+
+function packageWindow(totalEntries: number, ctx: WardenPanelPaneContext) {
+	const maxPaneLines = finitePaneLines(ctx.maxPaneLines);
+	const needsScrollProbe = totalEntries > Math.max(1, maxPaneLines - 5);
+	const fixedLines = 5 + (needsScrollProbe ? 1 : 0);
+	const listBudget = Math.max(1, maxPaneLines - fixedLines);
+	const selectedPackageIndex = clamp(
+		ctx.selectedIndex - 2,
+		0,
+		totalEntries - 1,
+	);
+	return visibleWindow(totalEntries, selectedPackageIndex, listBudget);
+}
+
 function renderSelectPackagesRow(
-	active: boolean,
+	activity: RowActivity,
 	ctx: WardenPanelPaneContext,
 ): string {
-	const pointer = active
-		? ctx.theme.bold(ctx.theme.fg("text", ctx.glyphs.pointer))
-		: "  ";
-	const row = `${pointer}Select packages to remove`;
-	return active
-		? ctx.theme.bold(ctx.theme.fg("muted", row))
-		: ctx.theme.fg("muted", row);
+	return selectableRow("Select packages to remove", activity, "muted", ctx);
 }
 
 function renderPackageRow(
 	entry: PackageEntry,
-	selected: boolean,
-	active: boolean,
+	options: PackageRowOptions,
 	ctx: WardenPanelPaneContext,
 ): string {
-	const pointer = active
-		? ctx.theme.bold(ctx.theme.fg("text", ctx.glyphs.pointer))
-		: "  ";
-	const mark = selected ? ctx.glyphs.checkboxOn : ctx.glyphs.checkboxOff;
-	const row = `${pointer}${mark} ${entry.source}`;
-	return active
-		? ctx.theme.bold(ctx.theme.fg("text", row))
-		: ctx.theme.fg("text", row);
+	const mark = options.selected
+		? ctx.glyphs.checkboxOn
+		: ctx.glyphs.checkboxOff;
+	return selectableRow(`${mark} ${entry.source}`, options, "text", ctx);
 }
 
 function renderActionRow(
 	action: PackagesPaneActionId,
 	selectedCount: number,
-	active: boolean,
+	activity: RowActivity,
 	ctx: WardenPanelPaneContext,
 ): string {
 	const label =
 		action === PACKAGES_ACTION_REMOVE
 			? `Remove selected (${selectedCount})`
 			: "Install new package";
-	const pointer = active
+	return selectableRow(label, activity, "text", ctx);
+}
+
+function selectableRow(
+	label: string,
+	activity: RowActivity,
+	color: "muted" | "text",
+	ctx: WardenPanelPaneContext,
+): string {
+	const pointer = activity.active
 		? ctx.theme.bold(ctx.theme.fg("text", ctx.glyphs.pointer))
 		: "  ";
 	const row = `${pointer}${label}`;
-	return active
-		? ctx.theme.bold(ctx.theme.fg("text", row))
-		: ctx.theme.fg("text", row);
+	return activity.active
+		? ctx.theme.bold(ctx.theme.fg(color, row))
+		: ctx.theme.fg(color, row);
 }
 
 function visibleWindow(
