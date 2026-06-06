@@ -105,10 +105,28 @@ export function formatGitContext(context: GitContext): string {
 	return lines.join("\n");
 }
 
+const MUTATING_GIT_SUBCOMMANDS = new Set([
+	"add",
+	"am",
+	"checkout",
+	"cherry-pick",
+	"commit",
+	"merge",
+	"mv",
+	"pull",
+	"rebase",
+	"reset",
+	"restore",
+	"revert",
+	"rm",
+	"stash",
+	"switch",
+	"worktree",
+]);
+
 export function isGitMutatingCommand(command: string): boolean {
-	return /\bgit\s+(checkout|switch|commit|merge|rebase|pull|reset|revert|cherry-pick|worktree|am|stash|add|rm|mv|restore)\b/.test(
-		command,
-	);
+	const [program, subcommand] = command.trim().split(/\s+/);
+	return program === "git" && MUTATING_GIT_SUBCOMMANDS.has(subcommand ?? "");
 }
 
 export function shouldInvalidateGitContext(

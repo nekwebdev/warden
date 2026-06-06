@@ -38,36 +38,45 @@ let gitCache: GitContext | null | undefined;
 let lastGitSignature: string | null = null;
 
 export function registerWardenMap(pi: ExtensionAPI): void {
+	registerMapDebugFlag(pi);
+	registerMapLifecycleHooks(pi);
+	registerGitInvalidationHook(pi);
+	registerScopedMapHook(pi);
+	registerGitContextHook(pi);
+}
+
+function registerMapDebugFlag(pi: ExtensionAPI): void {
 	pi.registerFlag(WARDEN_MAP_DEBUG_FLAG, {
 		description: "Show hidden warden-map context injection messages",
 		type: "boolean",
 		default: false,
 	});
+}
 
-	pi.on("session_start", async (_event, ctx) => {
+function registerMapLifecycleHooks(pi: ExtensionAPI): void {
+	const resetAndInject = async (_event: unknown, ctx: { cwd: string }) => {
 		resetMapInjectionState();
 		resetGitContextState();
 		injectRootMap(ctx.cwd, pi);
 		await sendGitContextIfChanged(pi);
-	});
-
-	pi.on("session_compact", async (_event, ctx) => {
-		resetMapInjectionState();
-		resetGitContextState();
-		injectRootMap(ctx.cwd, pi);
-		await sendGitContextIfChanged(pi);
-	});
-
+	};
+	pi.on("session_start", resetAndInject);
+	pi.on("session_compact", resetAndInject);
 	pi.on("session_shutdown", () => {
 		resetMapInjectionState();
 		resetGitContextState();
 	});
+}
 
+function registerGitInvalidationHook(pi: ExtensionAPI): void {
 	pi.on("tool_call", (event: ToolEvent) => {
-		if (shouldInvalidateGitContext(event.toolName, event.input))
+		if (shouldInvalidateGitContext(event.toolName, event.input)) {
 			clearGitContextCache();
+		}
 	});
+}
 
+function registerScopedMapHook(pi: ExtensionAPI): void {
 	// `tool_result` is documented by Pi and lets us append scoped map context to
 	// the same tool result, avoiding an extra model-visible read call. Some older
 	// type bundles do not include the event overload yet, so the event name is
@@ -77,26 +86,33 @@ export function registerWardenMap(pi: ExtensionAPI): void {
 			name: "tool_result",
 			handler: (event: ToolEvent, ctx: ToolContext) => unknown,
 		) => void
-	)("tool_result", (event, ctx) => {
-		const inputPath = toolInputPath(event.input);
-		if (!inputPath) return undefined;
-		const injections = collectScopedMapInjections(ctx.cwd, inputPath).filter(
-			rememberMapInjection,
-		);
-		if (injections.length === 0) return undefined;
-		return {
-			content: appendTextContent(
-				event.content,
-				formatToolResultGuidance(injections),
-			),
-		};
-	});
+	)("tool_result", scopedMapToolResultHandler);
+}
 
+function registerGitContextHook(pi: ExtensionAPI): void {
 	pi.on("before_agent_start", async () => {
 		const content = await takeGitContextIfChanged(pi);
 		if (!content) return undefined;
 		return { message: buildGitContextMessage(pi, content) };
 	});
+}
+
+function scopedMapToolResultHandler(
+	event: ToolEvent,
+	ctx: ToolContext,
+): { content: MessageContent } | undefined {
+	const inputPath = toolInputPath(event.input);
+	if (!inputPath) return undefined;
+	const injections = collectScopedMapInjections(ctx.cwd, inputPath).filter(
+		rememberMapInjection,
+	);
+	if (injections.length === 0) return undefined;
+	return {
+		content: appendTextContent(
+			event.content,
+			formatToolResultGuidance(injections),
+		),
+	};
 }
 
 export function resetMapInjectionState(): void {
