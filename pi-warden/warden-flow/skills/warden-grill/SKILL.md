@@ -1,86 +1,96 @@
 ---
 name: warden-grill
-description: Pressure-test a Warden work packet before implementation and return Go, Adjust, or Stop.
+description: Grilling session that challenges your warden work packet against the existing domain model, sharpens terminology, and updates it inline as decisions crystallise. Use when user wants to stress-test a warden work packet against their project's language and documented decisions.
 license: MIT
 ---
 
-# Warden Grill
+<checks>
+- Check that $1 is a path to a `packet.md` file. If not error out and ask to call the skill with a `packet.md` path as an argument.
+- If input is rough intent only, do not shape it into a packet; recommend `/skill:warden-start`
+- Require one small vertical implementation pass.
+- Flag broad roadmaps, multiple unrelated packages/runtimes, root + runner + package mixtures, docs/process work disguised as implementation, and vague “improve everything” work.
+</checks>
 
-Adversarially review a `.warden/work/<slug>/packet.md`, pasted packet, or proposed coding-agent slice before implementation. Return one verdict only: `Go`, `Adjust`, or `Stop`.
+<what-to-do>
 
-Do not edit files by default. Do not implement code. Do not plan a new slice. Do not secretly become `warden-start`. When only rough intent exists, return `Stop` or `Adjust` and recommend `/skill:warden-start`.
+Interview me relentlessly about every aspect of this warden $1 work packet until we reach a shared understanding and $1 is ready for test driven develpment. Walk down each branch of the design tree, resolving dependencies between decisions one-by-one. For each question, provide your recommended answer.
 
-## Challenge stance
+Ask the questions one at a time, waiting for feedback on each question before continuing.
 
-Be relentless but useful. Test whether the packet can survive implementation pressure, not whether it sounds polished.
+If a question can be answered by exploring the codebase, explore the codebase instead.
+  
+</what-to-do>
 
-- Inspect repo files before asking the user when packet facts or repository evidence can answer.
-- Challenge vague language: sharpen vague terms into concrete behavior, boundaries, files, owners, commands, or acceptance signals.
-- Surface packet/code/doc contradictions, especially mismatches between packet claims, live files, package guidance, README behavior, map hints, and tests.
-- Probe edge scenarios: wrong cwd, stale maps, missing package guidance, unavailable tooling, broad likely files, cross-boundary edits, risky shell/network/install behavior, and untestable acceptance.
-- Ask at most one blocking question at a time, and only when repo evidence cannot resolve the blocker.
+<supporting-info>
 
-## Challenge loop
+## Asking questions
 
-1. Read the packet or pasted slice first.
-2. Inspect relevant package guidance, README, likely files, tests, and commands when needed.
-3. Convert fuzzy claims into concrete pass/fail checks.
-4. Compare packet claims against live repo evidence and documented Warden boundaries.
-5. Return one verdict with minimum changes or next safe action.
+Use `ask_user_question`, questionnaire extension, or equivalent structured choice UI when available
 
-## Verdicts
+## Domain awareness
 
-- `Go`: slice is small, bounded, testable, research-aware, and safe enough for implementation. Minor notes only; no blocking changes.
-- `Adjust`: slice is close but needs tightening before implementation: missing tests, vague acceptance, unclear boundaries, stale map risk, missing external research, or broad likely files.
-- `Stop`: slice is unsafe, wrong owner/cwd, crosses too many boundaries, lacks a real implementation object, depends on unverified risky external claims, or must be split before any coding agent edits files.
+Use `<repo root>/.warden/map/<slug>/map.md` guidance files.
 
-## Review checks
-
-1. Packet existence and shape
-   - Confirm real packet, pasted packet, or proposed coding-agent slice exists.
-   - If input is rough intent only, do not shape it into a packet; recommend `/skill:warden-start`.
-2. Slice size
-   - Require one small vertical implementation pass.
-   - Flag broad roadmaps, multiple unrelated packages/runtimes, root + runner + package mixtures, docs/process work disguised as implementation, and vague “improve everything” work.
-3. Acceptance behavior
-   - Require observable behavior.
-   - Flag vague acceptance, “works correctly” with no observable result, or acceptance that cannot be tested or manually verified.
-4. Test strategy
-   - Require narrow automated tests where possible.
-   - Flag missing tests, invented commands without repo evidence, broad “run all tests” as only strategy when narrower tests exist, and claims that tests passed without actual commands.
-5. Manual verification
-   - Require a human-visible check.
-   - Flag no manual verification, checks that only repeat automated tests, or no command output/behavior to inspect.
-6. Boundary and ownership
-   - Check primary agent, expected cwd, owned work area, likely files, files not to touch, handoffs, package locality, and rejected cross-boundary work.
-   - Preserve Warden ownership: root bootstrap and `run-warden/` belong to Sentinel by default; `pi-warden/<package>/` package work belongs to Piper; `nix-warden/` and `dev-warden/` are Systems or future-specialist areas unless explicitly scoped.
-7. Map handling
+Map handling:
    - maps are orientation only; they are not task state, implementation diaries, issue trackers, release notes, or PRDs.
    - map information may be stale.
    - Only `/skill:warden-map` updates map files: `.warden/map.md` and `.warden/maps/**/map.md`.
    - Other skills may read map capsules as hints but must verify repo facts before relying on them.
    - If map freshness matters, recommend a scoped `/skill:warden-map` refresh.
-8. External research
-   - Repo facts come from local repo evidence: repository files, commands, tests, boundaries, and implementation behavior.
-   - External/current facts use web research when packet depends on current upstream APIs, dependency behavior, package manager behavior, OS/platform behavior, licensing, security guidance, external service behavior, or third-party docs.
-   - Prefer official or primary sources for external technical facts.
-   - Do not browse to rediscover local repo facts.
-   - If external research affects verdict, record researched claim, source/source type, and decision impact.
-9. Safety and security
+
+## During the session
+
+Do not edit files by default. Do not implement code.
+Be relentless but useful. Test whether the packet can survive implementation pressure.
+Surface packet/code/doc contradictions, especially mismatches between packet claims, live files, package guidance, README behavior, map hints, and tests.
+Probe edge scenarios: wrong cwd, stale maps, missing package guidance, unavailable tooling, broad likely files, cross-boundary edits, risky shell/network/install behavior, and untestable acceptance.
+
+### Challenge against the glossary
+
+When the user uses a term that conflicts with the existing language in `map.md` or relevant `README.md` or `AGENTS.md`, call it out immediately. "Your glossary defines 'cancellation' as X, but you seem to mean Y — which is it?"
+
+### Sharpen fuzzy language
+
+When the user uses vague or overloaded terms, propose a precise canonical term. "You're saying 'account' — do you mean the Customer or the User? Those are different things."
+
+### Discuss concrete scenarios
+
+When domain relationships are being discussed, stress-test them with specific scenarios. Invent scenarios that probe edge cases and force the user to be precise about the boundaries between concepts.
+
+### Cross-reference with code
+
+When the user states how something works, check whether the code agrees. If you find a contradiction, surface it: "Your code cancels entire Orders, but you just said partial cancellation is possible — which is right?"
+
+### External research
+
+External/current facts use web research when packet depends on current upstream APIs, dependency behavior, package manager behavior, OS/platform behavior, licensing, security guidance, external service behavior, or third-party docs. Prefer official or primary sources for external technical facts.
+
+### Update $1 inline
+
+When an aspect is resolved, update $1 right there. Don't batch these up — capture them as they happen.
+
+Treat $1 as the work packet an implementation agent will use to implement with test driven development. Respect current sections and only expand when relevant because of a grill step decision.
+
+## Final review checks
+
+1. Acceptance behavior
+   - Require observable behavior.
+   - Flag vague acceptance, “works correctly” with no observable result, or acceptance that cannot be tested or manually verified.
+2. Test strategy
+   - Require narrow automated tests where possible.
+   - Flag missing tests, invented commands without repo evidence, broad “run all tests” as only strategy when narrower tests exist, and claims that tests passed without actual commands.
+3. Manual verification
+   - Require a human-visible check.
+   - Flag no manual verification, checks that only repeat automated tests, or no command output/behavior to inspect.
+4. Safety and security
    - Apply extra caution for shell execution, filesystem mutation, installers, network calls, auth/secrets, permissions, agent lifecycle, external tool invocation, dependency loading, commit/apply behavior, map writing, and generated files.
    - Recommend stronger verification or a smaller slice when risk is high.
-10. Durable docs
-   - Do not edit `CONTEXT.md`, ADRs, map files, or packet files inline.
-   - Recommend docs work only when acceptance or boundary clarity needs it; make it a packet adjustment, not a grill-side edit.
+5. Durable docs
+   - Add docs work to packet only when acceptance or boundary clarity needs it; adjust the packet accordingly.
    - README is for human/operator usage, setup, commands, and project explanation.
    - AGENTS is for role-neutral agent editing rules and boundaries.
    - `.warden/map.md` and `.warden/maps/**/map.md` are durable orientation only.
-   - `.warden/work/<slug>/packet.md` is active task state.
-   - `CHANGELOG.md` belongs in seal only when public/operator behavior changes.
-   - ADRs are only for pivotal, expensive-to-reverse, surprising, or likely-to-be-reargued choices.
-   - Reject PRDs, issue trackers, implementation diaries, and lifecycle state machines. Reject broad roadmaps.
-
-Do not add subagents. Do not add custom tools, extensions, workflow runners, or packet automation.
+   - $1 is active task state.
 
 ## Output
 
@@ -88,14 +98,6 @@ Use this exact shape. Keep concise. Prefer specific fixes over abstract criticis
 
 ```md
 # Warden Grill
-
-Verdict: Go | Adjust | Stop
-
-## What holds up
-
-## What breaks
-
-## Boundary check
 
 ## Slice check
 
@@ -109,7 +111,8 @@ Verdict: Go | Adjust | Stop
 
 ## Durable-docs check
 
-## Tightened next safe step
 ```
 
-If verdict is `Adjust`, list minimum changes needed to make packet implementation-ready. If verdict is `Stop`, give safest next action: run `/skill:warden-start`, split packet, move work to correct owner/agent, refresh maps with `/skill:warden-map`, research a blocking external claim, or reduce slice to one package-local change.
+Offer next step with `/skill:warden-tdd $1`
+
+</supporting-info>

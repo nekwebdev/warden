@@ -26,8 +26,6 @@ Plan local commits from a Warden snapshot. Create local commits only through `wa
       - question: `Apply this exact commit plan?`
       - options:
         - `Commit` — apply exact plan;
-        - `Adjust` — revise plan;
-        - `Review` — inspect targeted diffs/files;
         - `Abort` — stop.
    If no structured choice UI is available, ask the same concise question in plain text after the plan.
    After any valid structured choice or plain-text reply, do not ask the same confirmation question again. Treat that answer as final for this plan.
