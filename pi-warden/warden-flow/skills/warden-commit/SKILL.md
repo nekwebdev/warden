@@ -67,7 +67,7 @@ Use `warden_commit_snapshot` as source of truth for:
 - recent commit style;
 - `snapshotHash`.
 
-Inspect targeted diffs or files only when semantic grouping, commit subject/body wording, or safety warnings need more evidence.
+Inspect exact diffs for every path you may include. Inspect additional targeted files only when semantic grouping, commit subject/body wording, or safety warnings need more evidence.
 
 Infer message style from `recentCommitSubjects`. If unclear, use Conventional Commits.
 
@@ -75,14 +75,43 @@ Commit body is developer-facing technical change narrative. `CHANGELOG.md` is cu
 
 </context-sources>
 
+<snapshot-review-protocol>
+
+Treat each `warden_commit_snapshot` section as an input to review, not as a complete commit plan.
+
+- Warnings:
+  - Copy warnings into the visible plan.
+  - If warnings mention risky/excluded paths, pre-existing staged changes, mixed staged/unstaged files, or unclear safety, stop or ask before planning apply.
+- Changed files:
+  - Inspect the exact diff for every path you may include before final grouping or message wording.
+  - Preferred per-file command: `git diff -- <path>`.
+  - Preferred related-file command: `git diff -- <path1> <path2> ...`.
+  - Use `git diff --stat -- <paths>` or `git diff --name-status -- <paths>` only as overview; never use overview as the only evidence for non-trivial changes.
+  - For large diffs, inspect bounded chunks with `git diff -- <paths> | sed -n '1,220p'`, then continue only as needed.
+- Boundaries:
+  - Use boundary labels to avoid crossing unrelated Warden areas.
+  - If one commit crosses boundaries, explain why the paths are one logical slice.
+- Suggested deterministic buckets:
+  - Treat buckets as grouping hints, not authority.
+  - Merge or split buckets when actual diffs show different logical purpose.
+- Recent commit subjects:
+  - Match repository style when possible.
+  - Prefer Conventional Commits when recent style is unclear.
+- Snapshot hash:
+  - Carry the exact `snapshotHash` into the visible plan and later into `warden_commit_apply`.
+  - If anything changes after the plan, take a new snapshot and rebuild the plan.
+
+</snapshot-review-protocol>
+
 <workflow>
 
 1. Call `warden_commit_snapshot` before planning.
-2. Review snapshot warnings, excluded files, boundaries, status buckets, and recent commit subjects.
-3. Inspect targeted diffs/files only when needed for semantic grouping or message quality.
+2. Review snapshot warnings, changed files, boundaries, suggested buckets, recent commit subjects, and `snapshotHash` using `<snapshot-review-protocol>`.
+3. Inspect exact diffs for every path you may include before final grouping or message quality decisions.
 4. Build atomic commit plan with exact repo-relative paths.
-5. Send full visible plan as normal assistant text before asking for confirmation. Do not call `ask_user_question`, questionnaire extension, or structured choice UI before this plan is visible.
-6. Ask for final choice exactly once after the visible plan:
+5. Send full visible plan as normal assistant text before asking for confirmation. The visible plan must include `# Warden Commit Plan`, `Snapshot`, `Commits`, `Warnings / excluded files`, and `Diff inspection`. Do not call `ask_user_question`, questionnaire extension, structured choice UI, or `warden_commit_apply` before this plan is visible.
+6. Before any confirmation UI/tool call, pause and verify the previous assistant message already displayed the full plan. If not, print the plan first.
+7. Ask for final choice exactly once after the visible plan:
    - Use `ask_user_question`, questionnaire extension, or equivalent structured choice UI when available.
    - Use exactly one question, no option previews, concise text:
      - header: `Commit?`
@@ -92,9 +121,10 @@ Commit body is developer-facing technical change narrative. `CHANGELOG.md` is cu
        - `Abort` — stop.
    - If no structured choice UI is available, ask the same concise question in plain text.
    - After any valid structured choice or plain-text reply, do not ask the same confirmation question again.
-7. Treat only a selected option or free-form reply that is exactly `Commit` as confirmation. Custom answers, paraphrases, lowercase variants, and echoed plan text are not confirmation.
-8. Only after exact `Commit`, call `warden_commit_apply` with reviewed `snapshotHash`, `confirmedUserIntent: "Commit"`, and exact planned commits/paths.
-9. After apply, report commit hash(es), final `git status --short`, and remaining uncommitted files.
+8. Treat only a selected option or free-form reply that is exactly `Commit` as confirmation. Custom answers, paraphrases, lowercase variants, echoed plan text, and any answer captured before the visible plan are not confirmation.
+9. If a questionnaire or structured confirmation fires before the visible plan, discard that answer, do not call apply from it, print the full plan, then ask once after the plan.
+10. Only after exact `Commit`, call `warden_commit_apply` with reviewed `snapshotHash`, `confirmedUserIntent: "Commit"`, and exact planned commits/paths.
+11. After apply, report commit hash(es), final `git status --short`, and remaining uncommitted files.
 
 </workflow>
 
@@ -106,7 +136,7 @@ Before asking for confirmation, verify plan includes:
 - exact subject/body for every commit;
 - exact repo-relative paths for every commit;
 - warnings and excluded files from snapshot;
-- whether diffs/files were inspected;
+- exact diff commands or files inspected;
 - reason for grouping when multiple paths or boundaries are involved.
 
 Message checks:
