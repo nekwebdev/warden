@@ -59,6 +59,8 @@ contributeWardenPane({
   order: 50,
   command: "warden:example",
   showApplyControl: false,
+  // footerHint?: string
+  footerHint: "↑/↓ move • Enter run • Esc close",
   itemCount: () => 1,
   render: (ctx, _width, _active) => [
     ctx.selectedIndex === 0 ? "> Run action" : "  Run action",
@@ -71,7 +73,7 @@ contributeWardenPaneActionHandler("example", async (action, ctx) => {
 });
 ```
 
-Duplicate pane IDs are rejected. Pane registry and action-handler state is shared through `globalThis` so independently loaded Warden packages can contribute panes to the same panel. `showWardenPanel()` is exported for package commands that open the panel on a contributed pane. Pane render context includes `maxPaneLines` for scroll-window calculations.
+Duplicate pane IDs are rejected. Pane registry and action-handler state is shared through `globalThis` so independently loaded Warden packages can contribute panes to the same panel. `showWardenPanel()` is exported for package commands that open the panel on a contributed pane. Pane render context includes `maxPaneLines` for scroll-window calculations. Optional `footerHint?: string` overrides the default panel footer text for a pane-specific keyboard/action hint.
 
 ## Package layout
 
