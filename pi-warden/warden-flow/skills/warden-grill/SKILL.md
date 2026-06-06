@@ -6,18 +6,24 @@ license: MIT
 ---
 
 <checks>
-- Treat $1 as the user's packet path argument, not as a skill-file-relative reference.
-- Accept absolute paths and relative paths. Resolve relative paths from the current working directory first, then from the Git repository root if the cwd-relative candidate does not exist. Do not resolve $1 against this skill directory unless the user provided that exact absolute path.
-- After resolving $1, check that the resolved path exists and has basename `packet.md`. If not, error out and ask to call the skill with a `packet.md` path as an argument.
-- Use the resolved packet path for reads, inline updates, and the final next-step command.
+
+- Treat `$1` as the user's packet path argument, not as a skill-file-relative reference.
+- Require an existing file with basename `packet.md`.
+- Accept absolute paths and relative paths.
+- Resolve relative paths from current working directory first.
+- If cwd-relative candidate does not exist, resolve from Git repository root.
+- Do not resolve `$1` against this skill directory unless user supplied that exact absolute path.
+- If no valid packet path is provided, stop and ask user to call `/skill:warden-grill <path-to-packet.md>`.
 - If input is rough intent only, do not shape it into a packet; recommend `/skill:warden-start`
+- Use the resolved packet path for reads, inline updates, and the final next-step command.
 - Require one small vertical implementation pass.
 - Flag broad roadmaps, multiple unrelated packages/runtimes, root + runner + package mixtures, docs/process work disguised as implementation, and vague “improve everything” work.
+
 </checks>
 
 <what-to-do>
 
-Interview me relentlessly about every aspect of this warden $1 work packet until we reach a shared understanding and $1 is ready for test driven develpment. Walk down each branch of the design tree, resolving dependencies between decisions one-by-one. For each question, provide your recommended answer.
+Interview me relentlessly about every aspect of this warden `$1` work packet until we reach a shared understanding and `$1` is ready for test driven develpment. Walk down each branch of the design tree, resolving dependencies between decisions one-by-one. For each question, provide your recommended answer.
 
 Ask the questions one at a time, waiting for feedback on each question before continuing.
 
