@@ -35,6 +35,21 @@ test("warden-start skill contains work packet write contract", () => {
 	}
 });
 
+test("warden-start skill writes packets under the git repository root", () => {
+	const content = skillContent();
+	for (const phrase of [
+		"Canonical packet root",
+		"First discover the Git repository root from the current cwd",
+		"only under `<git-root>/.warden/work/**`",
+		"write the packet under the Git repository root, not the nested cwd",
+		"unless that cwd is itself a separate Git repository",
+		"Do not use Warden home paths or environment-specific roots",
+		"relative to the Git repository root",
+	]) {
+		assert.ok(content.includes(phrase), `${phrase} should be present`);
+	}
+});
+
 test("warden-start skill contains all packet sections", () => {
 	const content = skillContent();
 	for (const section of [

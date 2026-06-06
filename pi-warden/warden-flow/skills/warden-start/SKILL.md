@@ -12,7 +12,16 @@ Turn rough user intent into one small, testable Warden work packet at:
 .warden/work/<slug>/packet.md
 ```
 
-When file-editing tools are available, create or update `.warden/work/<slug>/packet.md` and create the parent directory if needed.
+Canonical packet root:
+
+- First discover the Git repository root from the current cwd.
+- When cwd is inside a Git repository, create or update packets only under `<git-root>/.warden/work/**`.
+- If invoked from a nested cwd with no explicit path, write the packet under the Git repository root, not the nested cwd.
+- Do not write `.warden/work/**` under a nested cwd unless that cwd is itself a separate Git repository.
+- If cwd is not inside a Git repository, do not pretend there is a canonical packet root. Fail clearly unless explicit standalone path behavior is already supported by available repo evidence.
+- Do not use Warden home paths or environment-specific roots.
+
+When file-editing tools are available, create or update `<git-root>/.warden/work/<slug>/packet.md` and create the parent directory if needed.
 
 Use this skill as the entry point for a lean Warden dev cycle. It can work from a very small prompt, such as:
 
@@ -31,8 +40,9 @@ Do not require a polished plan. Shape messy intent into one safe slice.
 
 ## File write rules
 
-- Default behavior: create or update `.warden/work/<slug>/packet.md` when file-editing tools are available.
-- Create `.warden/work/<slug>/` first when needed.
+- Default behavior: discover the Git repository root, then create or update `<git-root>/.warden/work/<slug>/packet.md` when file-editing tools are available.
+- Create `<git-root>/.warden/work/<slug>/` first when needed.
+- Report packet paths as `.warden/work/<slug>/packet.md`, relative to the Git repository root.
 - Only output packet markdown instead of writing the file when the user explicitly asks for preview or dry run, the environment cannot edit files, or implementation safety is blocked.
 - Do not create PRDs, issue trackers, roadmaps, lifecycle machinery, or files outside the packet path.
 
@@ -47,20 +57,6 @@ Do not require a polished plan. Shape messy intent into one safe slice.
 - End with a next safe step suitable for a coding agent.
 - Split or reject broad requests that span unrelated boundaries, owners, packages, or runtimes.
 - Ask clarification only when implementation safety is truly blocked. Otherwise state assumptions and proceed.
-
-## Boundary rules
-
-Preserve Warden ownership boundaries:
-
-- Root bootstrap work belongs to Sentinel, not Piper.
-- `run-warden/` runner workflow work belongs to Sentinel by default.
-- `pi-warden/<package>/` package work belongs to Piper.
-- `nix-warden/` and `dev-warden/` are Systems or future-specialist areas unless explicitly scoped.
-- Package-local work must stay package-local.
-
-Boundary notes must capture primary agent, expected cwd, owned work area, handoffs, package locality, and rejected cross-boundary work.
-
-If a request crosses these boundaries, narrow it to one safe package-local slice, split it into separate packets, or reject the oversized packet.
 
 ## Map rules
 
@@ -116,8 +112,6 @@ Create or refine packet markdown with this exact section set:
 
 ## Manual verification
 
-## Boundary notes
-
 ## Map freshness notes
 
 ## External research notes
@@ -167,7 +161,7 @@ Packet action:
 ## Next action
 ```
 
-The packet path should be `.warden/work/<slug>/packet.md`. Choose a short lowercase slug from user intent, using hyphens. If tightening an existing packet, keep its path unless unsafe.
+The packet path should be `.warden/work/<slug>/packet.md`, relative to the Git repository root when inside a Git repository. Choose a short lowercase slug from user intent, using hyphens. If tightening an existing packet, keep its path unless unsafe.
 
 When the packet file is written, keep `## Packet` to a written-file note unless the user asks to see full content. When writing is skipped for preview, dry run, no file-editing tools, or blocked safety, put full packet markdown in `## Packet`.
 
