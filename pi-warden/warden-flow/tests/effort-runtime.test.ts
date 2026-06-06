@@ -201,6 +201,7 @@ describe("Warden effort runtime hook", () => {
 	});
 
 	it("shows a themed footer capsule when a Warden skill starts", async () => {
+		writeSettings({ warden: { effort: { showSkillStatus: true } } });
 		const statuses: StatusUpdate[] = [];
 		const ctx = createStatusContext(statuses);
 		const pi = createFakePi("high");
@@ -249,6 +250,7 @@ describe("Warden effort runtime hook", () => {
 	});
 
 	it("applies effort and status for already-expanded Warden skill blocks", async () => {
+		writeSettings({ warden: { effort: { showSkillStatus: true } } });
 		const statuses: StatusUpdate[] = [];
 		const ctx = createStatusContext(statuses);
 		const pi = createFakePi("minimal");
@@ -269,6 +271,35 @@ describe("Warden effort runtime hook", () => {
 			key: WARDEN_SKILL_STATUS_KEY,
 			text: renderWardenSkillStatus("warden-grill", "high", statusTheme as any),
 		});
+	});
+
+	it("skips skill status indicator when disabled", async () => {
+		writeSettings({
+			warden: {
+				effort: {
+					showSkillStatus: false,
+					skills: { "warden-grill": "high" },
+				},
+			},
+		});
+		const statuses: StatusUpdate[] = [];
+		const ctx = createStatusContext(statuses);
+		const pi = createFakePi("minimal");
+		wardenEffort(pi as any);
+
+		await runFirstHandler(
+			pi,
+			"before_agent_start",
+			{
+				prompt:
+					'<skill name="warden-grill" location="/tmp/SKILL.md">grill workflow</skill>',
+			},
+			ctx,
+		);
+		await runFirstHandler(pi, "agent_end", {}, ctx);
+
+		assert.deepEqual(pi.setCalls, ["high", "minimal"]);
+		assert.deepEqual(statuses, []);
 	});
 
 	it("ignores non-Warden skills", async () => {

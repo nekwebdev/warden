@@ -43,8 +43,9 @@ This package does not own Warden runner workflows, agent lifecycle commands, sib
 
 - Maintain Warden Flow skill defaults in `src/effort.ts`.
 - New Warden Flow `warden-*` skills need a default effort entry unless there is a clear reason to leave them unmanaged.
-- Keep effort source of truth in Pi `settings.json` under `warden.effort.skills`; do not add effort frontmatter or description prefixes.
+- Keep effort source of truth in Pi `settings.json` under `warden.effort` (`skills` plus related effort UI toggles); do not add effort frontmatter or description prefixes.
 - Update `extensions/warden-effort/` input-hook behavior when adding Warden Flow skills whose configured effort should apply before `/skill:warden-*` expansion.
+- Contribute related Display pane toggles through `@nekwebdev/warden-panel` display setting contributions instead of growing the Effort pane into general display settings.
 - Use Pi's public thinking-level API only; do not add provider-specific effort scales.
 - Keep `@nekwebdev/warden-panel` declared as a package dependency when Effort pane code imports its public pane API.
 

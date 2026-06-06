@@ -15,7 +15,9 @@ import {
 	cycleWardenEffortLevel,
 	getPiAgentSettingsPath,
 	isWardenEffortLevel,
+	readWardenSkillStatusEnabled,
 	seedWardenEffortDefaults,
+	setWardenSkillStatusEnabled,
 } from "../src/index.js";
 
 const envBefore = process.env.WARDEN_FLOW_TEST_HOME;
@@ -162,6 +164,52 @@ describe("Warden skill effort settings", () => {
 							"warden-start": "medium",
 							"warden-grill": "high",
 							"warden-commit": "medium",
+						},
+					},
+				});
+			},
+		);
+	});
+
+	it("reads and writes Warden skill status indicator toggle", async () => {
+		await withTempSettings(
+			{
+				model: "test-model",
+				warden: {
+					agent: { cwd: "~/work" },
+					effort: {
+						profiles: { careful: true },
+						skills: { "warden-map": "low" },
+					},
+				},
+			},
+			() => {
+				assert.equal(readWardenSkillStatusEnabled(), false);
+
+				assert.deepEqual(setWardenSkillStatusEnabled(true), { ok: true });
+				assert.equal(readWardenSkillStatusEnabled(), true);
+				assert.deepEqual(readSettings(), {
+					model: "test-model",
+					warden: {
+						agent: { cwd: "~/work" },
+						effort: {
+							profiles: { careful: true },
+							showSkillStatus: true,
+							skills: { "warden-map": "low" },
+						},
+					},
+				});
+
+				assert.deepEqual(setWardenSkillStatusEnabled(false), { ok: true });
+				assert.equal(readWardenSkillStatusEnabled(), false);
+				assert.deepEqual(readSettings(), {
+					model: "test-model",
+					warden: {
+						agent: { cwd: "~/work" },
+						effort: {
+							profiles: { careful: true },
+							showSkillStatus: false,
+							skills: { "warden-map": "low" },
 						},
 					},
 				});

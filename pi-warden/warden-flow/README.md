@@ -85,12 +85,13 @@ Git context is cached and re-injected only when branch, commit, or dirty state c
 
 ## Skill effort
 
-Warden Flow stores per-skill effort settings in Pi `settings.json`:
+Warden Flow stores per-skill effort settings and the skill status indicator toggle in Pi `settings.json`:
 
 ```json
 {
   "warden": {
     "effort": {
+      "showSkillStatus": false,
       "skills": {
         "warden-map": "low",
         "warden-start": "medium",
@@ -111,7 +112,9 @@ Current defaults seeded at session start:
 
 `/warden:effort` opens the Effort pane contributed through the public pane API from `@nekwebdev/warden-panel`. `warden-flow` declares that package as a dependency so the pane framework is available when the Effort extension loads. Space/Enter cycles a selected skill through `off`, `minimal`, `low`, `medium`, `high`, `xhigh` and writes immediately; there is no Apply step.
 
-When a `/skill:warden-*` turn starts, `extensions/warden-effort` reads the configured level, calls Pi's public `setThinkingLevel()`, shows a small themed footer capsule with the active skill and effort level, then restores the previous thinking level and clears the capsule after the agent turn. Pi may clamp unsupported levels depending on the active model/provider.
+`extensions/warden-effort` also contributes a Display pane setting for the skill status indicator through `contributeWardenDisplaySetting()`. The indicator defaults off. Toggle it from Display; the setting writes inline.
+
+When a `/skill:warden-*` turn starts, `extensions/warden-effort` reads the configured level, calls Pi's public `setThinkingLevel()`, shows a small themed Pi status indicator with the active skill and effort level when `warden.effort.showSkillStatus` is `true` (default off), then restores the previous thinking level and clears the status indicator after the agent turn. Pi may clamp unsupported levels depending on the active model/provider.
 
 ## Commit helper
 

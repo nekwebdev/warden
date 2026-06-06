@@ -12,12 +12,15 @@ import { afterEach, beforeEach, describe, it, mock } from "node:test";
 import type { WardenPanelPaneContext } from "../../warden-panel/src/index.js";
 import {
 	clearWardenPanesForTests,
+	getWardenDisplaySettings,
 	getWardenPane,
 } from "../../warden-panel/src/registry.js";
 import wardenEffort, {
 	EFFORT_COMMAND,
 	EFFORT_FOOTER_HINT,
 	EFFORT_PANE_ID,
+	SKILL_STATUS_DISPLAY_SETTING_ID,
+	SKILL_STATUS_SETTING_LABEL,
 	createEffortPane,
 } from "../extensions/warden-effort/index.js";
 import { getPiAgentSettingsPath } from "../src/effort.js";
@@ -181,6 +184,46 @@ describe("Effort pane", () => {
 				"warden-zed: high",
 			],
 		);
+	});
+
+	it("contributes skill status indicator toggle to the Display pane", () => {
+		wardenEffort({ registerCommand: mock.fn(), on: mock.fn() } as any);
+		const setting = getWardenDisplaySettings().find(
+			(item) => item.id === SKILL_STATUS_DISPLAY_SETTING_ID,
+		);
+		assert.ok(setting);
+		let draftSettings: WardenPanelPaneContext["draftSettings"] = {
+			effort: {
+				profiles: { careful: true },
+				skills: { "warden-map": "low" },
+			},
+		};
+		const ctx: WardenPanelPaneContext = {
+			...context(0),
+			get draftSettings() {
+				return draftSettings;
+			},
+			updateDraftSettings(patch) {
+				draftSettings = { ...draftSettings, ...patch };
+			},
+		};
+
+		assert.deepEqual(setting.render(ctx, 80, true), [
+			"> [ ] Show skill status indicator",
+			"",
+		]);
+		assert.ok(
+			setting
+				.render(ctx, 80, true)
+				.join("\n")
+				.includes(SKILL_STATUS_SETTING_LABEL),
+		);
+		assert.equal(setting.handleInput?.(" ", ctx), true);
+		assert.deepEqual(draftSettings.effort, {
+			profiles: { careful: true },
+			showSkillStatus: true,
+			skills: { "warden-map": "low" },
+		});
 	});
 
 	it("cycles and saves selected effort inline without Apply", () => {

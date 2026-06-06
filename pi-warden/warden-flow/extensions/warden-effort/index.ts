@@ -3,8 +3,10 @@ import type {
 	ExtensionContext,
 } from "@earendil-works/pi-coding-agent";
 import {
+	contributeWardenDisplaySetting,
 	contributeWardenPane,
 	getWardenPane,
+	hasWardenDisplaySetting,
 	openWardenPanel,
 	type WardenPanelPane,
 	type WardenPanelPaneContext,
@@ -12,6 +14,7 @@ import {
 import {
 	cycleWardenEffortLevel,
 	readWardenSkillEffortEntries,
+	readWardenSkillStatusEnabled,
 	resolveWardenSkillEffort,
 	seedWardenEffortDefaults,
 	setWardenSkillEffort,
@@ -24,6 +27,8 @@ export const EFFORT_COMMAND = "warden:effort";
 export const EFFORT_FOOTER_HINT =
 	"↑↓ navigate • Space/Enter cycle effort • Tab/Shift+Tab pane • Esc close";
 export const WARDEN_SKILL_STATUS_KEY = "warden-flow.skill";
+export const SKILL_STATUS_DISPLAY_SETTING_ID = "warden-flow.skill-status";
+export const SKILL_STATUS_SETTING_LABEL = "Show skill status indicator";
 
 type WardenStatusTheme = ExtensionContext["ui"]["theme"];
 type WardenThemeColor = Parameters<WardenStatusTheme["fg"]>[0];
@@ -108,7 +113,7 @@ export function registerWardenEffort(pi: ExtensionAPI): void {
 		ctx: ExtensionContext | undefined,
 		runtime: WardenSkillRuntime,
 	): void => {
-		if (!canSetStatus(ctx)) return;
+		if (!canSetStatus(ctx) || !readWardenSkillStatusEnabled()) return;
 		ctx.ui.setStatus(
 			WARDEN_SKILL_STATUS_KEY,
 			renderWardenSkillStatus(runtime.skillName, runtime.effort, ctx.ui.theme),
@@ -128,6 +133,9 @@ export function registerWardenEffort(pi: ExtensionAPI): void {
 	};
 
 	if (!getWardenPane(EFFORT_PANE_ID)) contributeWardenPane(createEffortPane());
+	if (!hasWardenDisplaySetting(SKILL_STATUS_DISPLAY_SETTING_ID)) {
+		contributeWardenDisplaySetting(createSkillStatusDisplaySetting());
+	}
 	pi.registerCommand(EFFORT_COMMAND, {
 		description: "Configure Warden skill effort levels",
 		handler: async (_args, ctx) => {
@@ -161,15 +169,66 @@ export default function wardenEffort(pi: ExtensionAPI): void {
 	registerWardenEffort(pi);
 }
 
+function createSkillStatusDisplaySetting() {
+	return {
+		id: SKILL_STATUS_DISPLAY_SETTING_ID,
+		order: 20,
+		itemCount: () => 1,
+		render: (ctx: WardenPanelPaneContext, _width: number, active: boolean) => [
+			renderSkillStatusSettingRow(
+				ctx.draftSettings.effort?.showSkillStatus === true,
+				active && ctx.selectedIndex === 0,
+				ctx,
+			),
+			"",
+		],
+		handleInput: (_data: string, ctx: WardenPanelPaneContext) => {
+			ctx.updateDraftSettings({
+				effort: {
+					...ctx.draftSettings.effort,
+					showSkillStatus: ctx.draftSettings.effort?.showSkillStatus !== true,
+				},
+			});
+			ctx.requestRender();
+			return true;
+		},
+	};
+}
+
+function renderSkillStatusSettingRow(
+	enabled: boolean,
+	active: boolean,
+	ctx: WardenPanelPaneContext,
+): string {
+	const mark = enabled ? ctx.glyphs.checkboxOn : ctx.glyphs.checkboxOff;
+	return renderSelectableRow(
+		`${mark} ${SKILL_STATUS_SETTING_LABEL}`,
+		active,
+		ctx,
+	);
+}
+
 function renderEffortRow(
 	entry: WardenSkillEffortEntry,
+	active: boolean,
+	ctx: WardenPanelPaneContext,
+): string {
+	return renderSelectableRow(
+		`${entry.skillName}: ${entry.effort}`,
+		active,
+		ctx,
+	);
+}
+
+function renderSelectableRow(
+	text: string,
 	active: boolean,
 	ctx: WardenPanelPaneContext,
 ): string {
 	const pointer = active
 		? ctx.theme.bold(ctx.theme.fg("text", ctx.glyphs.pointer))
 		: "  ";
-	const row = `${pointer}${entry.skillName}: ${entry.effort}`;
+	const row = `${pointer}${text}`;
 	return active
 		? ctx.theme.bold(ctx.theme.fg("text", row))
 		: ctx.theme.fg("text", row);

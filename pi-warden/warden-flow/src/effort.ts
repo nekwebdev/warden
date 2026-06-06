@@ -40,6 +40,8 @@ export type WardenSkillEffortEntry = {
 	readonly effort: WardenEffortLevel;
 };
 
+export const DEFAULT_WARDEN_SKILL_STATUS_ENABLED = false;
+
 type PiAgentSettingsReadResult =
 	| { readonly ok: true; readonly settings: Record<string, unknown> }
 	| { readonly ok: false; readonly error: string; readonly path: string };
@@ -116,6 +118,27 @@ export function readWardenSkillEffortEntries(): WardenSkillEffortEntry[] {
 		)
 		.map(([skillName, effort]) => ({ skillName, effort }))
 		.sort(compareSkillEffortEntries);
+}
+
+export function readWardenSkillStatusEnabled(): boolean {
+	const result = readPiAgentSettings();
+	if (!result.ok) return DEFAULT_WARDEN_SKILL_STATUS_ENABLED;
+	const { currentEffort } = settingsParts(result.settings);
+	return currentEffort.showSkillStatus === true;
+}
+
+export function setWardenSkillStatusEnabled(
+	enabled: boolean,
+): WardenEffortSettingsResult {
+	const result = readPiAgentSettings();
+	if (!result.ok) return result;
+	const { currentWarden, currentEffort } = settingsParts(result.settings);
+	return writePiAgentSettings(
+		withWardenEffortSettings(result.settings, currentWarden, {
+			...currentEffort,
+			showSkillStatus: enabled,
+		}),
+	);
 }
 
 export function resolveWardenSkillEffort(
@@ -227,14 +250,22 @@ function withWardenSkillEfforts(
 	currentEffort: Record<string, unknown>,
 	skills: Record<string, unknown>,
 ): Record<string, unknown> {
+	return withWardenEffortSettings(settings, currentWarden, {
+		...currentEffort,
+		skills,
+	});
+}
+
+function withWardenEffortSettings(
+	settings: Record<string, unknown>,
+	currentWarden: Record<string, unknown>,
+	effort: Record<string, unknown>,
+): Record<string, unknown> {
 	return {
 		...settings,
 		warden: {
 			...currentWarden,
-			effort: {
-				...currentEffort,
-				skills,
-			},
+			effort,
 		},
 	};
 }
