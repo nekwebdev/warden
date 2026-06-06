@@ -30,6 +30,7 @@ result-*
 .pi-lens/
 pi-lens/
 *.warden-tmp
+.warden/work/*
 
 # Environment and secrets
 .env
