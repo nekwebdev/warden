@@ -59,6 +59,49 @@ Do not add extensions or folders just for ceremony. Add them when package behavi
 
 When packages import sibling package APIs, declare that package-to-package dependency in the importing package manifest. `warden-flow` depends on `@nekwebdev/warden-panel` for the Effort pane contribution.
 
+## Warden skill template
+
+Future Warden skills should keep a consistent frontmatter and body-tag shape so skill workflows are easy to scan, compare, and maintain. Keep required body tags present even when empty.
+
+```md
+---
+name: warden-example
+description: Specific workflow description plus when to use it.
+argument-hint: [expected arguments]
+license: MIT
+---
+
+<argument-handling>
+
+</argument-handling>
+
+<scope-gates>
+
+</scope-gates>
+
+<workflow>
+
+</workflow>
+
+<context-sources>
+
+</context-sources>
+
+<safety>
+
+</safety>
+
+<review-checks>
+
+</review-checks>
+
+<output-format>
+
+</output-format>
+```
+
+`argument-hint` is useful documentation metadata for skill arguments. Current Pi versions display it for prompt templates, not `/skill:<name>` autocomplete, unless Pi adds skill support later.
+
 ## Warden skill effort settings
 
 Packages that add `warden-*` skills should seed default effort settings in Pi `settings.json` under `warden.effort.skills.<skillName>`. `/warden:effort` is the user-facing control surface for changing those values.

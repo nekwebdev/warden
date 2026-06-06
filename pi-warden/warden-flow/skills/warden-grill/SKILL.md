@@ -5,109 +5,126 @@ argument-hint: [work packet.md path]
 license: MIT
 ---
 
-<checks>
+<argument-handling>
 
-- Treat `$1` as the user's packet path argument, not as a skill-file-relative reference.
+- Treat `$1` as the user's packet path argument, not as a skill-file-relative path.
 - Require an existing file with basename `packet.md`.
 - Accept absolute paths and relative paths.
 - Resolve relative paths from current working directory first.
-- If cwd-relative candidate does not exist, resolve from Git repository root.
+- If cwd-relative path does not exist, resolve from Git repository root.
 - Do not resolve `$1` against this skill directory unless user supplied that exact absolute path.
 - If no valid packet path is provided, stop and ask user to call `/skill:warden-grill <path-to-packet.md>`.
-- If input is rough intent only, do not shape it into a packet; recommend `/skill:warden-start`
-- Use the resolved packet path for reads, inline updates, and the final next-step command.
-- Require one small vertical implementation pass.
-- Flag broad roadmaps, multiple unrelated packages/runtimes, root + runner + package mixtures, docs/process work disguised as implementation, and vague “improve everything” work.
+- If input is rough intent only, do not shape it into a packet; recommend `/skill:warden-start`.
+- Use resolved packet path for reads, inline updates, final output, and next-step command.
 
-</checks>
+</argument-handling>
 
-<what-to-do>
+<scope-gates>
 
-Interview me relentlessly about every aspect of this warden `$1` work packet until we reach a shared understanding and `$1` is ready for test driven develpment. Walk down each branch of the design tree, resolving dependencies between decisions one-by-one. For each question, provide your recommended answer.
+Require one small vertical implementation pass. Flag and shrink:
 
-Ask the questions one at a time, waiting for feedback on each question before continuing.
+- broad roadmaps;
+- multiple unrelated packages or runtimes;
+- root + runner + package mixtures;
+- docs/process work disguised as implementation;
+- vague “improve everything” work;
+- acceptance that cannot be tested or manually verified.
 
-If a question can be answered by exploring the codebase, explore the codebase instead.
-  
-</what-to-do>
+</scope-gates>
 
-<supporting-info>
+<safety>
 
-## Asking questions
+Default edits: update only resolved `$1`. Do not implement code. Do not edit maps, README, AGENTS, package docs, or source files unless user explicitly redirects.
 
-Use `ask_user_question`, questionnaire extension, or equivalent structured choice UI when available
+Apply extra caution for shell execution, filesystem mutation, installers, network calls, auth/secrets, permissions, agent lifecycle, external tool invocation, dependency loading, commit/apply behavior, map writing, and generated files. Recommend stronger verification or smaller slice when risk is high.
 
-## Domain awareness
+</safety>
 
-Use `<repo root>/.warden/map/<slug>/map.md` guidance files.
+<context-sources>
 
-Map handling:
-   - maps are orientation only; they are not task state, implementation diaries, issue trackers, release notes, or PRDs.
-   - map information may be stale.
-   - Only `/skill:warden-map` updates map files: `.warden/map.md` and `.warden/maps/**/map.md`.
-   - Other skills may read map capsules as hints but must verify repo facts before relying on them.
-   - If map freshness matters, recommend a scoped `/skill:warden-map` refresh.
+Use maps as orientation only:
 
-## During the session
+- Root map: `<repo root>/.warden/map.md`.
+- Scoped maps: `<repo root>/.warden/maps/<repo-relative-scope>/map.md`.
+- Map information may be stale; verify repo facts before relying on it.
+- Only `/skill:warden-map` updates `.warden/map.md` and `.warden/maps/**/map.md`.
+- If map freshness matters, recommend scoped `/skill:warden-map` refresh.
 
-Do not edit files by default. Do not implement code.
-Be relentless but useful. Test whether the packet can survive implementation pressure.
-Surface packet/code/doc contradictions, especially mismatches between packet claims, live files, package guidance, README behavior, map hints, and tests.
-Probe edge scenarios: wrong cwd, stale maps, missing package guidance, unavailable tooling, broad likely files, cross-boundary edits, risky shell/network/install behavior, and untestable acceptance.
+Use external research only when packet depends on current upstream APIs, dependency behavior, package manager behavior, OS/platform behavior, licensing, security guidance, external service behavior, or third-party docs. Prefer official or primary sources.
 
-### Challenge against the glossary
+</context-sources>
 
-When the user uses a term that conflicts with the existing language in `map.md` or relevant `README.md` or `AGENTS.md`, call it out immediately. "Your glossary defines 'cancellation' as X, but you seem to mean Y — which is it?"
+<questioning-policy>
 
-### Sharpen fuzzy language
+Use `ask_user_question`, questionnaire extension, or equivalent structured choice UI when available.
 
-When the user uses vague or overloaded terms, propose a precise canonical term. "You're saying 'account' — do you mean the Customer or the User? Those are different things."
+Be relentless but useful:
 
-### Discuss concrete scenarios
+- Challenge terminology that conflicts with `map.md`, relevant `README.md`, or `AGENTS.md`.
+- Sharpen vague or overloaded terms by proposing a canonical term.
+- Discuss concrete edge scenarios that expose boundary mistakes.
+- Cross-reference live code when user claims how behavior works.
+- Surface packet/code/doc contradictions immediately.
 
-When domain relationships are being discussed, stress-test them with specific scenarios. Invent scenarios that probe edge cases and force the user to be precise about the boundaries between concepts.
+Ask one question at a time and wait for feedback before continuing.
 
-### Cross-reference with code
+</questioning-policy>
 
-When the user states how something works, check whether the code agrees. If you find a contradiction, surface it: "Your code cancels entire Orders, but you just said partial cancellation is possible — which is right?"
+<workflow>
 
-### External research
+Goal: make `$1` ready for test-driven development.
 
-External/current facts use web research when packet depends on current upstream APIs, dependency behavior, package manager behavior, OS/platform behavior, licensing, security guidance, external service behavior, or third-party docs. Prefer official or primary sources for external technical facts.
+1. Resolve and read `$1`.
+2. Read relevant repository guidance, package guidance, README files, maps, tests, and code when needed to verify packet claims.
+3. If a question can be answered by exploring the codebase, explore first instead of asking.
+4. Interview the user one unresolved decision at a time. For each question, provide your recommended answer.
+5. Walk dependency order: settle blocking terminology, boundaries, acceptance, tests, safety, docs, then implementation slice.
+6. When an aspect is resolved, update `$1` inline immediately. Do not batch packet edits.
+7. Continue the question → packet update → next question loop until all review checks pass. Then finish with a readiness summary and next-step command. If the packet cannot be made safe or testable, explain the blocker and stop.
 
-### Update $1 inline
+</workflow>
 
-When an aspect is resolved, update $1 right there. Don't batch these up — capture them as they happen.
+<review-checks>
 
-Treat $1 as the work packet an implementation agent will use to implement with test driven development. Respect current sections and only expand when relevant because of a grill step decision.
+Before final output, verify:
 
-## Final review checks
-
-1. Acceptance behavior
-   - Require observable behavior.
-   - Flag vague acceptance, “works correctly” with no observable result, or acceptance that cannot be tested or manually verified.
-2. Test strategy
-   - Require narrow automated tests where possible.
-   - Flag missing tests, invented commands without repo evidence, broad “run all tests” as only strategy when narrower tests exist, and claims that tests passed without actual commands.
-3. Manual verification
-   - Require a human-visible check.
-   - Flag no manual verification, checks that only repeat automated tests, or no command output/behavior to inspect.
-4. Safety and security
-   - Apply extra caution for shell execution, filesystem mutation, installers, network calls, auth/secrets, permissions, agent lifecycle, external tool invocation, dependency loading, commit/apply behavior, map writing, and generated files.
-   - Recommend stronger verification or a smaller slice when risk is high.
-5. Durable docs
-   - Add docs work to packet only when acceptance or boundary clarity needs it; adjust the packet accordingly.
+1. Slice
+   - One vertical implementation pass.
+   - Clear boundary and likely files.
+   - No mixed ownership unless explicitly justified.
+2. Acceptance
+   - Observable behavior.
+   - No “works correctly” without concrete result.
+3. Automated tests
+   - Narrow tests where possible.
+   - No invented commands without repo evidence.
+   - Broad “run all tests” not sole strategy when narrower tests exist.
+4. Manual verification
+   - Human-visible check.
+   - Not only repeating automated tests.
+5. External research
+   - Current external facts researched from primary sources when needed.
+6. Maps
+   - Map hints treated as stale orientation unless verified.
+7. Durable docs
+   - Add docs work only when acceptance or boundary clarity needs it.
    - README is for human/operator usage, setup, commands, and project explanation.
    - AGENTS is for role-neutral agent editing rules and boundaries.
    - `.warden/map.md` and `.warden/maps/**/map.md` are durable orientation only.
-   - $1 is active task state.
+   - `$1` is active task state.
 
-## Output
+</review-checks>
 
-Use this exact shape. Keep concise. Prefer specific fixes over abstract criticism.
+<output-format>
+
+During the loop, output only one next question with your recommended answer, or a brief note that `$1` was updated before the next question.
+
+Only when no unresolved questions remain, use this final shape. Keep concise. Prefer specific fixes over abstract criticism.
 
 ```md
 # Warden Grill
+
+Status: Packet solid for TDD
 
 ## Slice check
 
@@ -120,9 +137,8 @@ Use this exact shape. Keep concise. Prefer specific fixes over abstract criticis
 ## Map check
 
 ## Durable-docs check
-
 ```
 
-Offer next step with `/skill:warden-tdd $1`
+Offer next step with `/skill:warden-tdd <resolved-packet-path>`.
 
-</supporting-info>
+</output-format>

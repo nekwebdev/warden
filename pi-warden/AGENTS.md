@@ -91,6 +91,52 @@ Use only folders that fit the package.
 - Add or update package-local tests for deterministic package behavior when code changes.
 - Do not add extensions or folders just for ceremony.
 
+## Warden skill template
+
+Future Warden skills should start from this shape. Keep every body tag present, even when a tag is empty for a narrow skill.
+
+```md
+---
+name: warden-example
+description: Specific workflow description plus when to use it.
+argument-hint: [expected arguments]
+license: MIT
+---
+
+<argument-handling>
+
+</argument-handling>
+
+<scope-gates>
+
+</scope-gates>
+
+<safety>
+
+</safety>
+
+<context-sources>
+
+</context-sources>
+
+<workflow>
+
+</workflow>
+
+<review-checks>
+
+</review-checks>
+
+<output-format>
+
+</output-format>
+```
+
+- `name`, `description`, and `license` follow the Agent Skills frontmatter shape used by `warden-grill`.
+- `argument-hint` documents expected `/skill:<name>` arguments. Pi currently treats it as metadata for skills; do not rely on autocomplete display unless Pi adds skill support.
+- Add package-specific body tags only when the skill truly needs them.
+- Keep deterministic, repeated, safety-sensitive, or testable behavior in package code instead of only in template prose.
+
 ## Testing
 
 From the repo root:
