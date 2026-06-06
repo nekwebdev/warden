@@ -218,17 +218,28 @@ function writePiAgentSettings(
 	settings: Record<string, unknown>,
 ): WardenEffortSettingsResult {
 	const settingsPath = getPiAgentSettingsPath();
-	let tempPath: string | undefined;
+	const tempPath = tempSettingsPath(settingsPath);
 	try {
-		mkdirSync(dirname(settingsPath), { recursive: true });
-		tempPath = `${settingsPath}.${process.pid}.${Date.now()}.tmp`;
-		writeFileSync(tempPath, `${JSON.stringify(settings, null, 2)}\n`, "utf-8");
-		renameSync(tempPath, settingsPath);
+		writeSettingsJson(settingsPath, tempPath, settings);
 		return { ok: true };
 	} catch (error) {
-		if (tempPath) rmSync(tempPath, { force: true });
+		rmSync(tempPath, { force: true });
 		return { ok: false, path: settingsPath, error: toErrorMessage(error) };
 	}
+}
+
+function tempSettingsPath(settingsPath: string): string {
+	return `${settingsPath}.${process.pid}.${Date.now()}.tmp`;
+}
+
+function writeSettingsJson(
+	settingsPath: string,
+	tempPath: string,
+	settings: Record<string, unknown>,
+): void {
+	mkdirSync(dirname(settingsPath), { recursive: true });
+	writeFileSync(tempPath, `${JSON.stringify(settings, null, 2)}\n`, "utf-8");
+	renameSync(tempPath, settingsPath);
 }
 
 function settingsParts(settings: Record<string, unknown>): {
