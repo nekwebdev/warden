@@ -1,11 +1,15 @@
 ---
 name: warden-grill
 description: Grilling session that challenges your warden work packet against the existing domain model, sharpens terminology, and updates it inline as decisions crystallise. Use when user wants to stress-test a warden work packet against their project's language and documented decisions.
+argument-hint: [work packet.md path]
 license: MIT
 ---
 
 <checks>
-- Check that $1 is a path to a `packet.md` file. If not error out and ask to call the skill with a `packet.md` path as an argument.
+- Treat $1 as the user's packet path argument, not as a skill-file-relative reference.
+- Accept absolute paths and relative paths. Resolve relative paths from the current working directory first, then from the Git repository root if the cwd-relative candidate does not exist. Do not resolve $1 against this skill directory unless the user provided that exact absolute path.
+- After resolving $1, check that the resolved path exists and has basename `packet.md`. If not, error out and ask to call the skill with a `packet.md` path as an argument.
+- Use the resolved packet path for reads, inline updates, and the final next-step command.
 - If input is rough intent only, do not shape it into a packet; recommend `/skill:warden-start`
 - Require one small vertical implementation pass.
 - Flag broad roadmaps, multiple unrelated packages/runtimes, root + runner + package mixtures, docs/process work disguised as implementation, and vague “improve everything” work.

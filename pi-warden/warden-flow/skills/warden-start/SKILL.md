@@ -165,4 +165,4 @@ The packet path should be `.warden/work/<slug>/packet.md`, relative to the Git r
 
 When the packet file is written, keep `## Packet` to a written-file note unless the user asks to see full content. When writing is skipped for preview, dry run, no file-editing tools, or blocked safety, put full packet markdown in `## Packet`.
 
-Do not continue into implementation. Produce the packet file or preview plus next action only.
+Do not continue into implementation. Offer next action: `/skill:warden-grill <repo root>/.warden/work/<slug>/packet.md`
