@@ -1,9 +1,11 @@
 import assert from "node:assert/strict";
+import { execFileSync } from "node:child_process";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, it } from "node:test";
 import {
+	buildRootMapInjection,
 	collectScopedMapInjections,
 	candidateScopeDirs,
 	extractInjectableCapsule,
@@ -22,12 +24,25 @@ afterEach(() => {
 	cwd = "";
 });
 
+function initGitRepo(root = cwd): void {
+	execFileSync("git", ["init"], { cwd: root, stdio: "ignore" });
+}
+
 function writeMap(
 	relativePath: string,
 	capsule: string,
 	body = "## Details\nMore detail",
 ): void {
-	const target = join(cwd, relativePath);
+	writeMapAt(cwd, relativePath, capsule, body);
+}
+
+function writeMapAt(
+	base: string,
+	relativePath: string,
+	capsule: string,
+	body = "## Details\nMore detail",
+): void {
+	const target = join(base, relativePath);
 	mkdirSync(join(target, ".."), { recursive: true });
 	writeFileSync(
 		target,
@@ -73,6 +88,31 @@ describe("map capsule extraction", () => {
 	});
 });
 
+describe("root map selection", () => {
+	it("loads root map from git top-level when cwd is nested", () => {
+		initGitRepo();
+		const nestedCwd = join(cwd, "pi-warden");
+		mkdirSync(nestedCwd, { recursive: true });
+		writeMapAt(
+			cwd,
+			".warden/map.md",
+			"## Agent Quick Context\n\n- Purpose: Git root context",
+		);
+		writeMapAt(
+			nestedCwd,
+			".warden/map.md",
+			"## Agent Quick Context\n\n- Purpose: Nested cwd context",
+		);
+
+		const injection = buildRootMapInjection(nestedCwd);
+
+		assert.ok(injection);
+		assert.equal(injection.relativePath, ".warden/map.md");
+		assert.match(injection.message, /Purpose: Git root context/);
+		assert.doesNotMatch(injection.message, /Purpose: Nested cwd context/);
+	});
+});
+
 describe("scoped map selection", () => {
 	it("derives parent-to-child scope candidates for a touched path", () => {
 		assert.deepEqual(candidateScopeDirs(cwd, "a/b/c/file.ts"), [
@@ -84,6 +124,39 @@ describe("scoped map selection", () => {
 
 	it("skips paths inside .warden to avoid recursive map injection", () => {
 		assert.deepEqual(candidateScopeDirs(cwd, ROOT_MAP_RELATIVE_PATH), []);
+	});
+
+	it("loads scoped maps from git top-level using repo-relative touched paths", () => {
+		initGitRepo();
+		const nestedCwd = join(cwd, "pi-warden");
+		const touchedDir = join(nestedCwd, "warden-flow/src");
+		mkdirSync(touchedDir, { recursive: true });
+		writeFileSync(join(touchedDir, "effort.ts"), "export {};\n", "utf-8");
+		writeMapAt(
+			cwd,
+			".warden/maps/pi-warden/warden-flow/map.md",
+			"## Agent Quick Context\n\n- Purpose: Git root scoped context",
+		);
+		writeMapAt(
+			nestedCwd,
+			".warden/maps/warden-flow/map.md",
+			"## Agent Quick Context\n\n- Purpose: Nested cwd scoped context",
+		);
+
+		const injections = collectScopedMapInjections(
+			nestedCwd,
+			"warden-flow/src/effort.ts",
+		);
+
+		assert.deepEqual(
+			injections.map((item) => item.relativePath),
+			[".warden/maps/pi-warden/warden-flow/map.md"],
+		);
+		assert.match(injections[0].message, /Purpose: Git root scoped context/);
+		assert.doesNotMatch(
+			injections[0].message,
+			/Purpose: Nested cwd scoped context/,
+		);
 	});
 
 	it("collects nearest scoped maps within configured count", () => {

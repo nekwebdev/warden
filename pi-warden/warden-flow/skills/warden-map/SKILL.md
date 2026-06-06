@@ -13,6 +13,15 @@ Create or refresh the repository's Warden map files:
 .warden/maps/<repo-relative-scope>/map.md
 ```
 
+Canonical map root:
+
+- First discover the Git repository root from the current cwd.
+- When cwd is inside a Git repository, read and write maps only under `<git-root>/.warden/**`.
+- If invoked from a nested cwd with no explicit path, map the Git repository root. If a repo-relative scope is requested, map that scope while still writing under `<git-root>/.warden/**`.
+- Do not write `.warden/map.md` or `.warden/maps/**` under a nested cwd unless that cwd is itself a separate Git repository.
+- If cwd is not inside a Git repository, do not pretend there is a canonical map root. Fail clearly unless explicit standalone path behavior is already supported by available repo evidence.
+- Do not use Warden home paths or environment-specific roots.
+
 The map is not a task plan, issue tracker, or implementation artifact. It is durable orientation context for future agents and humans. Optimize for reducing repeated repo discovery.
 
 ## Principles
@@ -28,22 +37,22 @@ The map is not a task plan, issue tracker, or implementation artifact. It is dur
 
 ## Input
 
-User input may be empty, a repository path, a specific scope, or a request such as "map this repo". If no path is given, map the current working directory.
+User input may be empty, a repository path, a specific scope, or a request such as "map this repo". If no path is given and cwd is inside a Git repository, map the Git repository root, not a nested cwd. If no Git repository is available, fail clearly unless the requested path supports explicit standalone mapping.
 
-If the user asks for a narrow scope, update the root map only as needed and create/update scoped map files for that scope.
+If the user asks for a narrow scope, interpret it relative to the Git repository root when available, update the root map only as needed, and create/update scoped map files for that scope under the canonical map root.
 
 ## Required Output Paths
 
 Root map:
 
 ```text
-.warden/map.md
+<git-root>/.warden/map.md
 ```
 
 Scoped maps, when useful:
 
 ```text
-.warden/maps/<repo-relative-scope>/map.md
+<git-root>/.warden/maps/<repo-relative-scope>/map.md
 ```
 
 Examples of scope paths are package roots, app/service roots, plugin or extension roots, major modules, or directories with distinct ownership/conventions. Do not create scoped maps for every directory.
@@ -83,8 +92,8 @@ First pass:
 - Root `README.md`.
 - Relevant nested `AGENTS.md`.
 - Relevant nested `README.md`.
-- Existing `.warden/map.md`.
-- Relevant `.warden/maps/**/map.md`.
+- Existing `<git-root>/.warden/map.md` when inside a Git repository.
+- Relevant `<git-root>/.warden/maps/**/map.md` when inside a Git repository.
 - `CHANGELOG.md` if present.
 - Manifests, task files, test entry points, and obvious package boundaries.
 
@@ -138,9 +147,10 @@ Inspect individual historical diffs only if needed to understand a boundary or a
 
 ### 1. Establish Scope
 
-- Identify repository root or requested scope.
+- Discover the Git repository root from cwd, or fail clearly if no Git repository is available and no explicit standalone path behavior applies.
+- Identify repository root or requested repo-relative scope.
 - Choose refresh mode. Default to scoped refresh.
-- Read existing `.warden/map.md` and relevant `.warden/maps/**/map.md` if present.
+- Read existing `<git-root>/.warden/map.md` and relevant `<git-root>/.warden/maps/**/map.md` if present.
 - Read repository guidance files and high-signal docs at root and likely package/module boundaries within the discovery budget.
 - Inspect top-level tree and ignore obvious generated/vendor/cache output unless those directories are architecturally meaningful.
 

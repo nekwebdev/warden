@@ -31,8 +31,9 @@ This package does not own Warden runner workflows, agent lifecycle commands, sib
 
 ## Map model
 
-- Root map path: `.warden/map.md`.
-- Scoped map path: `.warden/maps/<repo-relative-scope>/map.md`.
+- Warden maps are canonical at the current Git repository root. When an agent cwd is nested inside a repo, map lookup and map writing still use `<git-root>/.warden/**`.
+- Root map path: `<git-root>/.warden/map.md`.
+- Scoped map path: `<git-root>/.warden/maps/<repo-relative-scope>/map.md`.
 - Map files are repository orientation context, not task plans or implementation artifacts.
 - Only `warden-map` updates `.warden/map.md` and `.warden/maps/**/map.md`; other skills treat maps as possibly stale orientation hints.
 - Every auto-injected map must come from the `<!-- warden-map:inject:start -->` / `<!-- warden-map:inject:end -->` capsule.

@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { execFileSync } from "node:child_process";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -25,8 +26,16 @@ afterEach(() => {
 	cwd = "";
 });
 
+function initGitRepo(root = cwd): void {
+	execFileSync("git", ["init"], { cwd: root, stdio: "ignore" });
+}
+
 function writeMap(relativePath: string, capsule: string): void {
-	const target = join(cwd, relativePath);
+	writeMapAt(cwd, relativePath, capsule);
+}
+
+function writeMapAt(base: string, relativePath: string, capsule: string): void {
+	const target = join(base, relativePath);
 	mkdirSync(join(target, ".."), { recursive: true });
 	writeFileSync(
 		target,
@@ -110,6 +119,30 @@ describe("warden-map extension", () => {
 		assert.match(pi.messages[1].content, /Dirty: no/);
 	});
 
+	it("injects root map from git top-level when cwd is nested", async () => {
+		initGitRepo();
+		const nestedCwd = join(cwd, "pi-warden");
+		mkdirSync(nestedCwd, { recursive: true });
+		writeMapAt(
+			cwd,
+			".warden/map.md",
+			"## Agent Quick Context\n\n- Purpose: Git root context",
+		);
+		writeMapAt(
+			nestedCwd,
+			".warden/map.md",
+			"## Agent Quick Context\n\n- Purpose: Nested cwd context",
+		);
+		const pi = createFakePi();
+		wardenMap(pi as any);
+
+		await runHandler(pi, "session_start", {}, { cwd: nestedCwd });
+
+		assert.equal(pi.messages[0].customType, WARDEN_MAP_MESSAGE);
+		assert.match(pi.messages[0].content, /Purpose: Git root context/);
+		assert.doesNotMatch(pi.messages[0].content, /Purpose: Nested cwd context/);
+	});
+
 	it("appends scoped map capsule to matching tool results and dedupes", async () => {
 		writeMap(
 			".warden/maps/src/map.md",
@@ -143,6 +176,49 @@ describe("warden-map extension", () => {
 			{ cwd },
 		);
 		assert.equal(second, undefined);
+	});
+
+	it("appends scoped maps from git top-level when cwd is nested", async () => {
+		initGitRepo();
+		const nestedCwd = join(cwd, "pi-warden");
+		const touchedDir = join(nestedCwd, "warden-flow/src");
+		mkdirSync(touchedDir, { recursive: true });
+		writeFileSync(join(touchedDir, "effort.ts"), "export {};\n", "utf-8");
+		writeMapAt(
+			cwd,
+			".warden/maps/pi-warden/warden-flow/map.md",
+			"## Agent Quick Context\n\n- Purpose: Git root scoped context",
+		);
+		writeMapAt(
+			nestedCwd,
+			".warden/maps/warden-flow/map.md",
+			"## Agent Quick Context\n\n- Purpose: Nested cwd scoped context",
+		);
+		const pi = createFakePi();
+		wardenMap(pi as any);
+		await runHandler(pi, "session_start", {}, { cwd: nestedCwd });
+
+		const result = await runHandler(
+			pi,
+			"tool_result",
+			{
+				toolName: "read",
+				input: { path: "warden-flow/src/effort.ts" },
+				content: [{ type: "text", text: "file content" }],
+			},
+			{ cwd: nestedCwd },
+		);
+
+		assert.equal(result.content.length, 2);
+		assert.match(result.content[1].text, /Purpose: Git root scoped context/);
+		assert.doesNotMatch(
+			result.content[1].text,
+			/Purpose: Nested cwd scoped context/,
+		);
+		assert.match(
+			result.content[1].text,
+			/Source: \.warden\/maps\/pi-warden\/warden-flow\/map\.md/,
+		);
 	});
 
 	it("re-injects git context before an agent turn when dirty state changes", async () => {

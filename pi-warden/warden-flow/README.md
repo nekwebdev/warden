@@ -14,14 +14,16 @@ It reduces repeated repo discovery by maintaining a small map tree, injecting on
 - `extensions/warden-map` — injects map capsules and git context.
 - `extensions/warden-commit` — registers `warden_commit_snapshot` and `warden_commit_apply` for safe local commit planning and execution.
 - `extensions/warden-effort` — seeds Warden skill effort defaults and applies configured effort before `/skill:warden-*` expansion.
-- Session-start map injection — hidden root map capsule from `.warden/map.md`.
-- Scoped map injection — hidden scoped capsules from `.warden/maps/<scope>/map.md` appended to relevant tool results.
+- Session-start map injection — hidden root map capsule from `<git-root>/.warden/map.md`.
+- Scoped map injection — hidden scoped capsules from `<git-root>/.warden/maps/<scope>/map.md` appended to relevant tool results.
 - Git context injection — branch, short commit, and dirty state.
 
 ## Map layout
 
+When cwd is inside a Git repository, maps are canonical at the Git top-level, even when Pi runs from a nested cwd:
+
 ```text
-.warden/
+<git-root>/.warden/
 ├── map.md
 └── maps/
     └── <repo-relative-scope>/

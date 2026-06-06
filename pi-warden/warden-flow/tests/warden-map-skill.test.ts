@@ -84,3 +84,19 @@ test("warden-map skill keeps anti-bloat language", () => {
 		assert.ok(content.includes(phrase), `${phrase} should be present`);
 	}
 });
+
+test("warden-map skill defines git-root canonical map handling", () => {
+	const content = skillContent();
+	for (const phrase of [
+		"discover the Git repository root",
+		"<git-root>/.warden/**",
+		"nested cwd",
+		"cwd is itself a separate Git repository",
+		"Do not use Warden home paths",
+		"durable orientation context",
+	]) {
+		assert.ok(content.includes(phrase), `${phrase} should be present`);
+	}
+	const wardenHomeVariable = `$${["WARDEN", "HOME"].join("_")}`;
+	assert.equal(content.includes(wardenHomeVariable), false);
+});

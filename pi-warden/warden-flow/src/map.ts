@@ -1,3 +1,4 @@
+import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { existsSync, readFileSync, statSync } from "node:fs";
 import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
@@ -83,22 +84,38 @@ export function extractInjectableCapsule(
 	return { status: "ok", content, bytes, maxBytes };
 }
 
+export function resolveRepoRoot(cwd: string): string | null {
+	const result = spawnSync("git", ["rev-parse", "--show-toplevel"], {
+		cwd,
+		encoding: "utf-8",
+		timeout: 1000,
+	});
+	if (result.status !== 0 || result.error) return null;
+	const repoRoot = result.stdout.trim();
+	return repoRoot ? resolve(repoRoot) : null;
+}
+
+export function canonicalMapRoot(cwd: string): string {
+	return resolveRepoRoot(cwd) ?? resolve(cwd);
+}
+
 export function toRepoRelativePath(
 	cwd: string,
 	inputPath: string,
+	repoRoot = canonicalMapRoot(cwd),
 ): string | null {
 	const cleaned = stripPathSigils(inputPath);
 	const absolutePath = isAbsolute(cleaned)
 		? resolve(cleaned)
 		: resolve(cwd, cleaned);
-	const relativePath = relative(cwd, absolutePath);
+	const relativePath = relative(repoRoot, absolutePath);
 	if (!relativePath || relativePath === "") return "";
 	if (relativePath.startsWith("..") || isAbsolute(relativePath)) return null;
 	return normalizeSlashes(relativePath);
 }
 
 export function rootMapPath(cwd: string): string {
-	return join(cwd, ROOT_MAP_RELATIVE_PATH);
+	return join(canonicalMapRoot(cwd), ROOT_MAP_RELATIVE_PATH);
 }
 
 export function scopedMapRelativePath(scope: string): string {
@@ -108,12 +125,12 @@ export function scopedMapRelativePath(scope: string): string {
 }
 
 export function candidateScopeDirs(cwd: string, inputPath: string): string[] {
-	const relativePath = toRepoRelativePath(cwd, inputPath);
+	const repoRoot = canonicalMapRoot(cwd);
+	const relativePath = toRepoRelativePath(cwd, inputPath, repoRoot);
 	if (relativePath === null || relativePath === "") return [];
-	if (relativePath === ".warden" || relativePath.startsWith(".warden/"))
-		return [];
+	if (isWardenInternalPath(relativePath)) return [];
 
-	const absolutePath = resolve(cwd, relativePath);
+	const absolutePath = resolve(repoRoot, relativePath);
 	let scopePath = relativePath;
 	try {
 		if (!statSync(absolutePath).isDirectory())
@@ -176,7 +193,7 @@ export function readMapCapsule(
 
 export function buildRootMapInjection(cwd: string): MapInjection | null {
 	const capsule = readMapCapsule(
-		cwd,
+		canonicalMapRoot(cwd),
 		ROOT_MAP_RELATIVE_PATH,
 		ROOT_CAPSULE_MAX_BYTES,
 	);
@@ -197,9 +214,10 @@ export function collectScopedMapInjections(
 		options.maxInjectionBytes ?? SCOPED_INJECTION_MAX_BYTES;
 	const maxScopedMaps =
 		options.maxScopedMaps ?? MAX_SCOPED_MAPS_PER_TOOL_RESULT;
+	const repoRoot = canonicalMapRoot(cwd);
 	const candidates = candidateScopeDirs(cwd, inputPath)
 		.map((scope) =>
-			readMapCapsule(cwd, scopedMapRelativePath(scope), maxCapsuleBytes),
+			readMapCapsule(repoRoot, scopedMapRelativePath(scope), maxCapsuleBytes),
 		)
 		.filter((capsule) => capsule.status !== "missing-file");
 	const nearest = candidates.slice(-maxScopedMaps);
@@ -304,6 +322,15 @@ function scopeFromMapPath(relativePath: string): string {
 
 function normalizeSlashes(value: string): string {
 	return value.split(sep).join("/");
+}
+
+function isWardenInternalPath(relativePath: string): boolean {
+	return (
+		relativePath === ".warden" ||
+		relativePath.startsWith(".warden/") ||
+		relativePath.endsWith("/.warden") ||
+		relativePath.includes("/.warden/")
+	);
 }
 
 function stripPathSigils(value: string): string {
