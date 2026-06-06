@@ -66,6 +66,7 @@ Use only folders that fit the package.
   - Owns `/skill:warden-map`, map capsule injection, scoped map loading, and git context injection.
   - Owns `/skill:warden-commit`, commit snapshot/apply tools, and local commit safety rules.
   - Owns `/warden:effort` and per-skill effort defaults for Warden Flow skills.
+  - Declares `@nekwebdev/warden-panel` as its package dependency for Effort pane contribution through the public panel API.
   - Does not own general runner workflows or agent lifecycle commands.
 
 ## Scope rules
@@ -76,6 +77,7 @@ Use only folders that fit the package.
 - Keep Warden-managed Pi agent environment lifecycle behavior in `run-warden/`; package code owns package behavior, not the agent-environment bootstrap.
 - Keep package behavior independently installable and testable.
 - Keep package boundaries explicit when packages share APIs.
+- When one Warden package imports another Warden package API, declare that dependency in the importing package manifest.
 
 ## Skill implementation rules
 

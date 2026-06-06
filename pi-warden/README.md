@@ -57,6 +57,8 @@ Use:
 
 Do not add extensions or folders just for ceremony. Add them when package behavior needs them.
 
+When packages import sibling package APIs, declare that package-to-package dependency in the importing package manifest. `warden-flow` depends on `@nekwebdev/warden-panel` for the Effort pane contribution.
+
 ## Warden skill effort settings
 
 Packages that add `warden-*` skills should seed default effort settings in Pi `settings.json` under `warden.effort.skills.<skillName>`. `/warden:effort` is the user-facing control surface for changing those values.
@@ -95,7 +97,7 @@ Provides:
 
 - `/skill:warden-map` — creates or refreshes repository map files;
 - `/skill:warden-commit` — plans safe, atomic local commits and can apply them after exact `Commit` confirmation;
-- `/warden:effort` — opens the Warden panel Effort pane for per-skill effort settings;
+- `/warden:effort` — opens the Warden panel Effort pane for per-skill effort settings through `@nekwebdev/warden-panel`;
 - `extensions/warden-map` — injects token-conscious map capsules and git context;
 - `extensions/warden-commit` — provides `warden_commit_snapshot` and `warden_commit_apply` for compact commit planning and safe local commit execution;
 - `extensions/warden-effort` — seeds and applies configured `warden-*` skill effort before skill expansion;
