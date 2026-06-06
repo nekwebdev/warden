@@ -12,6 +12,8 @@ Turn rough user intent into one small, testable Warden work packet at:
 .warden/work/<slug>/packet.md
 ```
 
+When file-editing tools are available, create or update `.warden/work/<slug>/packet.md` and create the parent directory if needed.
+
 Use this skill as the entry point for a lean Warden dev cycle. It can work from a very small prompt, such as:
 
 ```text
@@ -26,6 +28,13 @@ Do not require a polished plan. Shape messy intent into one safe slice.
 2. Tighten an existing rough packet.
 3. Split or reject work that crosses too many boundaries.
 4. State assumptions instead of blocking unless implementation safety is truly blocked.
+
+## File write rules
+
+- Default behavior: create or update `.warden/work/<slug>/packet.md` when file-editing tools are available.
+- Create `.warden/work/<slug>/` first when needed.
+- Only output packet markdown instead of writing the file when the user explicitly asks for preview or dry run, the environment cannot edit files, or implementation safety is blocked.
+- Do not create PRDs, issue trackers, roadmaps, lifecycle machinery, or files outside the packet path.
 
 ## Slice rules
 
@@ -49,6 +58,8 @@ Preserve Warden ownership boundaries:
 - `nix-warden/` and `dev-warden/` are Systems or future-specialist areas unless explicitly scoped.
 - Package-local work must stay package-local.
 
+Boundary notes must capture primary agent, expected cwd, owned work area, handoffs, package locality, and rejected cross-boundary work.
+
 If a request crosses these boundaries, narrow it to one safe package-local slice, split it into separate packets, or reject the oversized packet.
 
 ## Map rules
@@ -59,7 +70,16 @@ If a request crosses these boundaries, narrow it to one safe package-local slice
 - Only /skill:warden-map updates map files: `.warden/map.md` and `.warden/maps/**/map.md`.
 - Do not edit `.warden/map.md` or `.warden/maps/**/map.md` from this skill.
 - If map freshness matters, recommend `/skill:warden-map` for the relevant scope.
-- If the packet depends on current facts, instruct the coding agent to inspect repository files before editing.
+- If the packet depends on current repo facts, instruct the coding agent to inspect repository files before editing.
+
+## External research rules
+
+- Repo facts come from local repo evidence: repository structure, commands, tests, boundaries, and implementation behavior.
+- External/current facts come from web research; use it only when the packet depends on facts outside the repository or facts likely to have changed.
+- External facts include current upstream APIs, dependency behavior, package manager behavior, OS or platform behavior, licensing, security guidance, and external service behavior.
+- Prefer official or primary sources for external technical facts.
+- Do not browse to rediscover local repo facts.
+- If external research affects the packet, record what needed research, source or source type, decision impact, and whether implementation should verify again before editing.
 
 ## Anti-bloat rules
 
@@ -100,6 +120,8 @@ Create or refine packet markdown with this exact section set:
 
 ## Map freshness notes
 
+## External research notes
+
 ## Decisions
 
 ## Next safe step
@@ -116,8 +138,9 @@ Section guidance:
 - `Files not to touch`: protected boundaries, maps, generated files, secrets, unrelated packages.
 - `Test strategy`: narrow automated checks where possible; say when none fit.
 - `Manual verification`: human-visible check or command output to inspect.
-- `Boundary notes`: owner handoffs, package locality, rejected cross-boundary work.
+- `Boundary notes`: primary agent, expected cwd, owned work area, handoffs, package locality, and rejected cross-boundary work.
 - `Map freshness notes`: map hints used, stale-risk, and whether `/skill:warden-map` is recommended.
+- `External research notes`: what needed research, source or source type, decision impact, and reverify-before-editing call; use `None; repo-local slice.` when no external research is needed.
 - `Decisions`: assumptions and chosen splits; keep brief.
 - `Next safe step`: first concrete action for the coding agent.
 
@@ -129,6 +152,7 @@ Respond in this shape:
 # Warden Start Result
 
 Packet path:
+Packet action:
 
 ## Summary
 
@@ -138,11 +162,13 @@ Packet path:
 
 ## Packet
 
-<packet markdown here>
+<packet markdown or written-file note>
 
 ## Next action
 ```
 
 The packet path should be `.warden/work/<slug>/packet.md`. Choose a short lowercase slug from user intent, using hyphens. If tightening an existing packet, keep its path unless unsafe.
 
-Do not continue into implementation. Produce the packet content and next action only.
+When the packet file is written, keep `## Packet` to a written-file note unless the user asks to see full content. When writing is skipped for preview, dry run, no file-editing tools, or blocked safety, put full packet markdown in `## Packet`.
+
+Do not continue into implementation. Produce the packet file or preview plus next action only.

@@ -22,9 +22,17 @@ test("warden-start skill frontmatter contains identity and license", () => {
 	assert.match(content, /^license:\s*MIT$/m);
 });
 
-test("warden-start skill contains work packet path", () => {
+test("warden-start skill contains work packet write contract", () => {
 	const content = skillContent();
-	assert.ok(content.includes(".warden/work/<slug>/packet.md"));
+	for (const phrase of [
+		"create or update",
+		".warden/work/<slug>/packet.md",
+		"file-editing tools",
+		"preview",
+		"dry run",
+	]) {
+		assert.ok(content.includes(phrase), `${phrase} should be present`);
+	}
 });
 
 test("warden-start skill contains all packet sections", () => {
@@ -41,10 +49,43 @@ test("warden-start skill contains all packet sections", () => {
 		"Manual verification",
 		"Boundary notes",
 		"Map freshness notes",
+		"External research notes",
 		"Decisions",
 		"Next safe step",
 	]) {
 		assert.ok(content.includes(section), `${section} should be present`);
+	}
+});
+
+test("warden-start skill contains external research rules", () => {
+	const content = skillContent();
+	for (const phrase of [
+		"External research",
+		"local repo evidence",
+		"web research",
+		"facts outside the repository",
+		"likely to have changed",
+		"official or primary sources",
+		"Do not browse",
+		"source",
+		"decision impact",
+		"External research notes",
+	]) {
+		assert.ok(content.includes(phrase), `${phrase} should be present`);
+	}
+});
+
+test("warden-start skill tightens boundary notes", () => {
+	const content = skillContent();
+	for (const phrase of [
+		"primary agent",
+		"expected cwd",
+		"owned work area",
+		"handoffs",
+		"package locality",
+		"rejected cross-boundary work",
+	]) {
+		assert.ok(content.includes(phrase), `${phrase} should be present`);
 	}
 });
 
