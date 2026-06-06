@@ -109,7 +109,7 @@ Current defaults seeded at session start:
 
 `/warden:effort` opens the Effort pane contributed through the public pane API from `@nekwebdev/warden-panel`. `warden-flow` declares that package as a dependency so the pane framework is available when the Effort extension loads. Space/Enter cycles a selected skill through `off`, `minimal`, `low`, `medium`, `high`, `xhigh` and writes immediately; there is no Apply step.
 
-Before Pi expands `/skill:warden-*`, `extensions/warden-effort` reads the configured level, calls Pi's public `setThinkingLevel()`, lets skill expansion continue, then restores the previous thinking level after the agent turn. Pi may clamp unsupported levels depending on the active model/provider.
+When a `/skill:warden-*` turn starts, `extensions/warden-effort` reads the configured level, calls Pi's public `setThinkingLevel()`, shows a small themed footer capsule with the active skill and effort level, then restores the previous thinking level and clears the capsule after the agent turn. Pi may clamp unsupported levels depending on the active model/provider.
 
 ## Commit helper
 

@@ -1,4 +1,7 @@
-import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
+import type {
+	ExtensionAPI,
+	ExtensionContext,
+} from "@earendil-works/pi-coding-agent";
 import {
 	contributeWardenPane,
 	getWardenPane,
@@ -20,6 +23,41 @@ export const EFFORT_PANE_ID = "effort";
 export const EFFORT_COMMAND = "warden:effort";
 export const EFFORT_FOOTER_HINT =
 	"↑↓ navigate • Space/Enter cycle effort • Tab/Shift+Tab pane • Esc close";
+export const WARDEN_SKILL_STATUS_KEY = "warden-flow.skill";
+
+type WardenStatusTheme = ExtensionContext["ui"]["theme"];
+type WardenThemeColor = Parameters<WardenStatusTheme["fg"]>[0];
+
+const EFFORT_STATUS_COLORS = {
+	off: "thinkingOff",
+	minimal: "thinkingMinimal",
+	low: "thinkingLow",
+	medium: "thinkingMedium",
+	high: "thinkingHigh",
+	xhigh: "thinkingXhigh",
+} as const satisfies Record<WardenEffortLevel, WardenThemeColor>;
+
+type WardenSkillRuntime = {
+	readonly skillName: string;
+	readonly effort: WardenEffortLevel;
+};
+
+export function renderWardenSkillStatus(
+	skillName: string,
+	effort: WardenEffortLevel,
+	theme: WardenStatusTheme,
+): string {
+	return [
+		" ",
+		theme.fg("customMessageLabel", "skill"),
+		theme.fg("dim", " "),
+		theme.fg("text", skillName),
+		theme.fg("dim", " · "),
+		theme.fg("muted", "effort "),
+		theme.fg(EFFORT_STATUS_COLORS[effort], effort),
+		" ",
+	].join("");
+}
 
 export function createEffortPane(): WardenPanelPane {
 	return {
@@ -55,10 +93,38 @@ export function createEffortPane(): WardenPanelPane {
 
 export function registerWardenEffort(pi: ExtensionAPI): void {
 	let restoreLevel: { readonly level: WardenEffortLevel } | undefined;
-	const restoreThinkingLevel = () => {
-		if (!restoreLevel) return;
-		pi.setThinkingLevel(restoreLevel.level);
-		restoreLevel = undefined;
+	let pendingSkillRuntime: WardenSkillRuntime | undefined;
+	let skillStatusActive = false;
+	const canSetStatus = (
+		ctx: ExtensionContext | undefined,
+	): ctx is ExtensionContext => ctx?.ui !== undefined && ctx.hasUI !== false;
+	const applySkillEffort = (runtime: WardenSkillRuntime): void => {
+		if (!restoreLevel) {
+			restoreLevel = { level: pi.getThinkingLevel() as WardenEffortLevel };
+		}
+		pi.setThinkingLevel(runtime.effort);
+	};
+	const showSkillStatus = (
+		ctx: ExtensionContext | undefined,
+		runtime: WardenSkillRuntime,
+	): void => {
+		if (!canSetStatus(ctx)) return;
+		ctx.ui.setStatus(
+			WARDEN_SKILL_STATUS_KEY,
+			renderWardenSkillStatus(runtime.skillName, runtime.effort, ctx.ui.theme),
+		);
+		skillStatusActive = true;
+	};
+	const restoreSkillRuntime = (ctx?: ExtensionContext) => {
+		if (restoreLevel) {
+			pi.setThinkingLevel(restoreLevel.level);
+			restoreLevel = undefined;
+		}
+		pendingSkillRuntime = undefined;
+		if (skillStatusActive && canSetStatus(ctx)) {
+			ctx.ui.setStatus(WARDEN_SKILL_STATUS_KEY, undefined);
+		}
+		skillStatusActive = false;
 	};
 
 	if (!getWardenPane(EFFORT_PANE_ID)) contributeWardenPane(createEffortPane());
@@ -72,18 +138,23 @@ export function registerWardenEffort(pi: ExtensionAPI): void {
 		seedWardenEffortDefaults();
 	});
 	pi.on("input", (event) => {
-		const skillName = wardenSkillNameFromInput(event.text);
-		if (!skillName) return undefined;
-		const effort = resolveWardenSkillEffort(skillName);
-		if (!effort) return undefined;
-		if (!restoreLevel) {
-			restoreLevel = { level: pi.getThinkingLevel() as WardenEffortLevel };
-		}
-		pi.setThinkingLevel(effort);
+		const runtime = wardenSkillRuntimeFromText(event.text);
+		if (!runtime) return undefined;
+		pendingSkillRuntime = runtime;
+		if (!event.streamingBehavior) applySkillEffort(runtime);
 		return { action: "continue" } as const;
 	});
-	pi.on("agent_end", restoreThinkingLevel);
-	pi.on("session_shutdown", restoreThinkingLevel);
+	pi.on("before_agent_start", (event, ctx) => {
+		const runtime =
+			pendingSkillRuntime ?? wardenSkillRuntimeFromText(event.prompt);
+		if (!runtime) return undefined;
+		applySkillEffort(runtime);
+		pendingSkillRuntime = undefined;
+		showSkillStatus(ctx, runtime);
+		return undefined;
+	});
+	pi.on("agent_end", (_event, ctx) => restoreSkillRuntime(ctx));
+	pi.on("session_shutdown", (_event, ctx) => restoreSkillRuntime(ctx));
 }
 
 export default function wardenEffort(pi: ExtensionAPI): void {
@@ -108,6 +179,19 @@ function isActivation(data: string): boolean {
 	return data === " " || data === "\r" || data === "\n";
 }
 
-function wardenSkillNameFromInput(text: string): string | undefined {
-	return text.trimStart().match(/^\/skill:(warden-\S*)/)?.[1];
+function wardenSkillRuntimeFromText(
+	text: string,
+): WardenSkillRuntime | undefined {
+	const skillName = wardenSkillNameFromText(text);
+	if (!skillName) return undefined;
+	const effort = resolveWardenSkillEffort(skillName);
+	return effort ? { skillName, effort } : undefined;
+}
+
+function wardenSkillNameFromText(text: string): string | undefined {
+	const trimmed = text.trimStart();
+	return (
+		trimmed.match(/^\/skill:(warden-\S*)/)?.[1] ??
+		trimmed.match(/^<skill name="(warden-[^"]+)"/)?.[1]
+	);
 }

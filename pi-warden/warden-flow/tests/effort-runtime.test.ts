@@ -10,7 +10,10 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, it, mock } from "node:test";
 import { clearWardenPanesForTests } from "../../warden-panel/src/registry.js";
-import wardenEffort from "../extensions/warden-effort/index.js";
+import wardenEffort, {
+	WARDEN_SKILL_STATUS_KEY,
+	renderWardenSkillStatus,
+} from "../extensions/warden-effort/index.js";
 import {
 	getPiAgentSettingsPath,
 	type WardenEffortLevel,
@@ -24,6 +27,25 @@ const envBefore = {
 };
 
 type Handler = (event?: any, ctx?: any) => any;
+type StatusUpdate = { readonly key: string; readonly text: string | undefined };
+
+const statusTheme = {
+	fg: (name: string, text: string) => `<${name}>${text}</${name}>`,
+	bg: (name: string, text: string) => `{${name}}${text}{/${name}}`,
+};
+
+function createStatusContext(statuses: StatusUpdate[]): any {
+	return {
+		cwd: process.cwd(),
+		hasUI: true,
+		ui: {
+			theme: statusTheme,
+			setStatus: mock.fn((key: string, text: string | undefined) =>
+				statuses.push({ key, text }),
+			),
+		},
+	};
+}
 
 function createFakePi(initialLevel: WardenEffortLevel = "off") {
 	const handlers = new Map<string, Handler[]>();
@@ -50,10 +72,11 @@ async function runFirstHandler(
 	pi: ReturnType<typeof createFakePi>,
 	name: string,
 	event?: any,
+	ctx: any = { cwd: process.cwd() },
 ): Promise<any> {
 	const handler = pi.handlers.get(name)?.[0];
 	assert.ok(handler, `${name} handler should be registered`);
-	return handler(event, { cwd: process.cwd() });
+	return handler(event, ctx);
 }
 
 function writeSettings(settings: unknown): void {
@@ -175,6 +198,77 @@ describe("Warden effort runtime hook", () => {
 		});
 
 		assert.deepEqual(pi.setCalls, ["xhigh"]);
+	});
+
+	it("shows a themed footer capsule when a Warden skill starts", async () => {
+		const statuses: StatusUpdate[] = [];
+		const ctx = createStatusContext(statuses);
+		const pi = createFakePi("high");
+		wardenEffort(pi as any);
+
+		await runFirstHandler(
+			pi,
+			"input",
+			{
+				text: "/skill:warden-commit",
+				source: "interactive",
+			},
+			ctx,
+		);
+		assert.deepEqual(statuses, []);
+
+		await runFirstHandler(
+			pi,
+			"before_agent_start",
+			{
+				prompt:
+					'<skill name="warden-commit" location="/tmp/SKILL.md">commit workflow</skill>',
+			},
+			ctx,
+		);
+
+		const expected = renderWardenSkillStatus(
+			"warden-commit",
+			"medium",
+			statusTheme as any,
+		);
+		assert.deepEqual(statuses[0], {
+			key: WARDEN_SKILL_STATUS_KEY,
+			text: expected,
+		});
+		assert.match(expected, /<thinkingMedium>medium<\/thinkingMedium>/);
+		assert.match(expected, /<customMessageLabel>skill<\/customMessageLabel>/);
+		assert.doesNotMatch(expected, /customMessageBg/);
+
+		await runFirstHandler(pi, "agent_end", {}, ctx);
+
+		assert.deepEqual(statuses[statuses.length - 1], {
+			key: WARDEN_SKILL_STATUS_KEY,
+			text: undefined,
+		});
+	});
+
+	it("applies effort and status for already-expanded Warden skill blocks", async () => {
+		const statuses: StatusUpdate[] = [];
+		const ctx = createStatusContext(statuses);
+		const pi = createFakePi("minimal");
+		wardenEffort(pi as any);
+
+		await runFirstHandler(
+			pi,
+			"before_agent_start",
+			{
+				prompt:
+					'<skill name="warden-grill" location="/tmp/SKILL.md">grill workflow</skill>',
+			},
+			ctx,
+		);
+
+		assert.deepEqual(pi.setCalls, ["high"]);
+		assert.deepEqual(statuses[0], {
+			key: WARDEN_SKILL_STATUS_KEY,
+			text: renderWardenSkillStatus("warden-grill", "high", statusTheme as any),
+		});
 	});
 
 	it("ignores non-Warden skills", async () => {
