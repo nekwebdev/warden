@@ -130,7 +130,7 @@ Section guidance:
 - `Work area`: narrow repo/package boundary for edits.
 - `Likely files`: probable files to inspect or edit; mark uncertain entries.
 - `Files not to touch`: protected boundaries, maps, generated files, secrets, unrelated packages.
-- `Test strategy`: narrow automated checks where possible; say when none fit.
+- `Test strategy`: narrow automated checks where possible; say when none fit. For prose-only `SKILL.md` or docs edits, prefer manual read/verification over markdown prose assertion tests; reserve automated tests for runtime behavior, package contracts, or existing tested invariants.
 - `Manual verification`: human-visible check or command output to inspect.
 - `Boundary notes`: primary agent, expected cwd, owned work area, handoffs, package locality, and rejected cross-boundary work.
 - `Map freshness notes`: map hints used, stale-risk, and whether `/skill:warden-map` is recommended.

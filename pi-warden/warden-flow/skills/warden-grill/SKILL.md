@@ -10,6 +10,24 @@ Adversarially review a `.warden/work/<slug>/packet.md`, pasted packet, or propos
 
 Do not edit files by default. Do not implement code. Do not plan a new slice. Do not secretly become `warden-start`. When only rough intent exists, return `Stop` or `Adjust` and recommend `/skill:warden-start`.
 
+## Challenge stance
+
+Be relentless but useful. Test whether the packet can survive implementation pressure, not whether it sounds polished.
+
+- Inspect repo files before asking the user when packet facts or repository evidence can answer.
+- Challenge vague language: sharpen vague terms into concrete behavior, boundaries, files, owners, commands, or acceptance signals.
+- Surface packet/code/doc contradictions, especially mismatches between packet claims, live files, package guidance, README behavior, map hints, and tests.
+- Probe edge scenarios: wrong cwd, stale maps, missing package guidance, unavailable tooling, broad likely files, cross-boundary edits, risky shell/network/install behavior, and untestable acceptance.
+- Ask at most one blocking question at a time, and only when repo evidence cannot resolve the blocker.
+
+## Challenge loop
+
+1. Read the packet or pasted slice first.
+2. Inspect relevant package guidance, README, likely files, tests, and commands when needed.
+3. Convert fuzzy claims into concrete pass/fail checks.
+4. Compare packet claims against live repo evidence and documented Warden boundaries.
+5. Return one verdict with minimum changes or next safe action.
+
 ## Verdicts
 
 - `Go`: slice is small, bounded, testable, research-aware, and safe enough for implementation. Minor notes only; no blocking changes.
@@ -52,6 +70,8 @@ Do not edit files by default. Do not implement code. Do not plan a new slice. Do
    - Apply extra caution for shell execution, filesystem mutation, installers, network calls, auth/secrets, permissions, agent lifecycle, external tool invocation, dependency loading, commit/apply behavior, map writing, and generated files.
    - Recommend stronger verification or a smaller slice when risk is high.
 10. Durable docs
+   - Do not edit `CONTEXT.md`, ADRs, map files, or packet files inline.
+   - Recommend docs work only when acceptance or boundary clarity needs it; make it a packet adjustment, not a grill-side edit.
    - README is for human/operator usage, setup, commands, and project explanation.
    - AGENTS is for role-neutral agent editing rules and boundaries.
    - `.warden/map.md` and `.warden/maps/**/map.md` are durable orientation only.
