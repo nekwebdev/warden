@@ -79,17 +79,17 @@ license: MIT
 
 </scope-gates>
 
-<workflow>
+<safety>
 
-</workflow>
+</safety>
 
 <context-sources>
 
 </context-sources>
 
-<safety>
+<workflow>
 
-</safety>
+</workflow>
 
 <review-checks>
 
@@ -139,6 +139,10 @@ Warden's workflow and durable-orientation package for Pi skills and extensions.
 Provides:
 
 - `/skill:warden-map` — creates or refreshes repository map files;
+- `/skill:warden-start` — turns rough intent into one small work packet;
+- `/skill:warden-grill` — pressure-tests a work packet or manual feedback until TDD-ready;
+- `/skill:warden-tdd` — implements one grilled packet slice with strict test-first workflow;
+- `/skill:warden-close` — validates an accepted packet, writes final `handoff.md`, and decides changelog/map impact;
 - `/skill:warden-commit` — plans safe, atomic local commits and can apply them after exact `Commit` confirmation;
 - `/warden:effort` — opens the Warden panel Effort pane for per-skill effort settings through `@nekwebdev/warden-panel`;
 - `extensions/warden-map` — injects token-conscious map capsules and git context;

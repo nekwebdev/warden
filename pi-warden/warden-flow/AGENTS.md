@@ -24,6 +24,7 @@ Package-owned areas:
 - `warden-start` skill in `skills/warden-start/`;
 - `warden-grill` skill in `skills/warden-grill/`;
 - `warden-tdd` skill in `skills/warden-tdd/`;
+- `warden-close` skill in `skills/warden-close/`;
 - `warden-commit` skill in `skills/warden-commit/`;
 - package tests in `tests/`;
 - package scripts in `scripts/`.

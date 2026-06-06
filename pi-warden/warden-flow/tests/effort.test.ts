@@ -94,6 +94,7 @@ describe("Warden skill effort settings", () => {
 				"warden-start": "medium",
 				"warden-grill": "high",
 				"warden-tdd": "high",
+				"warden-close": "medium",
 				"warden-commit": "medium",
 			});
 
@@ -106,6 +107,7 @@ describe("Warden skill effort settings", () => {
 							"warden-start": "medium",
 							"warden-grill": "high",
 							"warden-tdd": "high",
+							"warden-close": "medium",
 							"warden-commit": "medium",
 						},
 					},
@@ -138,6 +140,7 @@ describe("Warden skill effort settings", () => {
 								"warden-start": "medium",
 								"warden-grill": "high",
 								"warden-tdd": "high",
+								"warden-close": "medium",
 								"warden-commit": "medium",
 							},
 						},
@@ -167,6 +170,7 @@ describe("Warden skill effort settings", () => {
 							"warden-start": "medium",
 							"warden-grill": "high",
 							"warden-tdd": "high",
+							"warden-close": "medium",
 							"warden-commit": "medium",
 						},
 					},

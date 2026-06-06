@@ -41,11 +41,22 @@ function skillEntries(): string[] {
 }
 
 const expectedSkillEntries = [
+	join("skills", "warden-close", "SKILL.md"),
 	join("skills", "warden-commit", "SKILL.md"),
 	join("skills", "warden-grill", "SKILL.md"),
 	join("skills", "warden-map", "SKILL.md"),
 	join("skills", "warden-start", "SKILL.md"),
 	join("skills", "warden-tdd", "SKILL.md"),
+];
+
+const requiredWardenSkillBodyTags = [
+	"argument-handling",
+	"scope-gates",
+	"safety",
+	"context-sources",
+	"workflow",
+	"review-checks",
+	"output-format",
 ];
 
 function advertisedExtensionEntries(): string[] {
@@ -154,7 +165,31 @@ describe("package pi resources", () => {
 			const content = readFileSync(target, "utf-8");
 			assert.match(content, /^---\n[\s\S]*?\n---/);
 			assert.match(content, /^name:\s*\S+/m);
+			assert.match(content, /^description:\s*\S+/m);
+			assert.match(content, /^argument-hint:\s*\[[^\n]+\]$/m);
 			assert.match(content, /^license:\s*MIT/m);
+		}
+	});
+
+	it("all Warden Flow skills follow the package body tag template", () => {
+		const entries = skillEntries();
+		for (const entry of entries) {
+			const target = resolve(packageRoot, entry);
+			const content = readFileSync(target, "utf-8");
+			const tags = [...content.matchAll(/^<([a-z-]+)>$/gm)].map(
+				(match) => match[1],
+			);
+			for (const tag of requiredWardenSkillBodyTags) {
+				assert.ok(
+					tags.includes(tag),
+					`${entry} should include <${tag}> body tag`,
+				);
+				assert.match(
+					content,
+					new RegExp(`^<${tag}>\\n[\\s\\S]*?\\n</${tag}>`, "m"),
+					`${entry} should close <${tag}> body tag`,
+				);
+			}
 		}
 	});
 
