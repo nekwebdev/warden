@@ -8,7 +8,7 @@ It reduces repeated repo discovery by maintaining a small map tree, injecting on
 
 - `/skill:warden-map` — creates or refreshes repository map files.
 - `/skill:warden-commit` — plans safe, atomic local commits and can apply them after exact `Commit` confirmation.
-- `/warden:effort` — opens the Warden panel Effort pane for Warden skill thinking-level settings.
+- `/warden:effort` — opens the Warden panel Effort pane for Warden skill thinking-level settings through `@nekwebdev/warden-panel`.
 - `extensions/warden-map` — injects map capsules and git context.
 - `extensions/warden-commit` — registers `warden_commit_snapshot` and `warden_commit_apply` for safe local commit planning and execution.
 - `extensions/warden-effort` — seeds Warden skill effort defaults and applies configured effort before `/skill:warden-*` expansion.
@@ -101,7 +101,7 @@ Current defaults seeded at session start:
 - `warden-map`: `low`
 - `warden-commit`: `medium`
 
-`/warden:effort` opens the Effort pane contributed through `@nekwebdev/warden-panel`. Space/Enter cycles a selected skill through `off`, `minimal`, `low`, `medium`, `high`, `xhigh` and writes immediately; there is no Apply step.
+`/warden:effort` opens the Effort pane contributed through the public pane API from `@nekwebdev/warden-panel`. `warden-flow` declares that package as a dependency so the pane framework is available when the Effort extension loads. Space/Enter cycles a selected skill through `off`, `minimal`, `low`, `medium`, `high`, `xhigh` and writes immediately; there is no Apply step.
 
 Before Pi expands `/skill:warden-*`, `extensions/warden-effort` reads the configured level, calls Pi's public `setThinkingLevel()`, lets skill expansion continue, then restores the previous thinking level after the agent turn. Pi may clamp unsupported levels depending on the active model/provider.
 
@@ -115,6 +115,10 @@ Before Pi expands `/skill:warden-*`, `extensions/warden-effort` reads the config
 
 It never pushes, pulls, fetches, rebases, resets, amends, tags, stashes, checks out, cleans, restores, creates PRs, or runs remote git operations.
 
+## Package dependency
+
+`warden-flow` depends on `@nekwebdev/warden-panel` for the Effort pane registry and panel opener used by `/warden:effort`. In this repository the dependency is declared as `file:../warden-panel` so local package development and Pi local installs resolve the sibling package explicitly.
+
 ## Scope boundary
 
 This package owns Warden workflow/orientation Pi behavior, including `warden-map`, map capsule injection, `warden-commit`, commit snapshot/apply tooling, and Warden Flow skill effort settings.
@@ -124,6 +128,7 @@ It does not own Warden runner workflows, Pi agent lifecycle commands, or sibling
 ## Local development
 
 ```sh
+npm install --prefix pi-warden/warden-panel
 npm install --prefix pi-warden/warden-flow
 npm test --prefix pi-warden/warden-flow
 mise run test:pi-warden

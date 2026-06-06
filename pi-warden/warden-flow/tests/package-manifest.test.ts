@@ -14,6 +14,7 @@ const pkg = JSON.parse(
 	type?: string;
 	files?: string[];
 	scripts?: Record<string, string>;
+	dependencies?: Record<string, string>;
 	peerDependencies?: Record<string, string>;
 	devDependencies?: Record<string, string>;
 	exports?: Record<string, string>;
@@ -54,6 +55,10 @@ describe("package pi resources", () => {
 	});
 
 	it("declares Pi extension runtime dependencies", () => {
+		assert.equal(
+			pkg.dependencies?.["@nekwebdev/warden-panel"],
+			"file:../warden-panel",
+		);
 		assert.equal(
 			pkg.peerDependencies?.["@earendil-works/pi-coding-agent"],
 			"*",

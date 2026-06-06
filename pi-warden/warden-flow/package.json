@@ -44,13 +44,14 @@
   "scripts": {
     "test": "node scripts/run-tests.mjs"
   },
+  "dependencies": {
+    "@nekwebdev/warden-panel": "file:../warden-panel"
+  },
   "peerDependencies": {
-    "@earendil-works/pi-coding-agent": "*",
-    "@nekwebdev/warden-panel": "*"
+    "@earendil-works/pi-coding-agent": "*"
   },
   "devDependencies": {
     "@earendil-works/pi-coding-agent": "*",
-    "@nekwebdev/warden-panel": "file:../warden-panel",
     "@types/node": "^25.9.1",
     "tsx": "^4.20.0"
   },

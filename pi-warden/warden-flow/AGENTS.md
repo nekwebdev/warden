@@ -19,7 +19,7 @@ Package-owned areas:
 - shared map, git-context, commit helper, and effort setting logic in `src/`;
 - map injection extension in `extensions/warden-map/`;
 - commit snapshot/apply extension in `extensions/warden-commit/`;
-- effort panel/runtime extension in `extensions/warden-effort/`;
+- effort panel/runtime extension in `extensions/warden-effort/`, which uses the public `@nekwebdev/warden-panel` API;
 - `warden-map` skill in `skills/warden-map/`;
 - `warden-commit` skill in `skills/warden-commit/`;
 - package tests in `tests/`;
@@ -42,6 +42,7 @@ This package does not own Warden runner workflows, agent lifecycle commands, sib
 - Keep effort source of truth in Pi `settings.json` under `warden.effort.skills`; do not add effort frontmatter or description prefixes.
 - Update `extensions/warden-effort/` input-hook behavior when adding Warden Flow skills whose configured effort should apply before `/skill:warden-*` expansion.
 - Use Pi's public thinking-level API only; do not add provider-specific effort scales.
+- Keep `@nekwebdev/warden-panel` declared as a package dependency when Effort pane code imports its public pane API.
 
 ## Extension rules
 
@@ -57,6 +58,7 @@ This package does not own Warden runner workflows, agent lifecycle commands, sib
 ## Testing
 
 ```sh
+npm install --prefix pi-warden/warden-panel
 npm install --prefix pi-warden/warden-flow
 npm test --prefix pi-warden/warden-flow
 mise run test:pi-warden
