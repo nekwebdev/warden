@@ -89,6 +89,7 @@ describe("Warden skill effort settings", () => {
 		await withTempSettings({}, () => {
 			assert.deepEqual(DEFAULT_WARDEN_SKILL_EFFORTS, {
 				"warden-map": "low",
+				"warden-start": "medium",
 				"warden-commit": "medium",
 			});
 
@@ -98,6 +99,7 @@ describe("Warden skill effort settings", () => {
 					effort: {
 						skills: {
 							"warden-map": "low",
+							"warden-start": "medium",
 							"warden-commit": "medium",
 						},
 					},
@@ -127,6 +129,7 @@ describe("Warden skill effort settings", () => {
 							profiles: { careful: true },
 							skills: {
 								"warden-map": "low",
+								"warden-start": "medium",
 								"warden-commit": "medium",
 							},
 						},
@@ -153,6 +156,7 @@ describe("Warden skill effort settings", () => {
 					effort: {
 						skills: {
 							"warden-map": "high",
+							"warden-start": "medium",
 							"warden-commit": "medium",
 						},
 					},

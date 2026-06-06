@@ -90,6 +90,7 @@ Warden Flow stores per-skill effort settings in Pi `settings.json`:
     "effort": {
       "skills": {
         "warden-map": "low",
+        "warden-start": "medium",
         "warden-commit": "medium"
       }
     }
@@ -100,6 +101,7 @@ Warden Flow stores per-skill effort settings in Pi `settings.json`:
 Current defaults seeded at session start:
 
 - `warden-map`: `low`
+- `warden-start`: `medium`
 - `warden-commit`: `medium`
 
 `/warden:effort` opens the Effort pane contributed through the public pane API from `@nekwebdev/warden-panel`. `warden-flow` declares that package as a dependency so the pane framework is available when the Effort extension loads. Space/Enter cycles a selected skill through `off`, `minimal`, `low`, `medium`, `high`, `xhigh` and writes immediately; there is no Apply step.
