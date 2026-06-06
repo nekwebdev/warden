@@ -90,6 +90,7 @@ describe("Warden skill effort settings", () => {
 			assert.deepEqual(DEFAULT_WARDEN_SKILL_EFFORTS, {
 				"warden-map": "low",
 				"warden-start": "medium",
+				"warden-grill": "high",
 				"warden-commit": "medium",
 			});
 
@@ -100,6 +101,7 @@ describe("Warden skill effort settings", () => {
 						skills: {
 							"warden-map": "low",
 							"warden-start": "medium",
+							"warden-grill": "high",
 							"warden-commit": "medium",
 						},
 					},
@@ -130,6 +132,7 @@ describe("Warden skill effort settings", () => {
 							skills: {
 								"warden-map": "low",
 								"warden-start": "medium",
+								"warden-grill": "high",
 								"warden-commit": "medium",
 							},
 						},
@@ -157,6 +160,7 @@ describe("Warden skill effort settings", () => {
 						skills: {
 							"warden-map": "high",
 							"warden-start": "medium",
+							"warden-grill": "high",
 							"warden-commit": "medium",
 						},
 					},

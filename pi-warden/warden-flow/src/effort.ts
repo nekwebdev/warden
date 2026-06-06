@@ -23,6 +23,7 @@ export type WardenEffortLevel = (typeof WARDEN_EFFORT_LEVELS)[number];
 export const DEFAULT_WARDEN_SKILL_EFFORTS = {
 	"warden-map": "low",
 	"warden-start": "medium",
+	"warden-grill": "high",
 	"warden-commit": "medium",
 } as const satisfies Record<string, WardenEffortLevel>;
 

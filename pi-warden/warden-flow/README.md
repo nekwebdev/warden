@@ -2,12 +2,13 @@
 
 `@nekwebdev/warden-flow` is Warden's Pi Agent workflow, durable-orientation, and commit-safety package.
 
-It reduces repeated repo discovery by maintaining a small map tree, injecting only token-conscious capsules when relevant, and providing safe local commit planning tools.
+It reduces repeated repo discovery by maintaining a small map tree, injecting only token-conscious capsules when relevant, and providing lean workflow skills plus safe local commit planning tools.
 
 ## What it provides
 
 - `/skill:warden-map` — creates or refreshes repository map files.
 - `/skill:warden-start` — turns rough intent into one small `.warden/work/<slug>/packet.md` work packet for a lean dev cycle.
+- `/skill:warden-grill` — pressure-tests a work packet before implementation and returns `Go`, `Adjust`, or `Stop`.
 - `/skill:warden-commit` — plans safe, atomic local commits and can apply them after exact `Commit` confirmation.
 - `/warden:effort` — opens the Warden panel Effort pane for Warden skill thinking-level settings through `@nekwebdev/warden-panel`.
 - `extensions/warden-map` — injects map capsules and git context.
@@ -91,6 +92,7 @@ Warden Flow stores per-skill effort settings in Pi `settings.json`:
       "skills": {
         "warden-map": "low",
         "warden-start": "medium",
+        "warden-grill": "high",
         "warden-commit": "medium"
       }
     }
@@ -102,6 +104,7 @@ Current defaults seeded at session start:
 
 - `warden-map`: `low`
 - `warden-start`: `medium`
+- `warden-grill`: `high`
 - `warden-commit`: `medium`
 
 `/warden:effort` opens the Effort pane contributed through the public pane API from `@nekwebdev/warden-panel`. `warden-flow` declares that package as a dependency so the pane framework is available when the Effort extension loads. Space/Enter cycles a selected skill through `off`, `minimal`, `low`, `medium`, `high`, `xhigh` and writes immediately; there is no Apply step.
@@ -124,7 +127,7 @@ It never pushes, pulls, fetches, rebases, resets, amends, tags, stashes, checks 
 
 ## Scope boundary
 
-This package owns Warden workflow/orientation Pi behavior, including `warden-map`, map capsule injection, `warden-commit`, commit snapshot/apply tooling, and Warden Flow skill effort settings.
+This package owns Warden workflow/orientation Pi behavior, including `warden-map`, `warden-start`, `warden-grill`, `warden-commit`, map capsule injection, commit snapshot/apply tooling, and Warden Flow skill effort settings.
 
 It does not own Warden runner workflows, Pi agent lifecycle commands, or sibling package installation workflows.
 

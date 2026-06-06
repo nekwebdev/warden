@@ -22,6 +22,7 @@ Package-owned areas:
 - effort panel/runtime extension in `extensions/warden-effort/`, which uses the public `@nekwebdev/warden-panel` API;
 - `warden-map` skill in `skills/warden-map/`;
 - `warden-start` skill in `skills/warden-start/`;
+- `warden-grill` skill in `skills/warden-grill/`;
 - `warden-commit` skill in `skills/warden-commit/`;
 - package tests in `tests/`;
 - package scripts in `scripts/`.

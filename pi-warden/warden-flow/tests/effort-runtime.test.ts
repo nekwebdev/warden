@@ -99,6 +99,7 @@ describe("Warden effort runtime hook", () => {
 				skills: {
 					"warden-map": "low",
 					"warden-start": "medium",
+					"warden-grill": "high",
 					"warden-commit": "medium",
 				},
 			},
@@ -131,6 +132,20 @@ describe("Warden effort runtime hook", () => {
 			{ action: "continue" },
 		);
 		assert.deepEqual(pi.setCalls, ["medium"]);
+	});
+
+	it("applies high effort by default for /skill:warden-grill", async () => {
+		const pi = createFakePi("off");
+		wardenEffort(pi as any);
+
+		assert.deepEqual(
+			await runFirstHandler(pi, "input", {
+				text: "/skill:warden-grill review packet",
+				source: "interactive",
+			}),
+			{ action: "continue" },
+		);
+		assert.deepEqual(pi.setCalls, ["high"]);
 	});
 
 	it("applies medium effort by default for /skill:warden-commit", async () => {
