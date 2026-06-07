@@ -12,6 +12,7 @@ import type {
 } from "./commit-types.js";
 
 export * from "./commit-apply.js";
+export { validateWardenCommitApplyInput } from "./commit-apply-validation.js";
 export * from "./commit-format.js";
 export * from "./commit-paths.js";
 export * from "./commit-snapshot.js";

@@ -6,6 +6,7 @@ import { join } from "node:path";
 import { describe, it } from "node:test";
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import wardenCommit from "../extensions/warden-commit/index.js";
+import { validateWardenCommitApplyInput as validateWardenCommitApplyInputFromHelper } from "../src/commit-apply-validation.ts";
 import {
 	analyzePathRisk,
 	applyWardenCommitPlan,
@@ -343,6 +344,13 @@ describe("commit snapshot hashing", () => {
 });
 
 describe("commit apply validation", () => {
+	it("keeps input validation in a package-local helper", () => {
+		const result = validateWardenCommitApplyInputFromHelper(validApplyInput());
+
+		assert.equal(result.ok, true);
+		if (result.ok) assert.equal(result.value.confirmedUserIntent, "Commit");
+	});
+
 	it("rejects missing snapshot hash and confirmation intent", () => {
 		const missingHash = validApplyInput() as Record<string, unknown>;
 		delete missingHash.snapshotHash;

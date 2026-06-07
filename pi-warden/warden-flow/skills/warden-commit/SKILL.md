@@ -112,15 +112,12 @@ Treat each `warden_commit_snapshot` section as an input to review, not as a comp
 5. Send full visible plan as normal assistant text before asking for confirmation. The visible plan must include `# Warden Commit Plan`, `Snapshot`, `Commits`, `Warnings / excluded files`, and `Diff inspection`. Do not call `ask_user_question`, questionnaire extension, structured choice UI, or `warden_commit_apply` before this plan is visible.
 6. Before any confirmation UI/tool call, pause and verify the previous assistant message already displayed the full plan. If not, print the plan first.
 7. Ask for final choice exactly once after the visible plan:
-   - Use `ask_user_question`, questionnaire extension, or equivalent structured choice UI when available.
-   - Use exactly one question, no option previews, concise text:
+   - Use `ask_user_question`, questionnaire extension, or equivalent structured choice UI when available:
      - header: `Commit?`
      - question: `Apply this exact commit plan?`
      - options:
        - `Commit` — apply exact plan;
        - `Abort` — stop.
-   - If no structured choice UI is available, ask the same concise question in plain text.
-   - After any valid structured choice or plain-text reply, do not ask the same confirmation question again.
 8. Treat only a selected option or free-form reply that is exactly `Commit` as confirmation. Custom answers, paraphrases, lowercase variants, echoed plan text, and any answer captured before the visible plan are not confirmation.
 9. If a questionnaire or structured confirmation fires before the visible plan, discard that answer, do not call apply from it, print the full plan, then ask once after the plan.
 10. Only after exact `Commit`, call `warden_commit_apply` with reviewed `snapshotHash`, `confirmedUserIntent: "Commit"`, and exact planned commits/paths.
