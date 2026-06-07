@@ -14,6 +14,7 @@ setup() { PROJECT_ROOT=$(cd "$BATS_TEST_DIRNAME/.." && pwd -P); }
   [ -d "$PROJECT_ROOT/warden-flow/extensions/warden-map" ]
   [ -d "$PROJECT_ROOT/warden-flow/extensions/warden-commit" ]
   [ -d "$PROJECT_ROOT/warden-flow/skills/warden-map" ]
+  [ -d "$PROJECT_ROOT/warden-flow/skills/warden-seal" ]
   [ -d "$PROJECT_ROOT/warden-flow/skills/warden-commit" ]
 }
 

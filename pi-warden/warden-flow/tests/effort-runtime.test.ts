@@ -125,6 +125,7 @@ describe("Warden effort runtime hook", () => {
 					"warden-grill": "high",
 					"warden-tdd": "high",
 					"warden-close": "medium",
+					"warden-seal": "medium",
 					"warden-commit": "medium",
 				},
 			},
@@ -194,6 +195,20 @@ describe("Warden effort runtime hook", () => {
 		assert.deepEqual(
 			await runFirstHandler(pi, "input", {
 				text: "/skill:warden-close .warden/work/example/packet.md",
+				source: "interactive",
+			}),
+			{ action: "continue" },
+		);
+		assert.deepEqual(pi.setCalls, ["medium"]);
+	});
+
+	it("applies medium effort by default for /skill:warden-seal", async () => {
+		const pi = createFakePi("off");
+		wardenEffort(pi as any);
+
+		assert.deepEqual(
+			await runFirstHandler(pi, "input", {
+				text: "/skill:warden-seal .warden/work/example/packet.md",
 				source: "interactive",
 			}),
 			{ action: "continue" },

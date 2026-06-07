@@ -26,6 +26,7 @@ export const DEFAULT_WARDEN_SKILL_EFFORTS = {
 	"warden-grill": "high",
 	"warden-tdd": "high",
 	"warden-close": "medium",
+	"warden-seal": "medium",
 	"warden-commit": "medium",
 } as const satisfies Record<string, WardenEffortLevel>;
 
