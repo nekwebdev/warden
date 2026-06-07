@@ -45,7 +45,6 @@ const expectedSkillEntries = [
 	join("skills", "warden-commit", "SKILL.md"),
 	join("skills", "warden-grill", "SKILL.md"),
 	join("skills", "warden-map", "SKILL.md"),
-	join("skills", "warden-seal", "SKILL.md"),
 	join("skills", "warden-start", "SKILL.md"),
 	join("skills", "warden-tdd", "SKILL.md"),
 ];
@@ -175,17 +174,17 @@ describe("package pi resources", () => {
 		assert.match(content, /Status: Packet solid for TDD/);
 	});
 
-	it("warden-seal validates existing handoffs or creates missing ones", () => {
-		const content = skillContent("warden-seal");
+	it("warden-close validates existing handoffs or creates missing ones", () => {
+		const content = skillContent("warden-close");
 
 		assert.match(
 			content,
 			/^argument-hint:\s*\[packet\.md or handoff\.md path\]$/m,
 		);
-		assert.match(content, /Validate a Warden closure handoff/);
+		assert.match(content, /Close an accepted Warden work packet/);
 		assert.match(content, /If `handoff\.md` exists, validate it/);
 		assert.match(content, /If `handoff\.md` is missing.*create it/s);
-		assert.match(content, /Status: Sealed \| Needs work \| Blocked/);
+		assert.match(content, /Status: Closed \| Not ready \| Blocked/);
 	});
 
 	it("all skill directories contain SKILL.md with minimal frontmatter", () => {

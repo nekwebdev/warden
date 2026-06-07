@@ -33,7 +33,6 @@ const SEEDED_SKILL_EFFORTS = {
 	"warden-grill": EFFORT_HIGH,
 	"warden-tdd": EFFORT_HIGH,
 	"warden-close": EFFORT_MEDIUM,
-	"warden-seal": EFFORT_MEDIUM,
 	"warden-commit": EFFORT_MEDIUM,
 } as const;
 

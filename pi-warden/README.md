@@ -142,8 +142,7 @@ Provides:
 - `/skill:warden-start` — turns rough intent into one small work packet;
 - `/skill:warden-grill` — pressure-tests a work packet or manual feedback until TDD-ready;
 - `/skill:warden-tdd` — implements one grilled packet slice with strict test-first workflow;
-- `/skill:warden-close` — validates an accepted packet, writes final `handoff.md`, and decides changelog/map impact;
-- `/skill:warden-seal` — validates an existing closure `handoff.md`, or creates the missing handoff for accepted closure;
+- `/skill:warden-close` — validates an accepted packet or existing closure `handoff.md`, creates or updates final `handoff.md`, and decides changelog/map impact;
 - `/skill:warden-commit` — plans safe, atomic local commits and can apply them after exact `Commit` confirmation;
 - `/warden:effort` — opens the Warden panel Effort pane for per-skill effort settings through `@nekwebdev/warden-panel`;
 - `extensions/warden-map` — injects token-conscious map capsules and git context;
