@@ -45,7 +45,8 @@ Slice rules:
 - Make non-goals explicit.
 - End with a next safe step suitable for a coding agent.
 - Split or reject broad requests that span unrelated boundaries, owners, packages, or runtimes.
-- Ask clarification only when implementation safety is truly blocked. Otherwise state assumptions and proceed.
+- Ask clarification only when implementation safety is truly blocked. Otherwise state assumptions and proceed until the late fine-tuning checkpoint.
+- Fine-tuning questions are not blockers or safety clarifications: once you believe the packet is ready, ask the user at least two structured questions to tune the slice before finalizing.
 
 Anti-bloat rules:
 
@@ -98,6 +99,24 @@ External research rules:
 
 </context-sources>
 
+<questioning-policy>
+
+Use `ask_user_question`, questionnaire extension, or equivalent structured choice UI when available.
+
+Early clarification:
+
+- Ask early only if implementation safety, canonical path, or boundary choice is truly blocked.
+
+Ready-packet fine-tuning:
+
+- After the draft packet passes review checks and before final output, ask at least two structured questions in one checkpoint.
+- Do not skip this checkpoint because assumptions feel obvious.
+- Each question must include your recommended answer and 2-4 concise options when using structured UI.
+- Aim questions at slice boundaries, acceptance wording, files not to touch, test/manual verification emphasis, and deferred non-goals.
+- Incorporate answers into `packet.md`, then re-run review checks.
+
+</questioning-policy>
+
 <workflow>
 
 1. Resolve canonical Git repository root and packet path.
@@ -106,8 +125,9 @@ External research rules:
 4. Use external research only when required by `<context-sources>`.
 5. Choose one small vertical slice, with explicit non-goals and files not to touch.
 6. Create or refine packet markdown using the section set in `<output-format>`.
-7. Write packet to `<git-root>/.warden/work/<slug>/packet.md` unless preview/dry-run/no-edit/blocked safety applies.
-8. Respond with `# Warden Start Result` and next action `/skill:warden-grill <repo-root>/.warden/work/<slug>/packet.md`.
+7. Once the packet appears ready, ask at least two fine-tuning questions, wait for answers, and incorporate them.
+8. Write packet to `<git-root>/.warden/work/<slug>/packet.md` unless preview/dry-run/no-edit/blocked safety applies.
+9. Respond with `# Warden Start Result` and next action `/skill:warden-grill <repo-root>/.warden/work/<slug>/packet.md`.
 
 </workflow>
 
@@ -126,7 +146,8 @@ Before finishing, verify packet has:
 - map freshness notes, including stale-risk and whether `/skill:warden-map` is recommended;
 - external research notes, using `None; repo-local slice.` when no external research is needed;
 - assumptions and chosen splits under `Decisions`;
-- first concrete coding-agent action under `Next safe step`.
+- first concrete coding-agent action under `Next safe step`;
+- at least two packet-ready fine-tuning questions were asked and their answers incorporated.
 
 For prose-only `SKILL.md` or docs edits, prefer manual read/verification over markdown prose assertion tests. Reserve automated tests for runtime behavior, package contracts, or existing tested invariants.
 

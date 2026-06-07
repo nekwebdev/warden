@@ -172,7 +172,21 @@ describe("package pi resources", () => {
 		);
 		assert.match(content, /ask_user_question/);
 		assert.match(content, /Grill packet alone/);
+		assert.match(content, /at least five substantive grill questions/i);
+		assert.match(content, /Do not count the startup mode question/i);
 		assert.match(content, /Status: Packet solid for TDD/);
+	});
+
+	it("warden-start asks packet-ready fine-tuning questions", () => {
+		const content = skillContent("warden-start");
+
+		assert.match(content, /late fine-tuning checkpoint/i);
+		assert.match(content, /at least two structured questions/i);
+		assert.match(
+			content,
+			/Once the packet appears ready, ask at least two fine-tuning questions/,
+		);
+		assert.match(content, /answers incorporated/i);
 	});
 
 	it("warden-close validates existing handoffs or creates missing ones", () => {
