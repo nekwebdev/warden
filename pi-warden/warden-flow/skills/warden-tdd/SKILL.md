@@ -137,11 +137,7 @@ Respond in this shape:
 
 ## Next safe step
 
-After a development cycle you should run before any other steps:
-
-`/skill:warden-commit`
-
-Then, if changes are required after manual verification:
+If changes are required after manual verification:
 
 `/skill:warden-grill <resolved-packet-path>`
 

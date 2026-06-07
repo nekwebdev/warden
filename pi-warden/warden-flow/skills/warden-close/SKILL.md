@@ -247,7 +247,11 @@ Status: Closed | Not ready | Blocked
 ## Next safe step
 ```
 
-For `Closed`, include `handoff.md` path and whether it was unchanged, created, or updated.
+For `Closed`, include `handoff.md` path and whether it was unchanged, created, or updated. And offer:
+
+```text
+/skill:warden-commit
+```
 
 For `Not ready`, next safe step should usually be:
 
