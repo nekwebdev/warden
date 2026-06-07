@@ -43,6 +43,7 @@ function skillEntries(): string[] {
 const expectedSkillEntries = [
 	join("skills", "warden-close", "SKILL.md"),
 	join("skills", "warden-commit", "SKILL.md"),
+	join("skills", "warden-docs", "SKILL.md"),
 	join("skills", "warden-grill", "SKILL.md"),
 	join("skills", "warden-map", "SKILL.md"),
 	join("skills", "warden-start", "SKILL.md"),
@@ -185,6 +186,34 @@ describe("package pi resources", () => {
 		assert.match(content, /If `handoff\.md` exists, validate it/);
 		assert.match(content, /If `handoff\.md` is missing.*create it/s);
 		assert.match(content, /Status: Closed \| Not ready \| Blocked/);
+	});
+
+	it("warden-docs aligns stale README and AGENTS docs only", () => {
+		const content = skillContent("warden-docs");
+
+		assert.match(content, /^name:\s*warden-docs$/m);
+		assert.match(content, /Git repository as the scan scope/);
+		assert.match(content, /walk.*`README\.md`.*`AGENTS\.md`/s);
+		assert.match(
+			content,
+			/code, tests, package manifests, maps, and repo evidence/,
+		);
+		assert.match(content, /default edits.*`README\.md` and `AGENTS\.md` only/s);
+		assert.match(content, /Do not edit source code/);
+		assert.match(content, /Do not edit.*\.warden\/map-state\.json/s);
+		assert.match(content, /Do not edit maps/);
+		assert.match(content, /Do not edit changelogs/);
+		assert.match(content, /Do not edit work packets/);
+		assert.match(content, /Do not edit generated files/);
+		assert.match(content, /Do not edit secrets/);
+		assert.match(content, /Do not edit runner files/);
+		assert.match(content, /Do not create PRDs/);
+		assert.match(content, /Inspect `git status --short` before doc edits/);
+		assert.match(content, /avoid editing already-dirty target docs/);
+		assert.match(content, /map freshness is stale or unknown.*stop/s);
+		assert.match(content, /recommend.*\/skill:warden-map/s);
+		assert.match(content, /must not auto-run `\/skill:warden-map`/);
+		assert.match(content, /support extension.*README\/AGENTS discovery/s);
 	});
 
 	it("all skill directories contain SKILL.md with minimal frontmatter", () => {

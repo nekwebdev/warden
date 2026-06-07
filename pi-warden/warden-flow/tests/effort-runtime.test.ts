@@ -141,6 +141,7 @@ describe("Warden effort runtime hook", () => {
 					"warden-tdd": "high",
 					"warden-close": "medium",
 					"warden-commit": "medium",
+					"warden-docs": "medium",
 				},
 			},
 		});
@@ -223,6 +224,20 @@ describe("Warden effort runtime hook", () => {
 		assert.deepEqual(
 			await runFirstHandler(pi, "input", {
 				text: "/skill:warden-commit",
+				source: "interactive",
+			}),
+			{ action: "continue" },
+		);
+		assert.deepEqual(pi.setCalls, ["medium"]);
+	});
+
+	it("applies medium effort by default for /skill:warden-docs", async () => {
+		const pi = createFakePi("off");
+		wardenEffort(pi as unknown as ExtensionAPI);
+
+		assert.deepEqual(
+			await runFirstHandler(pi, "input", {
+				text: "/skill:warden-docs",
 				source: "interactive",
 			}),
 			{ action: "continue" },
