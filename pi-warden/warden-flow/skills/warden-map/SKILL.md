@@ -1,7 +1,7 @@
 ---
 name: warden-map
 description: Create or refresh a project-agnostic Warden repository map. Use when the user wants a durable map that reduces repeated repo discovery, explains repository structure, boundaries, entry points, verification surfaces, and recent evolution from git history when available.
-argument-hint: [repository path or scope]
+argument-hint: [optional repository path or scope]
 license: MIT
 ---
 

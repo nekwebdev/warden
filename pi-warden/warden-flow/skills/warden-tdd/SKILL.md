@@ -1,7 +1,7 @@
 ---
 name: warden-tdd
 description: Implement one grilled Warden work packet slice with strict test-first workflow.
-argument-hint: [work packet.md path]
+argument-hint: [packet.md path]
 license: MIT
 ---
 
