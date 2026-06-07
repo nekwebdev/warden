@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "head": "02fb384d0ade6de9195619343347dff6ef131962",
+  "generatedAt": "2026-06-06T00:00:00.000Z",
+  "maps": {
+    ".warden/map.md": "02fb384d0ade6de9195619343347dff6ef131962",
+    ".warden/maps/run-warden/map.md": "02fb384d0ade6de9195619343347dff6ef131962",
+    ".warden/maps/pi-warden/map.md": "02fb384d0ade6de9195619343347dff6ef131962",
+    ".warden/maps/pi-warden/warden-panel/map.md": "02fb384d0ade6de9195619343347dff6ef131962",
+    ".warden/maps/pi-warden/warden-flow/map.md": "02fb384d0ade6de9195619343347dff6ef131962"
+  }
+}

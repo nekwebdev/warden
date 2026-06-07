@@ -3,7 +3,7 @@
 Reviewed: 2026-06-06
 Scope: repository root
 Evidence basis: root/subproject AGENTS and README files; `.mise.toml`; Bats/package test entry points; Pi package manifests; existing scoped maps; CHANGELOG placeholder; bounded git history.
-Git basis: main@e1a852a
+Git basis: main@02fb384
 
 <!-- warden-map:inject:start -->
 ## Agent Quick Context
@@ -19,17 +19,17 @@ Git basis: main@e1a852a
 
 Warden is a monorepo for an operating-environment workflow: bootstrap, runner commands, shell integration, Pi Agent package work, future NixOS config, and future developer-environment support. Evidence comes from `README.md`, `AGENTS.md`, `.mise.toml`, shell scripts, package manifests, tests, and recent git history.
 
-The first-run promise is central: a user can clone anywhere, run `./warden`, choose or accept `WARDEN_HOME`, approve any move/install, and reach a delegated runner without surprise overwrites.
+First-run promise is central: user can clone anywhere, run `./warden`, choose or accept `WARDEN_HOME`, approve any move/install, and reach delegated runner without surprise overwrites.
 
 ## Top-Level Map
 
 | Path | Role | Notes |
 |---|---|---|
 | `warden` | Root bootstrap shim | Resolves `HOME`, chooses/defaults `WARDEN_HOME`, moves clone after consent, ensures mise after consent, delegates via `mise exec`. |
-| `run-warden/` | Delegated runner | Owns command dispatch, reusable shell libs, shell snippets, Pi agent environment commands, Bats tests. See `.warden/maps/run-warden/map.md`. |
+| `run-warden/` | Delegated runner | Owns command dispatch, shell libs, shell snippets, Pi agent environment commands, Bats tests. See `.warden/maps/run-warden/map.md`. |
 | `pi-warden/` | Pi package container | Holds package-area docs/tests and package roots. Not itself a Pi package. See `.warden/maps/pi-warden/map.md`. |
 | `pi-warden/warden-panel/` | Pi package | `@nekwebdev/warden-panel`; panel framework plus Display and Packages panes. See scoped map. |
-| `pi-warden/warden-flow/` | Pi package | `@nekwebdev/warden-flow`; workflow package bundling `warden-map`, `warden-start`, `warden-grill`, `warden-tdd`, `warden-close`, and `warden-commit` skills plus map/git-context, effort, and commit-safety extensions. See scoped map. |
+| `pi-warden/warden-flow/` | Pi package | `@nekwebdev/warden-flow`; workflow/orientation/commit-safety package with Warden skills, map/git injection, effort runtime/UI, and safe commit tools. See scoped map. |
 | `nix-warden/` | Future NixOS/system package | Skeleton only; canonical active path after bootstrap is `$WARDEN_HOME/nix-warden`. |
 | `dev-warden/` | Future developer-environment package | Skeleton only; independently testable smoke boundary. |
 | `tests/root/` | Root bootstrap tests | Bats fixtures copy repo into temp dirs and verify first-run movement, no-overwrite safety, doctor, shell integration. |
@@ -42,7 +42,7 @@ The first-run promise is central: a user can clone anywhere, run `./warden`, cho
 - `./warden` is POSIX shell bootstrap. It requires `HOME`, computes default home as `${XDG_DATA_HOME:-$HOME/.local/share}/warden` unless `WARDEN_HOME` is set, asks before moving clone, refuses non-empty unrelated targets, installs mise only after consent, exports `run-warden/bin` on `PATH`, and `exec`s `run-warden/bin/warden` through `mise exec`.
 - `run-warden/bin/warden` is delegated CLI. It sources `lib/welcome.sh`, `lib/doctor.sh`, `lib/shell-integration.sh`, and `lib/pi-agents.sh`, then dispatches `welcome`, `doctor`, `agents`, `pi`, `shell`, and `help`.
 - Shell integration snippets live in `run-warden/shell/`; bash/zsh use guarded `# warden begin` / `# warden end` blocks, fish uses managed conf.d and function files.
-- Pi agent runtime flow is runner-owned: `warden agents new` creates isolated per-agent npm install, `warden agents set/unset/show/list` manages agent-local settings, and `warden pi <name> ...` launches agent-local Pi with `PI_CODING_AGENT_DIR` and `PILENS_DATA_DIR` inside agent dir.
+- Pi agent runtime flow is runner-owned: `warden agents new` creates isolated per-agent npm install, `warden agents update` refreshes existing managed Pi runtime, `warden agents set/unset/show/list` manages agent-local settings, and `warden pi <name> ...` launches agent-local Pi with `PI_CODING_AGENT_DIR` and `PILENS_DATA_DIR` inside agent dir.
 - Pi package entry points are package manifests under `pi-warden/<package>/package.json`. Packages advertise `pi.extensions` and, for `warden-flow`, `pi.skills`.
 
 ## Major Boundaries
@@ -59,8 +59,8 @@ The first-run promise is central: a user can clone anywhere, run `./warden`, cho
 - `WARDEN_AGENTS` overrides Pi agent root; otherwise agents live under `${XDG_CONFIG_HOME:-$HOME/.config}/pi-agents/<name>`.
 - Agent settings live in `$WARDEN_AGENTS/<name>/settings.json`. Runner stores per-agent cwd only at `warden.agent.cwd` and preserves unrelated Pi settings.
 - Warden panel reads/writes `$PI_CODING_AGENT_DIR/settings.json` or fallback Pi settings path, only under `settings.warden` keys it owns.
-- `.warden/map.md` and `.warden/maps/**/map.md` are durable orientation docs, not executable state or task plans.
-- `node_modules/`, `.pi/`, `.pi-lens/`, `pi-lens/`, build outputs, coverage, env files, and `*.warden-tmp` are ignored local/generated artifacts. Package `node_modules/` dirs are present in working tree but ignored.
+- `.warden/map.md`, `.warden/maps/**/map.md`, and `.warden/map-state.json` are durable orientation/map freshness files. Maps are not executable state or task plans. Only `warden-map` writes `.warden/map-state.json`.
+- `node_modules/`, `.pi/`, `.pi-lens/`, `pi-lens/`, build outputs, coverage, env files, and `*.warden-tmp` are ignored local/generated artifacts. Package `node_modules/` dirs may be present but are ignored.
 
 ## Verification Surfaces
 
@@ -74,24 +74,24 @@ The first-run promise is central: a user can clone anywhere, run `./warden`, cho
 ## Extension and Integration Points
 
 - Shell startup integration is reversible: bash/zsh guarded blocks, fish managed files.
-- `run-warden/lib/pi-agents.sh` integrates registry package `@earendil-works/pi-coding-agent` into isolated agent npm prefixes.
-- `pi-warden/warden-panel` exposes a pane registry API from `@nekwebdev/warden-panel`; independently loaded Warden packages share pane/action state through `globalThis`.
+- `run-warden/lib/pi-agents.sh` integrates registry package `@earendil-works/pi-coding-agent` into isolated agent npm prefixes and owns Warden-managed Pi runtime updates.
+- `pi-warden/warden-panel` exposes pane/display-setting registry APIs from `@nekwebdev/warden-panel`; independently loaded Warden packages share pane/action state through `globalThis`.
 - `pi-warden/warden-panel/extensions/warden-packages` edits global Pi `packages` settings through Pi package-manager behavior and reports restart-required messages.
-- `pi-warden/warden-flow` bundles `warden-map`, `warden-start`, `warden-grill`, `warden-tdd`, `warden-close`, and `warden-commit` skills; map/git-context, effort, and commit-safety extensions; and an Effort pane contribution through `@nekwebdev/warden-panel`. It never injects full map bodies.
+- `pi-warden/warden-flow` bundles `warden-map`, `warden-start`, `warden-grill`, `warden-tdd`, `warden-close`, and `warden-commit` skills; map/git-context, effort, and commit-safety extensions; and an Effort pane plus Display skill-status toggle contribution through `@nekwebdev/warden-panel`. It never injects full map bodies.
 - New Pi packages should follow `pi-warden/<package>/` shape with manifest, README, AGENTS, tests, scripts, and only needed asset folders.
 
 ## Recent Evolution from Git History
 
-Git history available. Current bounded basis: `main@e1a852a`.
+Git history available. Current bounded basis: `main@02fb384`.
 
 Orientation-relevant recent changes:
 
-- `warden-flow` remains the active cluster: recent commits added `warden-close`, `warden-tdd`, safer commit apply/snapshot helpers, map capsule splitting, and effort runtime extraction after earlier `warden-start`/`warden-grill` work.
-- `warden-panel` recently added package-pane empty-state tests; prior work added contributed Display settings so sibling packages can add inline Display toggles through the public pane API.
-- Root docs now clarify `nix-warden/` and `dev-warden/` as skeleton-only, and root `package.json` now exposes workspace test scripts.
-- Earlier runner/Pi-agent work tightened cwd reading to canonical flattened `warden.agent.cwd`, following Pi agent environment, settings, tmux-window, and shell integration work.
+- `warden-flow` remains active cluster: recent commits added `.warden/map-state.json` freshness tracking, folded former `warden-seal` workflow into `warden-close`, added `warden-tdd`, safer commit apply/snapshot helpers, map capsule splitting, and effort runtime extraction after earlier `warden-start`/`warden-grill` work.
+- `warden-panel` recently extracted panel session rendering and tightened package-pane empty-state tests; prior work added contributed Display settings so sibling packages can add inline Display toggles through public pane API.
+- Runner Pi-agent work includes `warden agents update` and `warden pi <name> update` behavior for Warden-managed runtime updates, plus canonical flattened `warden.agent.cwd` handling, tmux-window handling, and shell integration work.
+- Root docs now clarify `nix-warden/` and `dev-warden/` as skeleton-only, and root `package.json` exposes workspace test scripts.
 - Map files are orientation reference only; use live git context injection for current dirty-state source.
-- Skeleton `nix-warden/` and `dev-warden/` remained smoke-test-only boundaries.
+- Skeleton `nix-warden/` and `dev-warden/` remain smoke-test-only boundaries.
 
 Recent changed-path clusters center on `pi-warden/warden-flow`, `pi-warden/warden-panel`, root/runner Bats tests, `run-warden/`, and `.warden/` maps. Use live git context injection for current branch, commit, dirty paths, and staging details.
 
