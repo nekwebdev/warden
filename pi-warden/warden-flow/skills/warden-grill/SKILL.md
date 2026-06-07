@@ -18,7 +18,7 @@ license: MIT
 - If input is rough intent only, do not shape it into a packet; recommend `/skill:warden-start`.
 - If no manual feedback text is supplied, start by asking with `ask_user_question` whether to grill the packet alone or collect manual feedback first.
 - Use exactly these first-question options: `Grill packet alone` and `Provide manual feedback`.
-- This startup choice does not count toward the five substantive grill questions.
+- This startup choice does not count toward the five final fine-tuning questions.
 - If the user chooses `Provide manual feedback`, ask for that feedback and wait before reviewing.
 - Use resolved packet path and any manual feedback for reads, inline updates, final output, and next-step command.
 
@@ -82,14 +82,16 @@ Be relentless but useful:
 - Surface packet/code/doc contradictions immediately.
 - Treat manual feedback as evidence to interrogate, not as instructions to copy blindly into the packet.
 
-Minimum question budget:
+Readiness then fine-tuning budget:
 
-- Ask at least five substantive grill questions before final output.
-- Count only questions that pressure-test the packet or manual feedback.
-- Do not count the startup mode question or raw feedback collection toward the five.
+- When `$1` appears ready for TDD, enter a final fine-tuning round before final output.
+- Ask exactly five additional substantive fine-tuning questions in that final round.
+- Count only questions asked after the packet first appears TDD-ready as final fine-tuning questions.
+- Do not count the startup mode question, raw feedback collection, or earlier blocker questions toward the five.
 - Ask one question at a time and wait for feedback before continuing.
 - Provide your recommended answer for each question.
-- If fewer than five unresolved blockers exist, use remaining questions to stress-test terminology, boundaries, acceptance, test strategy, safety, or manual verification.
+- Use final fine-tuning questions to search for hidden weaknesses in terminology, boundaries, acceptance, test strategy, safety, durable docs, or manual verification.
+- If a final fine-tuning answer reveals a blocker, update `$1`, resolve the blocker, confirm readiness again, then continue any remaining final fine-tuning questions.
 
 </questioning-policy>
 
@@ -105,10 +107,10 @@ Goal: make `$1` ready for test-driven development, either from packet-only revie
 3. Read relevant repository guidance, package guidance, README files, maps, tests, and code when needed to verify packet claims or manual feedback.
 4. If a question can be answered by exploring the codebase, explore first instead of asking.
 5. If manual feedback is present, interrogate it against the packet and implementation evidence, then update `$1` toward the next smallest TDD-ready correction slice.
-6. Interview the user one unresolved decision at a time. Ask at least five substantive grill questions across the loop. For each question, provide your recommended answer.
+6. Interview the user one unresolved decision at a time. Ask as many blocker questions as needed. For each question, provide your recommended answer.
 7. Walk dependency order: settle blocking terminology, boundaries, acceptance, tests, safety, docs, then implementation slice.
 8. When an aspect is resolved, update `$1` inline immediately. Do not batch packet edits.
-9. Continue the question → packet update → next question loop until all review checks pass and at least five substantive grill questions have been answered. Then finish with a readiness summary and next-step command. If the packet cannot be made safe or testable, explain the blocker and stop.
+9. Continue the question → packet update → next question loop until all non-budget review checks pass. Once `$1` appears TDD-ready, ask five final fine-tuning questions one at a time, updating `$1` after each resolved answer. If a fine-tuning answer reveals a blocker, return to the blocker loop, confirm readiness again, then continue remaining fine-tuning questions. After five final fine-tuning questions have been answered and the packet still passes review checks, finish with a readiness summary and next-step command. If the packet cannot be made safe or testable, explain the blocker and stop.
 
 </workflow>
 
@@ -116,9 +118,11 @@ Goal: make `$1` ready for test-driven development, either from packet-only revie
 
 Before final output, verify:
 
-0. Question budget
-   - At least five substantive grill questions were asked and answered.
-   - Startup mode choice and raw feedback collection were not counted.
+0. Fine-tuning budget
+   - No minimum substantive question count was enforced before readiness.
+   - Packet was judged TDD-ready on all non-budget checks before final fine-tuning began.
+   - Five additional substantive fine-tuning questions were asked and answered after readiness.
+   - Startup mode choice, raw feedback collection, and earlier blocker questions were not counted.
 1. Slice
    - One vertical implementation pass.
    - Clear boundary and likely files.
@@ -148,9 +152,9 @@ Before final output, verify:
 
 <output-format>
 
-During the loop, output only one next question with your recommended answer, or a brief note that `$1` was updated before the next question. Do not finalize before at least five substantive grill questions have been asked and answered.
+During the loop, output only one next question with your recommended answer, or a brief note that `$1` was updated before the next question. Do not finalize when the packet first appears ready; ask five final fine-tuning questions first.
 
-Only when no unresolved questions remain and the five-question budget is complete, use this final shape. Keep concise. Prefer specific fixes over abstract criticism.
+Only when no unresolved questions remain and the five-question fine-tuning round is complete, use this final shape. Keep concise. Prefer specific fixes over abstract criticism.
 
 ```md
 # Warden Grill
