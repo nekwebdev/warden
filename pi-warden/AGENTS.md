@@ -64,6 +64,7 @@ Use only folders that fit the package.
 - `warden-flow/`
   - Owns Warden workflow/orientation Pi behavior.
   - Owns `/skill:warden-map`, map capsule injection, scoped map loading, and git context injection.
+  - Owns `/skill:warden-docs` for stale durable doc alignment when map freshness is current.
   - Owns `/skill:warden-start`, `/skill:warden-grill`, `/skill:warden-tdd`, and `/skill:warden-close` workflow skills.
   - Owns `/skill:warden-commit`, commit snapshot/apply tools, and local commit safety rules.
   - Owns `/warden:effort` and per-skill effort defaults for Warden Flow skills.

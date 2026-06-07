@@ -139,6 +139,7 @@ Warden's workflow and durable-orientation package for Pi skills and extensions.
 Provides:
 
 - `/skill:warden-map` — creates or refreshes repository map files;
+- `/skill:warden-docs` — aligns stale `README.md` and `AGENTS.md` files with repo evidence when map freshness is current;
 - `/skill:warden-start` — turns rough intent into one small work packet;
 - `/skill:warden-grill` — pressure-tests a work packet or manual feedback until TDD-ready;
 - `/skill:warden-tdd` — implements one grilled packet slice with strict test-first workflow;

@@ -205,7 +205,7 @@ pi-warden/warden-panel/
 pi-warden/warden-flow/
 ```
 
-`pi-warden/warden-flow/` contains Warden flow/orientation work, including the `warden-map` and `warden-commit` skills plus related map/git-context and commit-safety extensions.
+`pi-warden/warden-flow/` contains Warden flow/orientation work, including map/docs/start/grill/TDD/close/commit skills plus related map/git-context, effort, and commit-safety extensions.
 
 ### `nix-warden/`
 
