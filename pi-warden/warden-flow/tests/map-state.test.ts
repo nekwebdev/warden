@@ -44,6 +44,12 @@ function secondCommit(root = cwd): string {
 	return git(["rev-parse", "HEAD"], root);
 }
 
+function commitAll(message: string, root = cwd): string {
+	git(["add", "."], root);
+	git(["commit", "-m", message], root);
+	return git(["rev-parse", "HEAD"], root);
+}
+
 function writeState(root: string, state: unknown): void {
 	const target = join(root, MAP_STATE_RELATIVE_PATH);
 	mkdirSync(join(target, ".."), { recursive: true });
@@ -101,7 +107,34 @@ describe("map-state freshness", () => {
 		});
 	});
 
-	it("returns stale when state head differs from current HEAD", () => {
+	it("returns fresh when only map-owned files changed since map basis", () => {
+		const mapBasis = initGitRepo();
+		mkdirSync(join(cwd, ".warden", "maps", "src"), { recursive: true });
+		writeFileSync(join(cwd, ".warden", "map.md"), "# Root map\n", "utf-8");
+		writeFileSync(
+			join(cwd, ".warden", "maps", "src", "map.md"),
+			"# Scoped map\n",
+			"utf-8",
+		);
+		writeState(cwd, {
+			version: 1,
+			head: mapBasis,
+			generatedAt: "2026-06-07T00:00:00.000Z",
+			maps: {
+				".warden/map.md": mapBasis,
+				".warden/maps/src/map.md": mapBasis,
+			},
+		});
+		const currentHead = commitAll("refresh maps");
+
+		assert.deepEqual(classify(), {
+			verdict: "fresh",
+			mapBasis,
+			currentHead,
+		});
+	});
+
+	it("returns stale when non-map files changed since map basis", () => {
 		const oldHead = initGitRepo();
 		writeState(cwd, {
 			version: 1,
@@ -118,7 +151,7 @@ describe("map-state freshness", () => {
 		});
 	});
 
-	it("returns stale when per-map SHA differs from current HEAD", () => {
+	it("returns stale when per-map SHA differs from current HEAD after non-map changes", () => {
 		const oldHead = initGitRepo();
 		const currentHead = secondCommit();
 		writeState(cwd, {
@@ -149,6 +182,38 @@ describe("map-state freshness", () => {
 		assert.equal(freshness.verdict, "unknown");
 		assert.equal(freshness.mapBasis, null);
 		assert.equal(freshness.currentHead, head);
+	});
+
+	it("returns unknown when current Git HEAD is unavailable", () => {
+		writeState(cwd, {
+			version: 1,
+			head: "abcdef1234567890abcdef1234567890abcdef12",
+			generatedAt: "2026-06-07T00:00:00.000Z",
+			maps: { ".warden/map.md": "abcdef1234567890abcdef1234567890abcdef12" },
+		});
+
+		assert.deepEqual(classify(), {
+			verdict: "unknown",
+			mapBasis: null,
+			currentHead: null,
+		});
+	});
+
+	it("returns unknown when map basis is unreachable", () => {
+		const head = initGitRepo();
+		const unreachable = "abcdef1234567890abcdef1234567890abcdef12";
+		writeState(cwd, {
+			version: 1,
+			head: unreachable,
+			generatedAt: "2026-06-07T00:00:00.000Z",
+			maps: { ".warden/map.md": unreachable },
+		});
+
+		assert.deepEqual(classify(), {
+			verdict: "unknown",
+			mapBasis: unreachable,
+			currentHead: head,
+		});
 	});
 
 	it("reads marker from Git root .warden/map-state.json", () => {

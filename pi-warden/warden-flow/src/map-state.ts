@@ -1,7 +1,13 @@
 import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
-import { GIT_EXEC_TIMEOUT_MS, MAP_STATE_RELATIVE_PATH } from "./constants.js";
+import {
+	GIT_EXEC_TIMEOUT_MS,
+	MAP_FILE_NAME,
+	MAP_STATE_RELATIVE_PATH,
+	ROOT_MAP_RELATIVE_PATH,
+	SCOPED_MAPS_RELATIVE_DIR,
+} from "./constants.js";
 
 export type MapFreshnessVerdict = "fresh" | "stale" | "unknown";
 
@@ -71,14 +77,24 @@ export function classifyMapFreshness(
 		return unknownFreshness(context.currentHead);
 	}
 
-	if (
-		context.state.head !== context.currentHead ||
-		mapBasis !== context.currentHead
-	) {
-		return { verdict: "stale", mapBasis, currentHead: context.currentHead };
+	if (mapBasis === context.currentHead) {
+		return { verdict: "fresh", mapBasis, currentHead: context.currentHead };
 	}
 
-	return { verdict: "fresh", mapBasis, currentHead: context.currentHead };
+	const changedPaths = readChangedPathsBetween(
+		context.repoRoot,
+		mapBasis,
+		context.currentHead,
+	);
+	if (!changedPaths) {
+		return { verdict: "unknown", mapBasis, currentHead: context.currentHead };
+	}
+
+	if (changedPaths.every(isMapOwnedPath)) {
+		return { verdict: "fresh", mapBasis, currentHead: context.currentHead };
+	}
+
+	return { verdict: "stale", mapBasis, currentHead: context.currentHead };
 }
 
 export function formatFreshnessLines(freshness: MapFreshness): string {
@@ -128,6 +144,36 @@ function readCurrentGitHead(repoRoot: string): string | null {
 	if (result.status !== 0 || result.error) return null;
 	const head = result.stdout.trim();
 	return head || null;
+}
+
+function readChangedPathsBetween(
+	repoRoot: string,
+	fromHead: string,
+	toHead: string,
+): string[] | null {
+	const result = spawnSync(
+		"git",
+		["diff", "--name-only", "-z", `${fromHead}..${toHead}`, "--"],
+		{
+			cwd: repoRoot,
+			encoding: "utf-8",
+			timeout: GIT_EXEC_TIMEOUT_MS,
+		},
+	);
+	if (result.status !== 0 || result.error) return null;
+	return result.stdout
+		.split("\0")
+		.map((path) => normalizeSlashes(path.trim()))
+		.filter(Boolean);
+}
+
+function isMapOwnedPath(path: string): boolean {
+	return (
+		path === ROOT_MAP_RELATIVE_PATH ||
+		path === MAP_STATE_RELATIVE_PATH ||
+		(path.startsWith(`${SCOPED_MAPS_RELATIVE_DIR}/`) &&
+			path.endsWith(`/${MAP_FILE_NAME}`))
+	);
 }
 
 function resolveMapStateRoot(cwd: string): string {

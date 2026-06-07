@@ -41,7 +41,7 @@ This package does not own Warden runner workflows, agent lifecycle commands, sib
 - Map files are repository orientation context, not task plans or implementation artifacts.
 - Only `warden-map` updates `.warden/map.md`, `.warden/maps/**/map.md`, and `.warden/map-state.json`; other skills treat maps as possibly stale orientation hints.
 - `warden-map` refuses dirty repos before refreshing maps or map-state.
-- Map capsules include freshness based on map-state SHA vs current HEAD; freshness ignores dirty state.
+- Map capsules include freshness based on the requested map's basis and committed changes since that basis: map-only commits stay fresh; non-map commits become stale; dirty state is reported separately.
 - Every auto-injected map must come from the `<!-- warden-map:inject:start -->` / `<!-- warden-map:inject:end -->` capsule.
 - Never auto-inject full map files; inject path-only notices when capsules are missing or too large.
 

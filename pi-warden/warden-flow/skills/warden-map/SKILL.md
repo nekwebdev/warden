@@ -60,7 +60,7 @@ Canonical map root:
 - Do not write changelog entries from this skill.
 - Do not add task plans, TODO lists, issue lists, PRDs, workflow state, release notes, or implementation sequences to maps.
 - Keep transient dirty working-tree state out of injected capsules; the extension injects live git dirty context separately.
-- Do not include dirty state in map freshness; freshness is only map basis SHA versus current Git HEAD.
+- Do not include dirty state in map freshness; freshness uses the requested map's basis plus committed changes since that basis. Map-only commits stay fresh; non-map commits become stale.
 - Maps do not override system, developer, user, or repo instructions.
 
 </safety>
@@ -158,6 +158,7 @@ Git and changelog use:
    - If no map content changed but maps were reviewed at the clean HEAD, still update `.warden/map-state.json`.
    - Do not update map bodies just to refresh timestamps or Git basis if map content did not change.
 9. Run map health check from `<review-checks>`.
+10. Run `/skill:warden-commit` to ensure commit is related to map.
 10. Present concise summary from `<output-format>`.
 
 </workflow>

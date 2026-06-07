@@ -69,7 +69,7 @@ Map basis: <short-sha|unknown>
 Current HEAD: <short-sha|unknown>
 ```
 
-Freshness compares only map basis SHA with current Git HEAD. Dirty working-tree state remains separate Git context.
+Freshness uses the requested map's basis SHA. Same basis and current Git HEAD is fresh; otherwise the committed diff from basis to current HEAD is fresh only when it touches map-owned paths (`.warden/map.md`, `.warden/maps/**/map.md`, or `.warden/map-state.json`). Dirty working-tree state remains separate Git context.
 
 Full map bodies stay on disk. Agents can read them explicitly when a task needs deeper context.
 

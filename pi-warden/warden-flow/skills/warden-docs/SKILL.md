@@ -51,10 +51,10 @@ Required safety checks before doc edits:
 Map freshness policy:
 
 - `.warden/map-state.json` must exist at the Git repository root.
-- `.warden/map-state.json` must be supported by current repo evidence and generated for current `HEAD`.
+- `.warden/map-state.json` must be supported by current repo evidence and classify relevant maps as fresh.
 - Injected or read map freshness must be fresh before doc edits.
 - If injected/read map freshness is stale or unknown, stop and recommend `/skill:warden-map`; do not edit docs.
-- If `.warden/map-state.json` is missing, unsupported, stale, or cannot be matched to current `HEAD`, stop and recommend `/skill:warden-map`; do not edit docs.
+- If `.warden/map-state.json` is missing, unsupported, stale, or cannot classify relevant maps as fresh, stop and recommend `/skill:warden-map`; do not edit docs.
 - `/skill:warden-docs` must not auto-run `/skill:warden-map`.
 - Only `/skill:warden-map` may edit `.warden/map.md`, `.warden/maps/**/map.md`, or `.warden/map-state.json`.
 
@@ -124,9 +124,9 @@ External research:
    - Record preexisting dirty paths.
 2. Gate on map freshness.
    - Read `.warden/map-state.json` when present.
-   - Compare map-state `head` with current full Git `HEAD`.
+   - Classify freshness from the requested map basis and committed changes since that basis.
    - Check injected/read map freshness labels when available.
-   - If map-state is missing, stale, unknown, unsupported, or not generated for current `HEAD`, stop with a recommendation to run `/skill:warden-map`; do not edit docs.
+   - If map-state is missing, stale, unknown, unsupported, or not fresh under the current classifier, stop with a recommendation to run `/skill:warden-map`; do not edit docs.
    - Do not auto-run `/skill:warden-map`.
 3. Build a bounded doc inventory.
    - Walk repo for `README.md` and `AGENTS.md` files, excluding generated, dependency, cache, secret, and ignored directories.
@@ -165,7 +165,7 @@ Before final response, verify:
 - Git repository root was discovered;
 - `git status --short` was inspected before doc edits;
 - preexisting dirty paths were recorded;
-- `.warden/map-state.json` was present, supported, and generated for current `HEAD` before doc edits;
+- `.warden/map-state.json` was present, supported, and classified relevant maps as fresh before doc edits;
 - injected/read map freshness was fresh before doc edits;
 - stale or unknown map freshness caused a stop and `/skill:warden-map` recommendation;
 - `/skill:warden-map` was not auto-run;
