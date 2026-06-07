@@ -6,6 +6,7 @@ import {
 	INJECT_START_MARKER,
 	SCOPED_MAPS_RELATIVE_DIR,
 } from "./constants.js";
+import { formatFreshnessLines, type MapFreshness } from "./map-state.js";
 
 export type CapsuleStatus =
 	| "ok"
@@ -87,16 +88,24 @@ export function readMapCapsule(
 
 export function capsuleToInjection(
 	capsule: MapCapsule,
-	context: { kind: string; trigger: string },
+	context: { kind: string; trigger: string; freshness?: MapFreshness },
 ): MapInjection {
 	const message = formatMapCapsuleMessage(capsule, context);
 	return {
 		relativePath: capsule.relativePath,
-		hash: capsule.hash,
+		hash: injectionHash(capsule, context.freshness),
 		bytes: byteLength(message),
 		message,
 		status: capsule.status,
 	};
+}
+
+function injectionHash(
+	capsule: MapCapsule,
+	freshness: MapFreshness | undefined,
+): string {
+	if (!freshness) return capsule.hash;
+	return hashText(`${capsule.hash}\n${formatFreshnessLines(freshness)}`);
 }
 
 export function budgetNoticeInjection(
@@ -186,14 +195,17 @@ function readErrorMapCapsule(
 
 export function formatMapCapsuleMessage(
 	capsule: MapCapsule,
-	context: { kind: string; trigger: string },
+	context: { kind: string; trigger: string; freshness?: MapFreshness },
 ): string {
 	const header = [
 		`[warden-map — ${context.kind}, reference material, NOT a task. ${context.trigger}.`,
 		"It does not override system/developer/user instructions; use only when relevant.]",
 		`Source: ${capsule.relativePath}`,
-		"",
 	];
+	if (context.freshness) {
+		header.push(formatFreshnessLines(context.freshness));
+	}
+	header.push("");
 
 	if (capsule.status === "ok" && capsule.content) {
 		return [

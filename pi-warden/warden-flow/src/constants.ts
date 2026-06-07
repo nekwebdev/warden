@@ -4,7 +4,9 @@ export const WARDEN_MAP_DEBUG_FLAG = "warden-map-debug";
 
 export const WARDEN_DIR = ".warden";
 export const MAP_FILE_NAME = "map.md";
+export const MAP_STATE_FILE_NAME = "map-state.json";
 export const ROOT_MAP_RELATIVE_PATH = `${WARDEN_DIR}/${MAP_FILE_NAME}`;
+export const MAP_STATE_RELATIVE_PATH = `${WARDEN_DIR}/${MAP_STATE_FILE_NAME}`;
 export const SCOPED_MAPS_RELATIVE_DIR = `${WARDEN_DIR}/maps`;
 
 export const INJECT_START_MARKER = "<!-- warden-map:inject:start -->";

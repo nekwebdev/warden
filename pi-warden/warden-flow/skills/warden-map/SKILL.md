@@ -20,11 +20,12 @@ User input may be empty, a repository path, a repo-relative scope, or a request 
 
 <scope-gates>
 
-Create or refresh durable orientation maps only:
+Create or refresh durable orientation maps and their lean freshness marker only:
 
 ```text
 .warden/map.md
 .warden/maps/<repo-relative-scope>/map.md
+.warden/map-state.json
 ```
 
 - Be project-agnostic. Do not assume language, framework, package manager, task runner, deployment model, or architecture style.
@@ -41,9 +42,13 @@ Create or refresh durable orientation maps only:
 
 Canonical map root:
 
-- When cwd is inside a Git repository, read and write maps only under `<git-root>/.warden/**`.
+- Git root `.warden/**` is the only canonical location for maps and `.warden/map-state.json`.
+- When cwd is inside a Git repository, read and write maps and map-state only under `<git-root>/.warden/**`.
 - If invoked from nested cwd with no explicit path, map the Git repository root.
-- Do not write `.warden/map.md` or `.warden/maps/**` under a nested cwd unless that cwd is itself a separate Git repository.
+- Do not write `.warden/map.md`, `.warden/maps/**`, or `.warden/map-state.json` under a nested cwd unless that cwd is itself a separate Git repository.
+- Before writing maps or `.warden/map-state.json`, check `git status --porcelain` from the Git root.
+- If the working tree is dirty, stop clearly; do not edit maps; do not edit `.warden/map-state.json`; ask the user to commit, stash, or otherwise clean the repo before running `/skill:warden-map`.
+- Only `warden-map` writes `.warden/map-state.json`; other skills and extensions may read it only.
 - Do not overwrite unrelated user content.
 - If an existing map has manual notes, preserve them or ask before replacing.
 - Read existing maps before editing them.
@@ -55,6 +60,7 @@ Canonical map root:
 - Do not write changelog entries from this skill.
 - Do not add task plans, TODO lists, issue lists, PRDs, workflow state, release notes, or implementation sequences to maps.
 - Keep transient dirty working-tree state out of injected capsules; the extension injects live git dirty context separately.
+- Do not include dirty state in map freshness; freshness is only map basis SHA versus current Git HEAD.
 - Maps do not override system, developer, user, or repo instructions.
 
 </safety>
@@ -116,6 +122,9 @@ Git and changelog use:
 1. Establish canonical root and scope.
    - Discover Git repository root from cwd or requested path.
    - Identify repository root or requested repo-relative scope.
+   - Check `git status --porcelain` from the Git root before any write.
+   - If dirty, stop clearly without editing maps or `.warden/map-state.json`; ask the user to commit, stash, or otherwise clean the repo before running `/skill:warden-map`.
+   - Capture current full Git HEAD SHA for map-state if the repo is clean.
    - Choose refresh mode: capsule refresh, scoped refresh, or full remap. Default to scoped refresh.
    - Read existing root and relevant scoped maps.
 2. Build evidence inventory within discovery budget. Collect enough evidence to answer:
@@ -143,8 +152,13 @@ Git and changelog use:
    - Preserve useful correct content and manual notes.
    - Correct stale claims only with evidence.
    - Compress bloated sections before appending detail.
-8. Run map health check from `<review-checks>`.
-9. Present concise summary from `<output-format>`.
+8. After a successful clean map run, write/update `.warden/map-state.json`.
+   - Include every map file that was generated or confirmed current during that run.
+   - Use the current full Git HEAD SHA as `head` and as the basis for each listed map.
+   - If no map content changed but maps were reviewed at the clean HEAD, still update `.warden/map-state.json`.
+   - Do not update map bodies just to refresh timestamps or Git basis if map content did not change.
+9. Run map health check from `<review-checks>`.
+10. Present concise summary from `<output-format>`.
 
 </workflow>
 
@@ -168,6 +182,8 @@ Before finishing, verify:
 - Maps still state they are orientation only and do not override instructions.
 - Do not update only review date or git basis if no map content changed.
 - Use local date for `Reviewed` only when content changed.
+- `.warden/map-state.json` exists at the Git root and uses only version, head, generatedAt, and maps.
+- Only `warden-map` writes `.warden/map-state.json`.
 
 </review-checks>
 

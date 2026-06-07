@@ -9,8 +9,10 @@ import {
 	collectScopedMapInjections,
 	candidateScopeDirs,
 	extractInjectableCapsule,
+	MAP_STATE_RELATIVE_PATH,
 	ROOT_MAP_RELATIVE_PATH,
 	SCOPED_CAPSULE_MAX_BYTES,
+	shortSha,
 } from "../src/index.js";
 
 let cwd = "";
@@ -24,8 +26,29 @@ afterEach(() => {
 	cwd = "";
 });
 
+function git(args: string[], root = cwd): string {
+	return execFileSync("git", args, { cwd: root, encoding: "utf-8" }).trim();
+}
+
 function initGitRepo(root = cwd): void {
 	execFileSync("git", ["init"], { cwd: root, stdio: "ignore" });
+}
+
+function initCommittedGitRepo(root = cwd): string {
+	initGitRepo(root);
+	git(["config", "user.email", "test@example.com"], root);
+	git(["config", "user.name", "Test User"], root);
+	writeFileSync(join(root, "README.md"), "# Test\n", "utf-8");
+	git(["add", "README.md"], root);
+	git(["commit", "-m", "initial"], root);
+	return git(["rev-parse", "HEAD"], root);
+}
+
+function secondCommit(root = cwd): string {
+	writeFileSync(join(root, "README.md"), "# Test\n\nUpdated\n", "utf-8");
+	git(["add", "README.md"], root);
+	git(["commit", "-m", "second"], root);
+	return git(["rev-parse", "HEAD"], root);
 }
 
 function writeMap(
@@ -59,6 +82,47 @@ function writeMapAt(
 	);
 }
 
+function writeState(
+	root: string,
+	head: string,
+	maps: Record<string, string>,
+): void {
+	const target = join(root, MAP_STATE_RELATIVE_PATH);
+	mkdirSync(join(target, ".."), { recursive: true });
+	writeFileSync(
+		target,
+		JSON.stringify(
+			{
+				version: 1,
+				head,
+				generatedAt: "2026-06-07T00:00:00.000Z",
+				maps,
+			},
+			null,
+			2,
+		),
+		"utf-8",
+	);
+}
+
+function assertFreshnessBlock(
+	message: string,
+	freshness: string,
+	mapBasis: string,
+	currentHead: string,
+): void {
+	assert.match(
+		message,
+		new RegExp(
+			`Freshness: ${freshness}\\nMap basis: ${mapBasis}\\nCurrent HEAD: ${currentHead}`,
+		),
+	);
+	assert.equal((message.match(/^Freshness: /gm) ?? []).length, 1);
+	assert.equal((message.match(/^Map basis: /gm) ?? []).length, 1);
+	assert.equal((message.match(/^Current HEAD: /gm) ?? []).length, 1);
+	assert.doesNotMatch(message, /Run:\s*\/skill:warden-map/);
+}
+
 describe("map capsule extraction", () => {
 	it("extracts marked capsule content", () => {
 		const result = extractInjectableCapsule(
@@ -89,6 +153,43 @@ describe("map capsule extraction", () => {
 });
 
 describe("root map selection", () => {
+	it("includes fresh map-state status in root capsule", () => {
+		const head = initCommittedGitRepo();
+		writeMap(
+			".warden/map.md",
+			"## Agent Quick Context\n\n- Purpose: Fresh root context",
+		);
+		writeState(cwd, head, { ".warden/map.md": head });
+
+		const injection = buildRootMapInjection(cwd);
+
+		assert.ok(injection);
+		assertFreshnessBlock(
+			injection.message,
+			"fresh",
+			shortSha(head),
+			shortSha(head),
+		);
+	});
+
+	it("includes unknown map-state status when marker is missing", () => {
+		const head = initCommittedGitRepo();
+		writeMap(
+			".warden/map.md",
+			"## Agent Quick Context\n\n- Purpose: Unknown root context",
+		);
+
+		const injection = buildRootMapInjection(cwd);
+
+		assert.ok(injection);
+		assertFreshnessBlock(
+			injection.message,
+			"unknown",
+			"unknown",
+			shortSha(head),
+		);
+	});
+
 	it("loads root map from git top-level when cwd is nested", () => {
 		initGitRepo();
 		const nestedCwd = join(cwd, "pi-warden");
@@ -114,6 +215,26 @@ describe("root map selection", () => {
 });
 
 describe("scoped map selection", () => {
+	it("includes stale map-state status in scoped capsule", () => {
+		const oldHead = initCommittedGitRepo();
+		writeMap(
+			".warden/maps/src/map.md",
+			"## Agent Quick Context\n\n- Purpose: Stale source scope",
+		);
+		writeState(cwd, oldHead, { ".warden/maps/src/map.md": oldHead });
+		const currentHead = secondCommit();
+
+		const [injection] = collectScopedMapInjections(cwd, "src/file.ts");
+
+		assert.ok(injection);
+		assertFreshnessBlock(
+			injection.message,
+			"stale",
+			shortSha(oldHead),
+			shortSha(currentHead),
+		);
+	});
+
 	it("derives parent-to-child scope candidates for a touched path", () => {
 		assert.deepEqual(candidateScopeDirs(cwd, "a/b/c/file.ts"), [
 			"a",

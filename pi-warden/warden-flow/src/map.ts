@@ -18,8 +18,14 @@ import {
 	type MapCapsule,
 	type MapInjection,
 } from "./map-capsule.js";
+import {
+	classifyMapFreshness,
+	loadMapFreshnessContext,
+	type MapFreshnessContext,
+} from "./map-state.js";
 
 export * from "./map-capsule.js";
+export * from "./map-state.js";
 
 export interface ScopedMapOptions {
 	maxCapsuleBytes?: number;
@@ -75,8 +81,10 @@ export function candidateScopeDirs(cwd: string, inputPath: string): string[] {
 }
 
 export function buildRootMapInjection(cwd: string): MapInjection | null {
+	const repoRoot = canonicalMapRoot(cwd);
+	const freshnessContext = loadMapFreshnessContext(repoRoot);
 	const capsule = readMapCapsule(
-		canonicalMapRoot(cwd),
+		repoRoot,
 		ROOT_MAP_RELATIVE_PATH,
 		ROOT_CAPSULE_MAX_BYTES,
 	);
@@ -84,6 +92,7 @@ export function buildRootMapInjection(cwd: string): MapInjection | null {
 	return capsuleToInjection(capsule, {
 		kind: "root repository map",
 		trigger: "auto-loaded at session start",
+		freshness: classifyMapFreshness(capsule.relativePath, freshnessContext),
 	});
 }
 
@@ -94,6 +103,7 @@ export function collectScopedMapInjections(
 ): MapInjection[] {
 	const limits = scopedMapLimits(options);
 	const repoRoot = canonicalMapRoot(cwd);
+	const freshnessContext = loadMapFreshnessContext(repoRoot);
 	const nearest = scopedMapCandidates(cwd, inputPath, repoRoot, limits);
 	const injections: MapInjection[] = [];
 	let used = 0;
@@ -104,6 +114,7 @@ export function collectScopedMapInjections(
 			used,
 			limits,
 			remainingCapsulePaths(nearest, index),
+			freshnessContext,
 		);
 		injections.push(result.injection);
 		if (!result.included) break;
@@ -169,10 +180,12 @@ function nextScopedInjection(
 	used: number,
 	limits: ReturnType<typeof scopedMapLimits>,
 	remainingPaths: string[],
+	freshnessContext: MapFreshnessContext,
 ): { injection: MapInjection; bytes: number; included: boolean } {
 	const injection = capsuleToInjection(capsule, {
 		kind: `scoped repository map for ${capsule.scope}`,
 		trigger: `auto-loaded because a tool touched ${normalizeSlashes(inputPath)}`,
+		freshness: classifyMapFreshness(capsule.relativePath, freshnessContext),
 	});
 	const bytes = byteLength(injection.message);
 	if (used + bytes <= limits.maxInjectionBytes) {

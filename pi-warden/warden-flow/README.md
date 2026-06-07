@@ -28,6 +28,7 @@ When cwd is inside a Git repository, maps are canonical at the Git top-level, ev
 ```text
 <git-root>/.warden/
 ├── map.md
+├── map-state.json
 └── maps/
     └── <repo-relative-scope>/
         └── map.md
@@ -37,9 +38,12 @@ Examples:
 
 ```text
 .warden/map.md
+.warden/map-state.json
 .warden/maps/pi-warden/map.md
 .warden/maps/pi-warden/warden-flow/map.md
 ```
+
+Only `/skill:warden-map` writes maps and `.warden/map-state.json`. It refuses dirty Git repositories before refreshing either. The marker is rooted at the Git top-level `.warden/**`, not at nested package cwd paths.
 
 ## Capsule contract
 
@@ -56,6 +60,16 @@ Only marked capsules are auto-injected:
 - Sharp edges:
 <!-- warden-map:inject:end -->
 ```
+
+The extension prepends freshness metadata from `.warden/map-state.json` to each injected root or scoped capsule:
+
+```text
+Freshness: fresh|stale|unknown
+Map basis: <short-sha|unknown>
+Current HEAD: <short-sha|unknown>
+```
+
+Freshness compares only map basis SHA with current Git HEAD. Dirty working-tree state remains separate Git context.
 
 Full map bodies stay on disk. Agents can read them explicitly when a task needs deeper context.
 

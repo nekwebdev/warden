@@ -7,6 +7,8 @@ import { afterEach, beforeEach, describe, it } from "node:test";
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import wardenMap from "../extensions/warden-map/index.js";
 import {
+	MAP_STATE_RELATIVE_PATH,
+	shortSha,
 	WARDEN_GIT_CONTEXT_MESSAGE,
 	WARDEN_MAP_DEBUG_FLAG,
 	WARDEN_MAP_MESSAGE,
@@ -38,8 +40,22 @@ afterEach(() => {
 	cwd = "";
 });
 
+function git(args: string[], root = cwd): string {
+	return execFileSync("git", args, { cwd: root, encoding: "utf-8" }).trim();
+}
+
 function initGitRepo(root = cwd): void {
 	execFileSync("git", ["init"], { cwd: root, stdio: "ignore" });
+}
+
+function initCommittedGitRepo(root = cwd): string {
+	initGitRepo(root);
+	git(["config", "user.email", "test@example.com"], root);
+	git(["config", "user.name", "Test User"], root);
+	writeFileSync(join(root, "README.md"), "# Test\n", "utf-8");
+	git(["add", "README.md"], root);
+	git(["commit", "-m", "initial"], root);
+	return git(["rev-parse", "HEAD"], root);
 }
 
 function writeMap(relativePath: string, capsule: string): void {
@@ -61,6 +77,29 @@ function writeMapAt(base: string, relativePath: string, capsule: string): void {
 			"## Full Detail",
 			"Deeper context stays on disk.",
 		].join("\n"),
+		"utf-8",
+	);
+}
+
+function writeState(
+	root: string,
+	head: string,
+	maps: Record<string, string>,
+): void {
+	const target = join(root, MAP_STATE_RELATIVE_PATH);
+	mkdirSync(join(target, ".."), { recursive: true });
+	writeFileSync(
+		target,
+		JSON.stringify(
+			{
+				version: 1,
+				head,
+				generatedAt: "2026-06-07T00:00:00.000Z",
+				maps,
+			},
+			null,
+			2,
+		),
 		"utf-8",
 	);
 }
@@ -126,10 +165,12 @@ function assertMessageUpdate(
 
 describe("warden-map extension", () => {
 	it("injects root map capsule and git context on session start", async () => {
+		const head = initCommittedGitRepo();
 		writeMap(
 			".warden/map.md",
 			"## Agent Quick Context\n\n- Purpose: Root context",
 		);
+		writeState(cwd, head, { ".warden/map.md": head });
 		const pi = createFakePi();
 		wardenMap(pi as unknown as ExtensionAPI);
 
@@ -139,6 +180,12 @@ describe("warden-map extension", () => {
 		assert.equal(pi.messages[0].customType, WARDEN_MAP_MESSAGE);
 		assert.equal(pi.messages[0].display, false);
 		assert.match(pi.messages[0].content, /Purpose: Root context/);
+		assert.match(
+			pi.messages[0].content,
+			new RegExp(
+				`Freshness: fresh\\nMap basis: ${shortSha(head)}\\nCurrent HEAD: ${shortSha(head)}`,
+			),
+		);
 		assert.equal(pi.messages[1].customType, WARDEN_GIT_CONTEXT_MESSAGE);
 		assert.match(pi.messages[1].content, /Dirty: no/);
 	});
@@ -168,10 +215,12 @@ describe("warden-map extension", () => {
 	});
 
 	it("appends scoped map capsule to matching tool results and dedupes", async () => {
+		const head = initCommittedGitRepo();
 		writeMap(
 			".warden/maps/src/map.md",
 			"## Agent Quick Context\n\n- Purpose: Source scope",
 		);
+		writeState(cwd, head, { ".warden/maps/src/map.md": head });
 		const pi = createFakePi();
 		wardenMap(pi as unknown as ExtensionAPI);
 		await runHandler(pi, "session_start", {}, { cwd });
@@ -189,6 +238,12 @@ describe("warden-map extension", () => {
 		assertToolResultUpdate(first);
 		assert.equal(first.content.length, 2);
 		assert.match(first.content[1].text, /Purpose: Source scope/);
+		assert.match(
+			first.content[1].text,
+			new RegExp(
+				`Freshness: fresh\\nMap basis: ${shortSha(head)}\\nCurrent HEAD: ${shortSha(head)}`,
+			),
+		);
 
 		const second = await runHandler(
 			pi,
