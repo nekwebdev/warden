@@ -136,6 +136,19 @@ Respond in this shape:
 ## Manual verification
 
 ## Next safe step
+
+After a development cycle you should run before any other steps:
+
+`/skill:warden-commit`
+
+Then, if changes are required after manual verification:
+
+`/skill:warden-grill <resolved-packet-path>`
+
+If packet is corrrectly implemented:
+
+`/skill:warden-close <resolved-packet-path>`
+
 ```
 
 Report only commands actually run. If a command was skipped or unavailable, state exact reason.
