@@ -4,6 +4,7 @@ import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, it } from "node:test";
+import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import wardenCommit from "../extensions/warden-commit/index.js";
 import {
 	analyzePathRisk,
@@ -16,6 +17,8 @@ import {
 	parseCommitPorcelainStatus,
 	validateWardenCommitApplyInput,
 	type CommitGitExec,
+	type CommitGitExecResult,
+	type ToolDefinition,
 	type WardenCommitFile,
 } from "../src/index.js";
 
@@ -37,6 +40,13 @@ function assertInvalidApplyInput(input: unknown, pattern: RegExp): void {
 	const result = validateWardenCommitApplyInput(input);
 	assert.equal(result.ok, false);
 	if (!result.ok) assert.match(result.errors.join("\n"), pattern);
+}
+
+function schemaRequiredParameters(tool: ToolDefinition | undefined): unknown {
+	const parameters = tool?.parameters;
+	if (!parameters || typeof parameters !== "object") return undefined;
+	if (!("required" in parameters)) return undefined;
+	return (parameters as { required?: unknown }).required;
 }
 
 function createStaticSnapshotExec(options: {
@@ -66,37 +76,64 @@ function createStaticSnapshotExec(options: {
 	};
 }
 
-function createSuccessfulApplyExec(path: string): CommitGitExec {
-	let stagedPaths: string[] = [];
-	let committed = false;
+interface SuccessfulApplyState {
+	stagedPaths: string[];
+	committed: boolean;
+}
+
+function successfulApplyProbeResponse(
+	key: string,
+	path: string,
+	state: SuccessfulApplyState,
+): CommitGitExecResult | null {
 	const status = ` M ${path}`;
+	if (key === "rev-parse --is-inside-work-tree") return { stdout: "true\n" };
+	if (key === "rev-parse --show-toplevel") return { stdout: "/repo\n" };
+	if (key === "rev-parse --abbrev-ref HEAD") return { stdout: "main\n" };
+	if (key === "rev-parse --short HEAD") return { stdout: "abc1234\n" };
+	if (key === "status --porcelain=v1") {
+		return { stdout: state.committed ? "" : status };
+	}
+	if (key === "diff --name-only --staged") return { stdout: "" };
+	if (key === "diff --name-only") {
+		return { stdout: state.committed ? "" : `${path}\n` };
+	}
+	if (key === "ls-files --others --exclude-standard") return { stdout: "" };
+	if (key.startsWith("log --oneline -n ")) return { stdout: "" };
+	return null;
+}
+
+function successfulApplyMutationResponse(
+	key: string,
+	args: string[],
+	state: SuccessfulApplyState,
+): CommitGitExecResult | null {
+	if (key === "diff --name-only --cached") {
+		return { stdout: state.stagedPaths.map((item) => `${item}\n`).join("") };
+	}
+	if (args[0] === "add" && args[1] === "--") {
+		state.stagedPaths = args.slice(2);
+		return { stdout: "", code: 0 };
+	}
+	if (args[0] === "commit") {
+		state.committed = true;
+		state.stagedPaths = [];
+		return { stdout: "[main fedcba9] test commit\n", code: 0 };
+	}
+	if (key === "rev-parse HEAD") return { stdout: `${"f".repeat(40)}\n` };
+	return null;
+}
+
+function createSuccessfulApplyExec(path: string): CommitGitExec {
+	const state: SuccessfulApplyState = { stagedPaths: [], committed: false };
 	return async (_command, args) => {
 		const key = args.join(" ");
-		if (key === "rev-parse --is-inside-work-tree") return { stdout: "true\n" };
-		if (key === "rev-parse --show-toplevel") return { stdout: "/repo\n" };
-		if (key === "rev-parse --abbrev-ref HEAD") return { stdout: "main\n" };
-		if (key === "rev-parse --short HEAD") return { stdout: "abc1234\n" };
-		if (key === "status --porcelain=v1")
-			return { stdout: committed ? "" : status };
-		if (key === "diff --name-only --staged") return { stdout: "" };
-		if (key === "diff --name-only")
-			return { stdout: committed ? "" : `${path}\n` };
-		if (key === "ls-files --others --exclude-standard") return { stdout: "" };
-		if (key.startsWith("log --oneline -n ")) return { stdout: "" };
-		if (key === "diff --name-only --cached") {
-			return { stdout: stagedPaths.map((item) => `${item}\n`).join("") };
-		}
-		if (args[0] === "add" && args[1] === "--") {
-			stagedPaths = args.slice(2);
-			return { stdout: "", code: 0 };
-		}
-		if (args[0] === "commit") {
-			committed = true;
-			stagedPaths = [];
-			return { stdout: "[main fedcba9] test commit\n", code: 0 };
-		}
-		if (key === "rev-parse HEAD") return { stdout: `${"f".repeat(40)}\n` };
-		if (key === "status --short") return { stdout: committed ? "" : status };
+		const response =
+			successfulApplyProbeResponse(key, path, state) ??
+			successfulApplyMutationResponse(key, args, state);
+		if (response) return response;
+		if (key === "status --short")
+			return { stdout: state.committed ? "" : ` M ${path}` };
 		throw new Error(`unexpected git args: ${key}`);
 	};
 }
@@ -553,18 +590,18 @@ describe("commit apply safety", () => {
 
 describe("commit snapshot tool", () => {
 	it("registers snapshot and apply tools", () => {
-		const tools: Array<{ name: string; parameters?: any }> = [];
-		wardenCommit({
-			registerTool: (tool: { name: string; parameters?: any }) =>
-				tools.push(tool),
-		} as any);
+		const tools: ToolDefinition[] = [];
+		const pi = {
+			registerTool: (tool: ToolDefinition) => tools.push(tool),
+		} as unknown as ExtensionAPI;
+		wardenCommit(pi);
 
 		assert.deepEqual(
 			tools.map((tool) => tool.name),
 			["warden_commit_snapshot", "warden_commit_apply"],
 		);
 		const applyTool = tools.find((tool) => tool.name === "warden_commit_apply");
-		assert.deepEqual(applyTool?.parameters?.required, [
+		assert.deepEqual(schemaRequiredParameters(applyTool), [
 			"snapshotHash",
 			"confirmedUserIntent",
 			"commits",

@@ -74,6 +74,24 @@ function skillContent(skillName: string): string {
 	);
 }
 
+function bodyTagNames(content: string): string[] {
+	return [...content.matchAll(/^<([a-z-]+)>$/gm)].map(
+		(match) => match[1] ?? "",
+	);
+}
+
+function hasClosedBodyTag(content: string, tag: string): boolean {
+	const openTag = `<${tag}>`;
+	const closeTag = `</${tag}>`;
+	const openIndex = content.indexOf(`${openTag}\n`);
+	if (openIndex < 0) return false;
+	const closeIndex = content.indexOf(
+		`\n${closeTag}`,
+		openIndex + openTag.length,
+	);
+	return closeIndex >= 0;
+}
+
 describe("package pi resources", () => {
 	it("declares warden-flow package identity", () => {
 		assert.equal(pkg.name, "@nekwebdev/warden-flow");
@@ -190,17 +208,15 @@ describe("package pi resources", () => {
 		for (const entry of entries) {
 			const target = resolve(packageRoot, entry);
 			const content = readFileSync(target, "utf-8");
-			const tags = [...content.matchAll(/^<([a-z-]+)>$/gm)].map(
-				(match) => match[1],
-			);
+			const tags = bodyTagNames(content);
 			for (const tag of requiredWardenSkillBodyTags) {
 				assert.ok(
 					tags.includes(tag),
 					`${entry} should include <${tag}> body tag`,
 				);
-				assert.match(
-					content,
-					new RegExp(`^<${tag}>\\n[\\s\\S]*?\\n</${tag}>`, "m"),
+				assert.equal(
+					hasClosedBodyTag(content, tag),
+					true,
 					`${entry} should close <${tag}> body tag`,
 				);
 			}

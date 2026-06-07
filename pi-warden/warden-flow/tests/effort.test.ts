@@ -21,6 +21,21 @@ import {
 } from "../src/index.js";
 
 const envBefore = process.env.WARDEN_FLOW_TEST_HOME;
+const EFFORT_OFF = "off";
+const EFFORT_MINIMAL = "minimal";
+const EFFORT_LOW = "low";
+const EFFORT_MEDIUM = "medium";
+const EFFORT_HIGH = "high";
+const EFFORT_XHIGH = "xhigh";
+const SEEDED_SKILL_EFFORTS = {
+	"warden-map": EFFORT_LOW,
+	"warden-start": EFFORT_MEDIUM,
+	"warden-grill": EFFORT_HIGH,
+	"warden-tdd": EFFORT_HIGH,
+	"warden-close": EFFORT_MEDIUM,
+	"warden-seal": EFFORT_MEDIUM,
+	"warden-commit": EFFORT_MEDIUM,
+} as const;
 
 async function withTempSettings(
 	contents: unknown,
@@ -55,12 +70,12 @@ describe("Warden skill effort settings", () => {
 
 	it("defines and validates the exact ordered effort scale", () => {
 		assert.deepEqual(WARDEN_EFFORT_LEVELS, [
-			"off",
-			"minimal",
-			"low",
-			"medium",
-			"high",
-			"xhigh",
+			EFFORT_OFF,
+			EFFORT_MINIMAL,
+			EFFORT_LOW,
+			EFFORT_MEDIUM,
+			EFFORT_HIGH,
+			EFFORT_XHIGH,
 		]);
 		for (const level of WARDEN_EFFORT_LEVELS) {
 			assert.equal(isWardenEffortLevel(level), true, level);
@@ -77,41 +92,25 @@ describe("Warden skill effort settings", () => {
 				cycleWardenEffortLevel(level),
 			]),
 			[
-				["off", "minimal"],
-				["minimal", "low"],
-				["low", "medium"],
-				["medium", "high"],
-				["high", "xhigh"],
-				["xhigh", "off"],
+				[EFFORT_OFF, EFFORT_MINIMAL],
+				[EFFORT_MINIMAL, EFFORT_LOW],
+				[EFFORT_LOW, EFFORT_MEDIUM],
+				[EFFORT_MEDIUM, EFFORT_HIGH],
+				[EFFORT_HIGH, EFFORT_XHIGH],
+				[EFFORT_XHIGH, EFFORT_OFF],
 			],
 		);
 	});
 
 	it("seeds missing Warden Flow effort defaults", async () => {
 		await withTempSettings({}, () => {
-			assert.deepEqual(DEFAULT_WARDEN_SKILL_EFFORTS, {
-				"warden-map": "low",
-				"warden-start": "medium",
-				"warden-grill": "high",
-				"warden-tdd": "high",
-				"warden-close": "medium",
-				"warden-seal": "medium",
-				"warden-commit": "medium",
-			});
+			assert.deepEqual(DEFAULT_WARDEN_SKILL_EFFORTS, SEEDED_SKILL_EFFORTS);
 
 			assert.deepEqual(seedWardenEffortDefaults(), { ok: true });
 			assert.deepEqual(readSettings(), {
 				warden: {
 					effort: {
-						skills: {
-							"warden-map": "low",
-							"warden-start": "medium",
-							"warden-grill": "high",
-							"warden-tdd": "high",
-							"warden-close": "medium",
-							"warden-seal": "medium",
-							"warden-commit": "medium",
-						},
+						skills: SEEDED_SKILL_EFFORTS,
 					},
 				},
 			});
@@ -137,15 +136,7 @@ describe("Warden skill effort settings", () => {
 						useNerdGlyphs: true,
 						effort: {
 							profiles: { careful: true },
-							skills: {
-								"warden-map": "low",
-								"warden-start": "medium",
-								"warden-grill": "high",
-								"warden-tdd": "high",
-								"warden-close": "medium",
-								"warden-seal": "medium",
-								"warden-commit": "medium",
-							},
+							skills: SEEDED_SKILL_EFFORTS,
 						},
 					},
 				});
@@ -169,13 +160,8 @@ describe("Warden skill effort settings", () => {
 				assert.deepEqual(readSettings().warden, {
 					effort: {
 						skills: {
-							"warden-map": "high",
-							"warden-start": "medium",
-							"warden-grill": "high",
-							"warden-tdd": "high",
-							"warden-close": "medium",
-							"warden-seal": "medium",
-							"warden-commit": "medium",
+							...SEEDED_SKILL_EFFORTS,
+							"warden-map": EFFORT_HIGH,
 						},
 					},
 				});

@@ -9,6 +9,7 @@ import {
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, it, mock } from "node:test";
+import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { clearWardenPanesForTests } from "../../warden-panel/src/registry.js";
 import wardenEffort, {
 	WARDEN_SKILL_STATUS_KEY,
@@ -26,15 +27,27 @@ const envBefore = {
 	WARDEN_PANEL_TEST_HOME: process.env.WARDEN_PANEL_TEST_HOME,
 };
 
-type Handler = (event?: any, ctx?: any) => any;
+type Handler = (event?: unknown, ctx?: unknown) => unknown;
 type StatusUpdate = { readonly key: string; readonly text: string | undefined };
+type StatusTheme = Parameters<typeof renderWardenSkillStatus>[2];
+type FakePi = ReturnType<typeof createFakePi>;
+
+type TestSettings = {
+	warden?: {
+		agent?: { cwd?: string };
+		effort?: {
+			showSkillStatus?: boolean;
+			skills?: Record<string, WardenEffortLevel>;
+		};
+	};
+};
 
 const statusTheme = {
 	fg: (name: string, text: string) => `<${name}>${text}</${name}>`,
 	bg: (name: string, text: string) => `{${name}}${text}{/${name}}`,
-};
+} as unknown as StatusTheme;
 
-function createStatusContext(statuses: StatusUpdate[]): any {
+function createStatusContext(statuses: StatusUpdate[]) {
 	return {
 		cwd: process.cwd(),
 		hasUI: true,
@@ -69,11 +82,11 @@ function createFakePi(initialLevel: WardenEffortLevel = "off") {
 }
 
 async function runFirstHandler(
-	pi: ReturnType<typeof createFakePi>,
+	pi: FakePi,
 	name: string,
-	event?: any,
-	ctx: any = { cwd: process.cwd() },
-): Promise<any> {
+	event?: unknown,
+	ctx: unknown = { cwd: process.cwd() },
+): Promise<unknown> {
 	const handler = pi.handlers.get(name)?.[0];
 	assert.ok(handler, `${name} handler should be registered`);
 	return handler(event, ctx);
@@ -83,8 +96,10 @@ function writeSettings(settings: unknown): void {
 	writeFileSync(getPiAgentSettingsPath(), JSON.stringify(settings), "utf-8");
 }
 
-function readSettings(): any {
-	return JSON.parse(readFileSync(getPiAgentSettingsPath(), "utf-8"));
+function readSettings(): TestSettings {
+	return JSON.parse(
+		readFileSync(getPiAgentSettingsPath(), "utf-8"),
+	) as TestSettings;
 }
 
 beforeEach(() => {
@@ -112,7 +127,7 @@ describe("Warden effort runtime hook", () => {
 	it("seeds missing defaults on session start", async () => {
 		writeSettings({ warden: { agent: { cwd: "~/work" } } });
 		const pi = createFakePi();
-		wardenEffort(pi as any);
+		wardenEffort(pi as unknown as ExtensionAPI);
 
 		await runFirstHandler(pi, "session_start", { reason: "startup" });
 
@@ -134,7 +149,7 @@ describe("Warden effort runtime hook", () => {
 
 	it("applies low effort by default for /skill:warden-map", async () => {
 		const pi = createFakePi("high");
-		wardenEffort(pi as any);
+		wardenEffort(pi as unknown as ExtensionAPI);
 
 		assert.deepEqual(
 			await runFirstHandler(pi, "input", {
@@ -148,7 +163,7 @@ describe("Warden effort runtime hook", () => {
 
 	it("applies medium effort by default for /skill:warden-start", async () => {
 		const pi = createFakePi("off");
-		wardenEffort(pi as any);
+		wardenEffort(pi as unknown as ExtensionAPI);
 
 		assert.deepEqual(
 			await runFirstHandler(pi, "input", {
@@ -162,7 +177,7 @@ describe("Warden effort runtime hook", () => {
 
 	it("applies high effort by default for /skill:warden-grill", async () => {
 		const pi = createFakePi("off");
-		wardenEffort(pi as any);
+		wardenEffort(pi as unknown as ExtensionAPI);
 
 		assert.deepEqual(
 			await runFirstHandler(pi, "input", {
@@ -176,7 +191,7 @@ describe("Warden effort runtime hook", () => {
 
 	it("applies high effort by default for /skill:warden-tdd", async () => {
 		const pi = createFakePi("off");
-		wardenEffort(pi as any);
+		wardenEffort(pi as unknown as ExtensionAPI);
 
 		assert.deepEqual(
 			await runFirstHandler(pi, "input", {
@@ -190,7 +205,7 @@ describe("Warden effort runtime hook", () => {
 
 	it("applies medium effort by default for /skill:warden-close", async () => {
 		const pi = createFakePi("off");
-		wardenEffort(pi as any);
+		wardenEffort(pi as unknown as ExtensionAPI);
 
 		assert.deepEqual(
 			await runFirstHandler(pi, "input", {
@@ -204,7 +219,7 @@ describe("Warden effort runtime hook", () => {
 
 	it("applies medium effort by default for /skill:warden-seal", async () => {
 		const pi = createFakePi("off");
-		wardenEffort(pi as any);
+		wardenEffort(pi as unknown as ExtensionAPI);
 
 		assert.deepEqual(
 			await runFirstHandler(pi, "input", {
@@ -218,7 +233,7 @@ describe("Warden effort runtime hook", () => {
 
 	it("applies medium effort by default for /skill:warden-commit", async () => {
 		const pi = createFakePi("off");
-		wardenEffort(pi as any);
+		wardenEffort(pi as unknown as ExtensionAPI);
 
 		assert.deepEqual(
 			await runFirstHandler(pi, "input", {
@@ -235,7 +250,7 @@ describe("Warden effort runtime hook", () => {
 			warden: { effort: { skills: { "warden-map": "xhigh" } } },
 		});
 		const pi = createFakePi("minimal");
-		wardenEffort(pi as any);
+		wardenEffort(pi as unknown as ExtensionAPI);
 
 		await runFirstHandler(pi, "input", {
 			text: "/skill:warden-map",
@@ -250,7 +265,7 @@ describe("Warden effort runtime hook", () => {
 		const statuses: StatusUpdate[] = [];
 		const ctx = createStatusContext(statuses);
 		const pi = createFakePi("high");
-		wardenEffort(pi as any);
+		wardenEffort(pi as unknown as ExtensionAPI);
 
 		await runFirstHandler(
 			pi,
@@ -276,7 +291,7 @@ describe("Warden effort runtime hook", () => {
 		const expected = renderWardenSkillStatus(
 			"warden-commit",
 			"medium",
-			statusTheme as any,
+			statusTheme,
 		);
 		assert.deepEqual(statuses[0], {
 			key: WARDEN_SKILL_STATUS_KEY,
@@ -299,7 +314,7 @@ describe("Warden effort runtime hook", () => {
 		const statuses: StatusUpdate[] = [];
 		const ctx = createStatusContext(statuses);
 		const pi = createFakePi("minimal");
-		wardenEffort(pi as any);
+		wardenEffort(pi as unknown as ExtensionAPI);
 
 		await runFirstHandler(
 			pi,
@@ -314,7 +329,7 @@ describe("Warden effort runtime hook", () => {
 		assert.deepEqual(pi.setCalls, ["high"]);
 		assert.deepEqual(statuses[0], {
 			key: WARDEN_SKILL_STATUS_KEY,
-			text: renderWardenSkillStatus("warden-grill", "high", statusTheme as any),
+			text: renderWardenSkillStatus("warden-grill", "high", statusTheme),
 		});
 	});
 
@@ -330,7 +345,7 @@ describe("Warden effort runtime hook", () => {
 		const statuses: StatusUpdate[] = [];
 		const ctx = createStatusContext(statuses);
 		const pi = createFakePi("minimal");
-		wardenEffort(pi as any);
+		wardenEffort(pi as unknown as ExtensionAPI);
 
 		await runFirstHandler(
 			pi,
@@ -349,7 +364,7 @@ describe("Warden effort runtime hook", () => {
 
 	it("ignores non-Warden skills", async () => {
 		const pi = createFakePi("medium");
-		wardenEffort(pi as any);
+		wardenEffort(pi as unknown as ExtensionAPI);
 
 		assert.equal(
 			await runFirstHandler(pi, "input", {
@@ -363,7 +378,7 @@ describe("Warden effort runtime hook", () => {
 
 	it("restores the previous thinking level after the agent turn", async () => {
 		const pi = createFakePi("high");
-		wardenEffort(pi as any);
+		wardenEffort(pi as unknown as ExtensionAPI);
 
 		await runFirstHandler(pi, "input", {
 			text: "/skill:warden-map",

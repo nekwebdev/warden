@@ -9,6 +9,7 @@ import {
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, it, mock } from "node:test";
+import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import type { WardenPanelPaneContext } from "../../warden-panel/src/index.js";
 import {
 	clearWardenPanesForTests,
@@ -42,6 +43,25 @@ type Component = {
 	handleInput?(data: string): void;
 };
 type RenderableComponent = Component & { render(width: number): string[] };
+type RegisteredCommandOptions = Parameters<ExtensionAPI["registerCommand"]>[1];
+type RegisteredCommand = {
+	name: string;
+	handler: RegisteredCommandOptions["handler"];
+};
+type CustomFactory = (
+	api: { requestRender(): void },
+	theme: typeof plainTheme,
+	initial: undefined,
+	close: (result: unknown) => void,
+) => Component | Promise<Component>;
+
+type TestSettings = {
+	warden?: {
+		effort?: {
+			skills?: Record<string, string>;
+		};
+	};
+};
 
 function renderText(component: Component, width = 100): string {
 	return (component as RenderableComponent).render(width).join("\n");
@@ -68,8 +88,14 @@ function writeSettings(settings: unknown): void {
 	writeFileSync(getPiAgentSettingsPath(), JSON.stringify(settings), "utf-8");
 }
 
-function readSettings(): any {
-	return JSON.parse(readFileSync(getPiAgentSettingsPath(), "utf-8"));
+function readSettings(): TestSettings {
+	return JSON.parse(
+		readFileSync(getPiAgentSettingsPath(), "utf-8"),
+	) as TestSettings;
+}
+
+function readSkillEffort(skillName: string): string | undefined {
+	return readSettings().warden?.effort?.skills?.[skillName];
 }
 
 function linesFor(settings: unknown, selectedIndex = 0): string[] {
@@ -103,15 +129,13 @@ describe("Effort pane", () => {
 		writeSettings({
 			warden: { effort: { skills: { "warden-map": "low" } } },
 		});
-		const commands: Array<{
-			name: string;
-			handler: (args: string, ctx: any) => Promise<void>;
-		}> = [];
-		wardenEffort({
-			registerCommand: (name: string, options: any) =>
+		const commands: RegisteredCommand[] = [];
+		const pi = {
+			registerCommand: (name: string, options: RegisteredCommandOptions) =>
 				commands.push({ name, handler: options.handler }),
 			on: mock.fn(),
-		} as any);
+		} as unknown as ExtensionAPI;
+		wardenEffort(pi);
 
 		assert.equal(getWardenPane(EFFORT_PANE_ID)?.label, "Effort");
 		const command = commands.find((item) => item.name === EFFORT_COMMAND);
@@ -120,10 +144,12 @@ describe("Effort pane", () => {
 		await command.handler("", {
 			hasUI: true,
 			ui: {
-				custom: async (factory: any) =>
+				custom: async (factory: unknown) =>
 					await new Promise((resolve) => {
+						assert.equal(typeof factory, "function");
+						const buildComponent = factory as CustomFactory;
 						Promise.resolve(
-							factory(
+							buildComponent(
 								{ requestRender: mock.fn() },
 								plainTheme,
 								undefined,
@@ -138,7 +164,7 @@ describe("Effort pane", () => {
 					}),
 				notify: mock.fn(),
 			},
-		});
+		} as unknown as Parameters<RegisteredCommand["handler"]>[1]);
 	});
 
 	it("lists valid warden-* entries from effort settings", () => {
@@ -187,7 +213,10 @@ describe("Effort pane", () => {
 	});
 
 	it("contributes skill status indicator toggle to the Display pane", () => {
-		wardenEffort({ registerCommand: mock.fn(), on: mock.fn() } as any);
+		wardenEffort({
+			registerCommand: mock.fn(),
+			on: mock.fn(),
+		} as unknown as ExtensionAPI);
 		const setting = getWardenDisplaySettings().find(
 			(item) => item.id === SKILL_STATUS_DISPLAY_SETTING_ID,
 		);
@@ -234,9 +263,9 @@ describe("Effort pane", () => {
 		assert.equal(pane.showApplyControl, false);
 
 		assert.equal(pane.handleInput?.(" ", context(0)), true);
-		assert.equal(readSettings().warden.effort.skills["warden-map"], "medium");
+		assert.equal(readSkillEffort("warden-map"), "medium");
 		assert.equal(pane.handleInput?.("\r", context(0)), true);
-		assert.equal(readSettings().warden.effort.skills["warden-map"], "high");
+		assert.equal(readSkillEffort("warden-map"), "high");
 	});
 
 	it("uses the custom Effort footer hint", () => {

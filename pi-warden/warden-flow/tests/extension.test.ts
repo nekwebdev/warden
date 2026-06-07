@@ -4,6 +4,7 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, it } from "node:test";
+import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import wardenMap from "../extensions/warden-map/index.js";
 import {
 	WARDEN_GIT_CONTEXT_MESSAGE,
@@ -11,7 +12,18 @@ import {
 	WARDEN_MAP_MESSAGE,
 } from "../src/index.js";
 
-type Handler = (event?: any, ctx?: any) => any;
+type SentMessage = {
+	customType: string;
+	display?: boolean;
+	content: string;
+};
+type ToolResultUpdate = { content: Array<{ type: string; text: string }> };
+type MessageUpdate = { message: SentMessage };
+type HandlerResult = ToolResultUpdate | MessageUpdate | undefined;
+type Handler = (
+	event?: unknown,
+	ctx?: unknown,
+) => HandlerResult | Promise<HandlerResult>;
 
 type FakePi = ReturnType<typeof createFakePi>;
 
@@ -55,7 +67,7 @@ function writeMapAt(base: string, relativePath: string, capsule: string): void {
 
 function createFakePi(status = "") {
 	const handlers = new Map<string, Handler[]>();
-	const messages: any[] = [];
+	const messages: SentMessage[] = [];
 	let statusText = status;
 	const pi = {
 		handlers,
@@ -70,7 +82,7 @@ function createFakePi(status = "") {
 		on(name: string, handler: Handler) {
 			handlers.set(name, [...(handlers.get(name) ?? []), handler]);
 		},
-		sendMessage(message: any) {
+		sendMessage(message: SentMessage) {
 			messages.push(message);
 		},
 		getFlag() {
@@ -92,12 +104,24 @@ function createFakePi(status = "") {
 async function runHandler(
 	pi: FakePi,
 	name: string,
-	event?: any,
-	ctx?: any,
-): Promise<any> {
+	event?: unknown,
+	ctx?: unknown,
+): Promise<HandlerResult> {
 	const handler = pi.handlers.get(name)?.[0];
 	assert.ok(handler, `${name} handler should be registered`);
 	return handler(event, ctx);
+}
+
+function assertToolResultUpdate(
+	value: HandlerResult,
+): asserts value is ToolResultUpdate {
+	assert.ok(value && "content" in value, "expected tool result update");
+}
+
+function assertMessageUpdate(
+	value: HandlerResult,
+): asserts value is MessageUpdate {
+	assert.ok(value && "message" in value, "expected message update");
 }
 
 describe("warden-map extension", () => {
@@ -107,7 +131,7 @@ describe("warden-map extension", () => {
 			"## Agent Quick Context\n\n- Purpose: Root context",
 		);
 		const pi = createFakePi();
-		wardenMap(pi as any);
+		wardenMap(pi as unknown as ExtensionAPI);
 
 		await runHandler(pi, "session_start", {}, { cwd });
 
@@ -134,7 +158,7 @@ describe("warden-map extension", () => {
 			"## Agent Quick Context\n\n- Purpose: Nested cwd context",
 		);
 		const pi = createFakePi();
-		wardenMap(pi as any);
+		wardenMap(pi as unknown as ExtensionAPI);
 
 		await runHandler(pi, "session_start", {}, { cwd: nestedCwd });
 
@@ -149,7 +173,7 @@ describe("warden-map extension", () => {
 			"## Agent Quick Context\n\n- Purpose: Source scope",
 		);
 		const pi = createFakePi();
-		wardenMap(pi as any);
+		wardenMap(pi as unknown as ExtensionAPI);
 		await runHandler(pi, "session_start", {}, { cwd });
 
 		const first = await runHandler(
@@ -162,6 +186,7 @@ describe("warden-map extension", () => {
 			},
 			{ cwd },
 		);
+		assertToolResultUpdate(first);
 		assert.equal(first.content.length, 2);
 		assert.match(first.content[1].text, /Purpose: Source scope/);
 
@@ -195,7 +220,7 @@ describe("warden-map extension", () => {
 			"## Agent Quick Context\n\n- Purpose: Nested cwd scoped context",
 		);
 		const pi = createFakePi();
-		wardenMap(pi as any);
+		wardenMap(pi as unknown as ExtensionAPI);
 		await runHandler(pi, "session_start", {}, { cwd: nestedCwd });
 
 		const result = await runHandler(
@@ -209,6 +234,7 @@ describe("warden-map extension", () => {
 			{ cwd: nestedCwd },
 		);
 
+		assertToolResultUpdate(result);
 		assert.equal(result.content.length, 2);
 		assert.match(result.content[1].text, /Purpose: Git root scoped context/);
 		assert.doesNotMatch(
@@ -223,7 +249,7 @@ describe("warden-map extension", () => {
 
 	it("re-injects git context before an agent turn when dirty state changes", async () => {
 		const pi = createFakePi();
-		wardenMap(pi as any);
+		wardenMap(pi as unknown as ExtensionAPI);
 		await runHandler(pi, "session_start", {}, { cwd });
 		pi.setStatusText(" M src/changed.ts\n");
 
@@ -240,11 +266,12 @@ describe("warden-map extension", () => {
 			{ cwd },
 		);
 
+		assertMessageUpdate(update);
 		assert.equal(update.message.customType, WARDEN_GIT_CONTEXT_MESSAGE);
 		assert.match(
-			update.message.content,
+			update.message.content ?? "",
 			/Dirty: yes — staged 0, unstaged 1, untracked 0/,
 		);
-		assert.match(update.message.content, /Dirty paths: src\/changed.ts/);
+		assert.match(update.message.content ?? "", /Dirty paths: src\/changed.ts/);
 	});
 });
