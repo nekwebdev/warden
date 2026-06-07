@@ -4,6 +4,7 @@ import type { WardenPanelPaneContext } from "../src/index.js";
 import {
 	PACKAGES_ACTION_INSTALL,
 	PACKAGES_ACTION_REMOVE,
+	PACKAGES_ACTION_UPDATE_TAGGED,
 	createPackagesPane,
 	renderPackagesPane,
 	sourcesFromRemovePayload,
@@ -57,9 +58,10 @@ describe("packages pane", () => {
 		);
 
 		assert.equal(lines[0], "> Install new package");
-		assert.equal(lines[1], "");
-		assert.equal(lines[2], "  Select packages to remove");
-		assert.equal(lines[3], "");
+		assert.equal(lines[1], "  Update tagged packages");
+		assert.equal(lines[2], "");
+		assert.equal(lines[3], "  Select packages to remove");
+		assert.equal(lines[4], "");
 		assert.doesNotMatch(lines.join("\n"), /\d+ installed packages/);
 		assert.match(lines.join("\n"), / {2}\[ \] npm:@foo\/bar@1\.0\.0/);
 		assert.match(lines.join("\n"), / {2}\[ \] \.\/local/);
@@ -71,15 +73,15 @@ describe("packages pane", () => {
 		const entries = [entry(0, "npm:a"), entry(1, "git:github.com/u/r")];
 		const pane = createPackagesPane({ readEntries: () => entries });
 
-		assert.equal(pane.itemCount(context(0)), 4);
-		assert.equal(pane.handleInput?.(" ", context(2)), true);
-		assert.equal(pane.itemCount(context(0)), 4);
+		assert.equal(pane.itemCount(context(0)), 5);
+		assert.equal(pane.handleInput?.(" ", context(3)), true);
+		assert.equal(pane.itemCount(context(0)), 5);
 		assert.match(
-			pane.render(context(2), 80, true).join("\n"),
+			pane.render(context(3), 80, true).join("\n"),
 			/ {2}Remove selected \(1\)[\s\S]*> \[x\] npm:a/,
 		);
 
-		const result = pane.handleInput?.("\r", context(1));
+		const result = pane.handleInput?.("\r", context(2));
 		assert.deepEqual(result, {
 			action: PACKAGES_ACTION_REMOVE,
 			payload: { sources: ["npm:a"] },
@@ -87,27 +89,33 @@ describe("packages pane", () => {
 		assert.deepEqual(sourcesFromRemovePayload(result?.payload), ["npm:a"]);
 	});
 
-	it("returns install action from the install row", () => {
+	it("returns install and update actions from action rows", () => {
 		const entries = [entry(0, "npm:a")];
 		const pane = createPackagesPane({ readEntries: () => entries });
 
 		assert.deepEqual(pane.handleInput?.("\r", context(0)), {
 			action: PACKAGES_ACTION_INSTALL,
 		});
+		assert.deepEqual(pane.handleInput?.("\r", context(1)), {
+			action: PACKAGES_ACTION_UPDATE_TAGGED,
+		});
 	});
 
-	it("uses install as the only action when no packages are installed", () => {
+	it("keeps update action available when no packages are installed", () => {
 		const pane = createPackagesPane({ readEntries: () => [] });
 
-		assert.equal(pane.itemCount(context(0)), 1);
-		const lines = pane.render(context(0), 80, true);
+		assert.equal(pane.itemCount(context(0)), 2);
+		const lines = pane.render(context(1), 80, true);
 		assert.match(
 			lines.join("\n"),
-			/> Install new package[\s\S]*Select packages to remove[\s\S]*No packages installed\. Choose Install new package to add one\./,
+			/ {2}Install new package\n> Update tagged packages[\s\S]*No packages installed\. Choose Install new package to add one\./,
 		);
 		assert.equal(lines.at(-1), "");
 		assert.deepEqual(pane.handleInput?.("\r", context(0)), {
 			action: PACKAGES_ACTION_INSTALL,
+		});
+		assert.deepEqual(pane.handleInput?.("\r", context(1)), {
+			action: PACKAGES_ACTION_UPDATE_TAGGED,
 		});
 	});
 
@@ -115,7 +123,7 @@ describe("packages pane", () => {
 		const entries = Array.from({ length: 10 }, (_, index) =>
 			entry(index, `npm:p${index}`),
 		);
-		const lines = renderPackagesPane(entries, new Set(), context(9, 7), 80, {
+		const lines = renderPackagesPane(entries, new Set(), context(10, 7), 80, {
 			activePane: true,
 		}).join("\n");
 

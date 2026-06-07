@@ -13,13 +13,16 @@ import {
 } from "../../src/index.js";
 import {
 	formatPackageOperationReport,
+	formatTaggedPackageUpdateReport,
 	installPackage,
 	removePackages,
+	updateTaggedNpmPackages,
 	type PackageOperationResult,
 } from "./operations.js";
 import {
 	PACKAGES_ACTION_INSTALL,
 	PACKAGES_ACTION_REMOVE,
+	PACKAGES_ACTION_UPDATE_TAGGED,
 	PACKAGES_COMMAND,
 	PACKAGES_PANE_ID,
 	createPackagesPane,
@@ -30,12 +33,15 @@ import { validateInstallSource } from "./packages.js";
 
 export {
 	formatPackageOperationReport,
+	formatTaggedPackageUpdateReport,
 	installPackage,
 	removePackages,
+	updateTaggedNpmPackages,
 } from "./operations.js";
 export {
 	PACKAGES_ACTION_INSTALL,
 	PACKAGES_ACTION_REMOVE,
+	PACKAGES_ACTION_UPDATE_TAGGED,
 	PACKAGES_COMMAND,
 	PACKAGES_PANE_ID,
 	createPackagesPane,
@@ -102,6 +108,10 @@ export async function handlePackagesPaneAction(
 		await handleInstall(pi, ctx);
 		return;
 	}
+	if (action.action === PACKAGES_ACTION_UPDATE_TAGGED) {
+		await handleUpdateTagged(pi, ctx);
+		return;
+	}
 	if (action.action === PACKAGES_ACTION_REMOVE) {
 		await handleRemove(pi, ctx, action.payload);
 	}
@@ -123,6 +133,14 @@ async function handleInstall(
 	}
 	const result = await installPackage(validation.source, { cwd: ctx.cwd });
 	sendReport(pi, [result]);
+}
+
+async function handleUpdateTagged(
+	pi: ExtensionAPI,
+	ctx: ExtensionCommandContext,
+): Promise<void> {
+	const results = await updateTaggedNpmPackages({ cwd: ctx.cwd });
+	sendReport(pi, results, formatTaggedPackageUpdateReport(results));
 }
 
 async function handleRemove(
@@ -148,10 +166,11 @@ async function waitForPanelTeardown(): Promise<void> {
 function sendReport(
 	pi: ExtensionAPI,
 	results: readonly PackageOperationResult[],
+	content = formatPackageOperationReport(results),
 ): void {
 	pi.sendMessage<{ results: readonly PackageOperationResult[] }>({
 		customType: WARDEN_PACKAGES_REPORT_MESSAGE,
-		content: formatPackageOperationReport(results),
+		content,
 		display: true,
 		details: { results },
 	});

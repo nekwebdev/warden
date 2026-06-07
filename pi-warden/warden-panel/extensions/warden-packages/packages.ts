@@ -16,6 +16,11 @@ export type GlobalSettingsReader = {
 	getGlobalSettings(): { readonly packages?: unknown };
 };
 
+export type TaggedNpmPackageSource = {
+	readonly name: string;
+	readonly tag: string;
+};
+
 export function readGlobalPackageEntries(
 	reader: GlobalSettingsReader = SettingsManager.create(
 		process.cwd(),
@@ -55,6 +60,34 @@ export function validateInstallSource(
 		};
 	}
 	return { ok: true, source };
+}
+
+export function parseTaggedNpmPackageSource(
+	source: string,
+): TaggedNpmPackageSource | undefined {
+	if (!source.startsWith("npm:")) return undefined;
+	const spec = source.slice("npm:".length).trim();
+	const match = spec.match(/^(@?[^@]+(?:\/[^@]+)?)(?:@(.+))?$/);
+	const name = match?.[1];
+	const tag = match?.[2];
+	if (!name || !tag) return undefined;
+	return { name, tag };
+}
+
+export function taggedNpmSourceWithVersion(
+	name: string,
+	version: string,
+): string {
+	return `npm:${name}@${version}`;
+}
+
+export function replacePackageEntrySource(
+	raw: unknown,
+	newSource: string,
+): unknown {
+	if (typeof raw === "string") return newSource;
+	if (!isPlainObject(raw) || typeof raw.source !== "string") return raw;
+	return { ...raw, source: newSource };
 }
 
 function packageSource(raw: unknown): string | undefined {

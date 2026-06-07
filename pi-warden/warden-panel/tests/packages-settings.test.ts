@@ -2,6 +2,8 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
 	normalizePackageEntries,
+	parseTaggedNpmPackageSource,
+	replacePackageEntrySource,
 	readGlobalPackageEntries,
 	validateInstallSource,
 	type GlobalSettingsReader,
@@ -49,6 +51,41 @@ describe("package settings parsing", () => {
 		assert.deepEqual(
 			readGlobalPackageEntries(reader).map((entry) => entry.source),
 			["npm:global"],
+		);
+	});
+
+	it("detects only tagged npm package sources", () => {
+		assert.deepEqual(parseTaggedNpmPackageSource("npm:@foo/bar@1.0.0"), {
+			name: "@foo/bar",
+			tag: "1.0.0",
+		});
+		assert.deepEqual(parseTaggedNpmPackageSource("npm:left-pad@latest"), {
+			name: "left-pad",
+			tag: "latest",
+		});
+		assert.deepEqual(parseTaggedNpmPackageSource("npm:@scope/pkg@^1"), {
+			name: "@scope/pkg",
+			tag: "^1",
+		});
+		assert.equal(parseTaggedNpmPackageSource("npm:@foo/bar"), undefined);
+		assert.equal(parseTaggedNpmPackageSource("npm:left-pad"), undefined);
+		assert.equal(
+			parseTaggedNpmPackageSource("git:github.com/user/repo@v1"),
+			undefined,
+		);
+	});
+
+	it("rewrites string and object package sources without losing fields", () => {
+		assert.equal(
+			replacePackageEntrySource("npm:left-pad@latest", "npm:left-pad@1.3.0"),
+			"npm:left-pad@1.3.0",
+		);
+		assert.deepEqual(
+			replacePackageEntrySource(
+				{ source: "npm:left-pad@latest", extensions: [], custom: true },
+				"npm:left-pad@1.3.0",
+			),
+			{ source: "npm:left-pad@1.3.0", extensions: [], custom: true },
 		);
 	});
 });

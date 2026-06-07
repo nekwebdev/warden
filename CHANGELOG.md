@@ -4,6 +4,10 @@ All notable Warden changes are recorded here.
 
 ## Unreleased
 
+### Added
+
+- Warden Panel Packages pane can update tagged npm package entries from global Pi settings, reconcile changed installs, and report `old -> new` source changes.
+
 ### Changed
 
 - Warden Flow map freshness now uses the requested map's per-map basis and committed changes since that basis, so commits containing only map-owned files keep refreshed maps fresh while later non-map commits mark them stale.
@@ -12,3 +16,4 @@ All notable Warden changes are recorded here.
 ### Tests
 
 - Added Warden Flow coverage for map-only commits, non-map commits, same-HEAD freshness, invalid or missing state, unreachable bases, and formatted freshness metadata.
+- Added Warden Panel coverage for tagged npm package update parsing, settings rewrites, pane row order, and update reports.

@@ -39,11 +39,13 @@ Supported package entries match Pi settings:
 }
 ```
 
-The first option is `Install new package`, which opens a text prompt and accepts any one-line package source. Pi's package manager validates the source.
+The first option is `Install new package`, which opens a text prompt and accepts any one-line package source. Pi's package manager validates the source, and the Packages pane persists the exact source text after trimming surrounding whitespace.
 
-A blank line separates install from the package list section. The package list section says `Select packages to remove` until rows are selected, then `Remove selected` replaces that line and opens a confirmation dialog listing exact sources. Rows display exact package sources only. Space/Enter toggles installed rows for removal.
+The second option is `Update tagged packages`. It scans global settings for npm package sources that already include a tag or version segment, such as `npm:@foo/bar@1.0.0`, `npm:left-pad@latest`, and object entries with a tagged npm `source`. It skips untagged npm packages, git/URL packages, and local paths. Changed entries are installed/reconciled first, then their global settings source is rewritten to the resolved concrete latest version. The report shows `old -> new`, unchanged tagged packages, failures, or `No tagged npm packages found.` Failed entries keep their old settings source.
 
-After install/remove, the extension writes a concise chat report and tells the user to restart Pi to load package changes. It does not auto-reload Pi.
+A blank line separates the install/update actions from the package list section. The package list section says `Select packages to remove` until rows are selected, then `Remove selected` replaces that line and opens a confirmation dialog listing exact sources. Rows display exact package sources only. Space/Enter toggles installed rows for removal.
+
+After install/remove/update, the extension writes a concise chat report and tells the user to restart Pi to load package changes. It does not auto-reload Pi.
 
 ## Pane framework API
 

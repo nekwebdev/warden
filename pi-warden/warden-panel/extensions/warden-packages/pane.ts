@@ -8,10 +8,12 @@ import { readGlobalPackageEntries, type PackageEntry } from "./packages.js";
 export const PACKAGES_PANE_ID = "packages";
 export const PACKAGES_COMMAND = "warden:packages";
 export const PACKAGES_ACTION_INSTALL = "install";
+export const PACKAGES_ACTION_UPDATE_TAGGED = "update-tagged";
 export const PACKAGES_ACTION_REMOVE = "remove";
 
 type PackagesPaneActionId =
 	| typeof PACKAGES_ACTION_INSTALL
+	| typeof PACKAGES_ACTION_UPDATE_TAGGED
 	| typeof PACKAGES_ACTION_REMOVE;
 
 type PackagesPaneDependencies = {
@@ -46,7 +48,7 @@ export function createPackagesPane(
 	}
 
 	function itemCount(current: readonly PackageEntry[]): number {
-		return current.length === 0 ? 1 : current.length + 2;
+		return current.length === 0 ? 2 : current.length + 3;
 	}
 
 	return {
@@ -68,7 +70,9 @@ export function createPackagesPane(
 			if (!isActivation(data)) return false;
 			const current = entries();
 			if (ctx.selectedIndex === 0) return { action: PACKAGES_ACTION_INSTALL };
-			if (ctx.selectedIndex === 1) {
+			if (ctx.selectedIndex === 1)
+				return { action: PACKAGES_ACTION_UPDATE_TAGGED };
+			if (ctx.selectedIndex === 2) {
 				const sources = selectedEntries(current).map((entry) => entry.source);
 				if (sources.length === 0) return false;
 				return {
@@ -76,7 +80,7 @@ export function createPackagesPane(
 					payload: { sources },
 				};
 			}
-			const entry = current[ctx.selectedIndex - 2];
+			const entry = current[ctx.selectedIndex - 3];
 			if (!entry) return false;
 			if (selectedIds.has(entry.id)) selectedIds.delete(entry.id);
 			else selectedIds.add(entry.id);
@@ -104,24 +108,14 @@ export function renderPackagesPane(
 			ctx,
 		),
 	);
-	lines.push("");
-	if (selectedCount > 0) {
-		lines.push(
-			renderActionRow(
-				PACKAGES_ACTION_REMOVE,
-				selectedCount,
-				{ active: activity.activePane && ctx.selectedIndex === 1 },
-				ctx,
-			),
-		);
-	} else {
-		lines.push(
-			renderSelectPackagesRow(
-				{ active: activity.activePane && ctx.selectedIndex === 1 },
-				ctx,
-			),
-		);
-	}
+	lines.push(
+		renderActionRow(
+			PACKAGES_ACTION_UPDATE_TAGGED,
+			selectedCount,
+			{ active: activity.activePane && ctx.selectedIndex === 1 },
+			ctx,
+		),
+	);
 	lines.push("");
 
 	if (entries.length === 0) {
@@ -131,7 +125,26 @@ export function renderPackagesPane(
 				"No packages installed. Choose Install new package to add one.",
 			),
 		);
+	} else if (selectedCount > 0) {
+		lines.push(
+			renderActionRow(
+				PACKAGES_ACTION_REMOVE,
+				selectedCount,
+				{ active: activity.activePane && ctx.selectedIndex === 2 },
+				ctx,
+			),
+		);
 	} else {
+		lines.push(
+			renderSelectPackagesRow(
+				{ active: activity.activePane && ctx.selectedIndex === 2 },
+				ctx,
+			),
+		);
+	}
+	lines.push("");
+
+	if (entries.length > 0) {
 		appendPackageRows(lines, entries, selectedIds, ctx, activity);
 	}
 	lines.push("");
@@ -153,7 +166,7 @@ function appendPackageRows(
 	ctx: WardenPanelPaneContext,
 	activity: PaneActivity,
 ): void {
-	const packageIndexOffset = 2;
+	const packageIndexOffset = 3;
 	const window = packageWindow(entries.length, ctx);
 	for (let index = window.start; index < window.end; index++) {
 		const entry = entries[index];
@@ -182,11 +195,11 @@ function appendPackageRows(
 
 function packageWindow(totalEntries: number, ctx: WardenPanelPaneContext) {
 	const maxPaneLines = finitePaneLines(ctx.maxPaneLines);
-	const needsScrollProbe = totalEntries > Math.max(1, maxPaneLines - 5);
-	const fixedLines = 5 + (needsScrollProbe ? 1 : 0);
+	const needsScrollProbe = totalEntries > Math.max(1, maxPaneLines - 6);
+	const fixedLines = 6 + (needsScrollProbe ? 1 : 0);
 	const listBudget = Math.max(1, maxPaneLines - fixedLines);
 	const selectedPackageIndex = clamp(
-		ctx.selectedIndex - 2,
+		ctx.selectedIndex - 3,
 		0,
 		totalEntries - 1,
 	);
@@ -220,7 +233,9 @@ function renderActionRow(
 	const label =
 		action === PACKAGES_ACTION_REMOVE
 			? `Remove selected (${selectedCount})`
-			: "Install new package";
+			: action === PACKAGES_ACTION_UPDATE_TAGGED
+				? "Update tagged packages"
+				: "Install new package";
 	return selectableRow(label, activity, "text", ctx);
 }
 
@@ -277,6 +292,7 @@ export function isPackagesPaneAction(
 ): action is WardenPanelPaneAction & { action: PackagesPaneActionId } {
 	return (
 		action.action === PACKAGES_ACTION_INSTALL ||
+		action.action === PACKAGES_ACTION_UPDATE_TAGGED ||
 		action.action === PACKAGES_ACTION_REMOVE
 	);
 }
