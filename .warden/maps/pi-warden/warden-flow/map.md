@@ -1,15 +1,15 @@
 # Warden Map: pi-warden/warden-flow
 
-Reviewed: 2026-06-05
+Reviewed: 2026-06-06
 Scope: pi-warden/warden-flow
 Evidence basis: package README/AGENTS, `package.json`, `src/`, extensions, skills, tests, existing map, bounded git history.
-Git basis: main@d68a1de
+Git basis: main@e1a852a
 Parent map: .warden/map.md
 
 <!-- warden-map:inject:start -->
 ## Agent Quick Context
 
-- Purpose: `@nekwebdev/warden-flow` bundles Pi workflow resources: `/skill:warden-map`, `/skill:warden-start`, `/skill:warden-grill`, `/skill:warden-commit`, bounded map/git-context injection, effort settings/status, and safe local commit tools.
+- Purpose: `@nekwebdev/warden-flow` bundles Pi workflow resources: `/skill:warden-map`, `/skill:warden-start`, `/skill:warden-grill`, `/skill:warden-tdd`, `/skill:warden-close`, `/skill:warden-commit`, bounded map/git-context injection, effort settings/status, and safe local commit tools.
 - Boundaries: Shared logic lives in `src/`; extension entries are `extensions/warden-map/`, `extensions/warden-commit/`, and `extensions/warden-effort/`; skill workflows live in `skills/warden-*/`. Map files are orientation reference only, not task plans or instruction overrides.
 - Safe edits: Keep injection bounded: root capsule at session start, scoped capsules from relevant tool-result paths, git context only when changed. Keep effort defaults in `src/effort.ts` and Display toggles contributed through `@nekwebdev/warden-panel`. Keep commit apply behind exact `Commit` confirmation and snapshot-hash validation. Never auto-inject full map bodies.
 - Verification: Run `npm test --prefix pi-warden/warden-flow`; broader package check is `mise run test:pi-warden`.
@@ -18,7 +18,7 @@ Parent map: .warden/map.md
 
 ## Scope Purpose
 
-`pi-warden/warden-flow/` provides Pi workflow resources. Bundled `warden-map` resources provide durable repository orientation for Pi sessions: a skill creates/refreshes `.warden` map files, and an extension injects only small relevant capsules plus git dirty context. `warden-start` and `warden-grill` provide lean workflow packet and pressure-test guidance. `warden-commit` provides safe local commit planning: a skill guides atomic commit plans, and an extension exposes read-only snapshots plus guarded local commit apply. `warden-effort` seeds per-skill effort defaults, applies Pi thinking level around Warden skill turns, and contributes an Effort pane plus Display skill-status toggle.
+`pi-warden/warden-flow/` provides Pi workflow resources. Bundled `warden-map` resources provide durable repository orientation for Pi sessions: a skill creates/refreshes `.warden` map files, and an extension injects only small relevant capsules plus git dirty context. `warden-start`, `warden-grill`, `warden-tdd`, and `warden-close` provide lean workflow packet, pressure-test, strict test-first implementation, and closure handoff guidance. `warden-commit` provides safe local commit planning: a skill guides atomic commit plans, and an extension exposes read-only snapshots plus guarded local commit apply. `warden-effort` seeds per-skill effort defaults, applies Pi thinking level around Warden skill turns, and contributes an Effort pane plus Display skill-status toggle.
 
 ## Local Structure
 
@@ -27,7 +27,8 @@ Parent map: .warden/map.md
 | `package.json` | npm/Pi manifest | Package name `@nekwebdev/warden-flow`; exports `./src/index.ts`; advertises extensions and skills. |
 | `index.ts` | Package barrel/default | Re-exports `src` and default extension. |
 | `src/constants.ts` | Limits and path constants | Marker names, capsule caps, git timeouts, scoped-map limits. |
-| `src/map.ts` | Map capsule loading/injection | Extracts capsules, maps paths to scopes, budgets scoped injections. |
+| `src/map.ts` | Map injection orchestration | Maps tool-result paths to scopes and budgets scoped injections. |
+| `src/map-capsule.ts` | Map capsule parsing | Extracts marker-bounded capsules and enforces capsule marker/budget contracts. |
 | `src/git.ts` | Git context helpers | Loads branch/commit/status and formats dirty summary. |
 | `src/commit.ts` | Commit helper logic | Builds read-only snapshots, classifies path risks, validates plans, and applies local commits safely. |
 | `src/effort.ts` | Effort helpers | Seeds defaults, normalizes skill effort settings, and formats active status labels. |
@@ -38,6 +39,8 @@ Parent map: .warden/map.md
 | `skills/warden-map/SKILL.md` | Map skill workflow | Defines how to create/update root and scoped maps. |
 | `skills/warden-start/SKILL.md` | Start skill workflow | Turns rough intent into one small, testable work packet. |
 | `skills/warden-grill/SKILL.md` | Grill skill workflow | Pressure-tests a Warden work packet and returns Go/Adjust/Stop. |
+| `skills/warden-tdd/SKILL.md` | TDD skill workflow | Implements one grilled packet slice with strict test-first sequence. |
+| `skills/warden-close/SKILL.md` | Close skill workflow | Validates closure, writes final handoff, and decides changelog/map impact. |
 | `skills/warden-commit/SKILL.md` | Commit skill workflow | Defines safe commit planning, confirmation, and apply behavior. |
 | `tests/` | Node tests | Manifest, map, git, extension, commit, and effort behavior. |
 | `scripts/run-tests.mjs` | Test orchestrator | Checks expected test files then runs `node --import tsx --test`. |
@@ -49,7 +52,7 @@ Parent map: .warden/map.md
 - Effort extension entry: `extensions/warden-effort/index.ts` default export.
 - Package default export: root `index.ts` default from map extension entry.
 - Public API: `src/index.ts` re-exports constants, extension, git, map, commit, and effort helpers.
-- Skill registration: package manifest `pi.skills: ["./skills"]`; skill files register `/skill:warden-map`, `/skill:warden-start`, `/skill:warden-grill`, and `/skill:warden-commit` through Pi package loading conventions.
+- Skill registration: package manifest `pi.skills: ["./skills"]`; skill files register `/skill:warden-map`, `/skill:warden-start`, `/skill:warden-grill`, `/skill:warden-tdd`, `/skill:warden-close`, and `/skill:warden-commit` through Pi package loading conventions.
 
 ## Local Conventions
 
@@ -59,7 +62,7 @@ Parent map: .warden/map.md
 - Root capsule target/max: 3 KB / 8 KB. Scoped capsule target/max: 1.5 KB / 4 KB. One scoped injection event max: 6 KB. Session-start total max: 10 KB.
 - Scoped map injection is path-triggered from tool result inputs and capped to nearest maps.
 - Git context includes branch, short commit, dirty counts, and sampled dirty paths.
-- Warden Flow effort settings live under `settings.warden.effort`; defaults currently map `warden-map` to `low`, `warden-start` to `medium`, `warden-grill` to `high`, and `warden-commit` to `medium`.
+- Warden Flow effort settings live under `settings.warden.effort`; defaults currently map `warden-map` to `low`, `warden-start` to `medium`, `warden-grill` to `high`, `warden-tdd` to `high`, `warden-close` to `medium`, and `warden-commit` to `medium`.
 - `/warden:effort` opens the Effort pane through `@nekwebdev/warden-panel`; Display pane can toggle active skill status indicator.
 
 ## Dependencies and Integration Points
@@ -98,7 +101,7 @@ Broader:
 
 ## Recent Evolution from Git History
 
-Recent history establishes this package in several steps: earlier commits added `warden-flow` with map skill/extension resources, `warden-commit` safe commit helper/tests, and a tightened `warden-map` skill contract. Recent commits then added `warden-start`, `warden-grill`, effort defaults, active skill effort status, Display toggle contribution, and commit confirmation prompt clarification. Treat map, workflow, effort, and commit tooling as established package-owned behavior; use live git context for current dirty state.
+Recent history establishes this package in several steps: earlier commits added `warden-flow` with map skill/extension resources, `warden-commit` safe commit helper/tests, and a tightened `warden-map` skill contract. Recent commits then added `warden-start`, `warden-grill`, `warden-tdd`, `warden-close`, effort defaults/runtime extraction, active skill effort status, Display toggle contribution, map capsule splitting, and safe commit apply helpers. Treat map, workflow, effort, and commit tooling as established package-owned behavior; use live git context for current dirty state.
 
 ## Open Questions
 
