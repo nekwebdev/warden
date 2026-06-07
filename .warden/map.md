@@ -2,8 +2,8 @@
 
 Reviewed: 2026-06-06
 Scope: repository root
-Evidence basis: root/subproject AGENTS and README files; `.mise.toml`; Bats/package test entry points; Pi package manifests; existing scoped maps; CHANGELOG placeholder; bounded git history.
-Git basis: main@02fb384
+Evidence basis: root/subproject AGENTS and README files; `.mise.toml`; Bats/package test entry points; Pi package manifests; existing scoped maps; CHANGELOG.md; bounded git history.
+Git basis: main@76a529e
 
 <!-- warden-map:inject:start -->
 ## Agent Quick Context
@@ -77,16 +77,16 @@ First-run promise is central: user can clone anywhere, run `./warden`, choose or
 - `run-warden/lib/pi-agents.sh` integrates registry package `@earendil-works/pi-coding-agent` into isolated agent npm prefixes and owns Warden-managed Pi runtime updates.
 - `pi-warden/warden-panel` exposes pane/display-setting registry APIs from `@nekwebdev/warden-panel`; independently loaded Warden packages share pane/action state through `globalThis`.
 - `pi-warden/warden-panel/extensions/warden-packages` edits global Pi `packages` settings through Pi package-manager behavior and reports restart-required messages.
-- `pi-warden/warden-flow` bundles `warden-map`, `warden-start`, `warden-grill`, `warden-tdd`, `warden-close`, and `warden-commit` skills; map/git-context, effort, and commit-safety extensions; and an Effort pane plus Display skill-status toggle contribution through `@nekwebdev/warden-panel`. It never injects full map bodies.
+- `pi-warden/warden-flow` bundles `warden-map`, `warden-docs`, `warden-start`, `warden-grill`, `warden-tdd`, `warden-close`, and `warden-commit` skills; map/git-context, effort, and commit-safety extensions; and an Effort pane plus Display skill-status toggle contribution through `@nekwebdev/warden-panel`. It never injects full map bodies.
 - New Pi packages should follow `pi-warden/<package>/` shape with manifest, README, AGENTS, tests, scripts, and only needed asset folders.
 
 ## Recent Evolution from Git History
 
-Git history available. Current bounded basis: `main@02fb384`.
+Git history available. Current bounded basis: `main@76a529e`.
 
 Orientation-relevant recent changes:
 
-- `warden-flow` remains active cluster: recent commits added `.warden/map-state.json` freshness tracking, folded former `warden-seal` workflow into `warden-close`, added `warden-tdd`, safer commit apply/snapshot helpers, map capsule splitting, and effort runtime extraction after earlier `warden-start`/`warden-grill` work.
+- `warden-flow` remains active cluster: recent commits added classifier-based `.warden/map-state.json` freshness tracking, `warden-docs`, folded former `warden-seal` workflow into `warden-close`, added `warden-tdd`, safer commit apply/snapshot helpers, map capsule splitting, and effort runtime extraction after earlier `warden-start`/`warden-grill` work.
 - `warden-panel` recently extracted panel session rendering and tightened package-pane empty-state tests; prior work added contributed Display settings so sibling packages can add inline Display toggles through public pane API.
 - Runner Pi-agent work includes `warden agents update` and `warden pi <name> update` behavior for Warden-managed runtime updates, plus canonical flattened `warden.agent.cwd` handling, tmux-window handling, and shell integration work.
 - Root docs now clarify `nix-warden/` and `dev-warden/` as skeleton-only, and root `package.json` exposes workspace test scripts.

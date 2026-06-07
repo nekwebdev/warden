@@ -3,14 +3,14 @@
 Reviewed: 2026-06-06
 Scope: pi-warden
 Evidence basis: `pi-warden/AGENTS.md`, `pi-warden/README.md`, package READMEs/AGENTS, package manifests, `pi-warden/tests/smoke.bats`, existing child maps, bounded git history.
-Git basis: main@02fb384
+Git basis: main@76a529e
 Parent map: .warden/map.md
 
 <!-- warden-map:inject:start -->
 ## Agent Quick Context
 
 - Purpose: `pi-warden/` is Warden's Pi Agent package area. It is a container, not itself a Pi package.
-- Boundaries: Package manifests/source/tests live under direct child package folders. Current packages are `warden-panel` (`@nekwebdev/warden-panel`) and `warden-flow` (`@nekwebdev/warden-flow`, bundling Warden workflow skills, map/git injection, effort settings/status, TDD/close workflows, and commit safety tools). Runner-owned `warden agents` and `warden pi` workflows remain in `run-warden/`.
+- Boundaries: Package manifests/source/tests live under direct child package folders. Current packages are `warden-panel` (`@nekwebdev/warden-panel`) and `warden-flow` (`@nekwebdev/warden-flow`, bundling Warden workflow/docs skills, map/git injection, effort settings/status, TDD/close workflows, and commit safety tools). Runner-owned `warden agents` and `warden pi` workflows remain in `run-warden/`.
 - Safe edits: Read `pi-warden/AGENTS.md` and package `AGENTS.md` before package edits. Do not place package manifests/source at `pi-warden/` root. Package behavior must not mutate root bootstrap or runner workflows unless explicitly scoped.
 - Verification: Run `mise run test:pi-warden`; package-specific checks are `npm test --prefix pi-warden/warden-panel` and `npm test --prefix pi-warden/warden-flow` after install.
 - Sharp edges: Package roots may contain ignored `node_modules/`. `warden-panel` absorbed former `warden-packages`; do not recreate `pi-warden/warden-packages`. Only `warden-map` writes `.warden/map-state.json`. Use live git context injection for current dirty-state details.
@@ -28,7 +28,7 @@ Parent map: .warden/map.md
 | `README.md` | Package-area docs | Lists current packages and package shape. |
 | `tests/smoke.bats` | Smoke tests | Checks package folders/manifests/resources and former package fold-in. |
 | `warden-panel/` | Pi package | Panel framework plus bundled panel/display/packages extensions. See scoped map. |
-| `warden-flow/` | Pi package | Workflow package bundling `warden-map`, `warden-start`, `warden-grill`, `warden-tdd`, `warden-close`, `warden-commit`, map/git context, effort settings/status, and commit safety tools. See scoped map. |
+| `warden-flow/` | Pi package | Workflow package bundling `warden-map`, `warden-docs`, `warden-start`, `warden-grill`, `warden-tdd`, `warden-close`, `warden-commit`, map/git context, effort settings/status, and commit safety tools. See scoped map. |
 
 Expected package shape from guidance:
 
@@ -86,7 +86,7 @@ Focused package commands:
 
 ## Recent Evolution from Git History
 
-Recent git history shows package area shifted from panel-only to workflow + panel package set. `warden-panel` added bundled panel extensions, folded former `warden-packages` into `extensions/warden-packages`, added contributed Display settings, extracted panel session rendering, and tightened package-pane tests. `warden-flow` added durable maps/git context, `.warden/map-state.json` freshness tracking, `warden-commit` snapshot/apply tooling, `warden-start`, `warden-grill`, `warden-tdd`, `warden-close`, per-skill effort defaults, active skill effort status, and Effort/Display contributions through `warden-panel`. Former `warden-seal` workflow was folded into `warden-close`; package-area docs and smoke tests now name only `warden-panel` and `warden-flow`.
+Recent git history shows package area shifted from panel-only to workflow + panel package set. `warden-panel` added bundled panel extensions, folded former `warden-packages` into `extensions/warden-packages`, added contributed Display settings, extracted panel session rendering, and tightened package-pane tests. `warden-flow` added durable maps/git context, classifier-based `.warden/map-state.json` freshness tracking, `warden-commit` snapshot/apply tooling, `warden-docs`, `warden-start`, `warden-grill`, `warden-tdd`, `warden-close`, per-skill effort defaults, active skill effort status, and Effort/Display contributions through `warden-panel`. Former `warden-seal` workflow was folded into `warden-close`; package-area docs and smoke tests now name only `warden-panel` and `warden-flow`.
 
 ## Open Questions
 
