@@ -57,7 +57,12 @@ describe("warden-subagents package manifest", () => {
 			"src/invocation-config.ts",
 			"src/model-resolver.ts",
 			"src/prompts.ts",
+			"src/status-note.ts",
 			"src/types.ts",
+			"src/usage.ts",
+			"src/ui/agent-renderer.ts",
+			"src/ui/agent-widget.ts",
+			"src/ui/notification-renderer.ts",
 			"extensions/subagents/index.ts",
 			"scripts/run-tests.mjs",
 			"tests/package-scaffold.test.mjs",
@@ -65,6 +70,10 @@ describe("warden-subagents package manifest", () => {
 			"tests/custom-agents.test.mjs",
 			"tests/agent-runner.test.mjs",
 			"tests/agent-manager.test.mjs",
+			"tests/usage.test.mjs",
+			"tests/agent-widget.test.mjs",
+			"tests/agent-renderer.test.mjs",
+			"tests/notification-renderer.test.mjs",
 		];
 
 		for (const entry of requiredEntries) {
@@ -100,12 +109,21 @@ describe("warden-subagents package manifest", () => {
 			"src/invocation-config.ts",
 			"src/model-resolver.ts",
 			"src/prompts.ts",
+			"src/status-note.ts",
 			"src/types.ts",
+			"src/ui/agent-renderer.ts",
+			"src/ui/agent-widget.ts",
+			"src/ui/notification-renderer.ts",
+			"src/usage.ts",
 			"tests/agent-manager.test.mjs",
+			"tests/agent-renderer.test.mjs",
 			"tests/agent-runner.test.mjs",
 			"tests/agent-types.test.mjs",
+			"tests/agent-widget.test.mjs",
 			"tests/custom-agents.test.mjs",
+			"tests/notification-renderer.test.mjs",
 			"tests/package-scaffold.test.mjs",
+			"tests/usage.test.mjs",
 		]);
 	});
 });

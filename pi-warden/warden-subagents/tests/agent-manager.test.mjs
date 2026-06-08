@@ -259,6 +259,87 @@ describe("AgentManager background lifecycle", () => {
 		);
 	});
 
+	it("notifies observers with activity snapshots and unconsumed terminal results", async () => {
+		const gate = deferred();
+		const activities = [];
+		const terminals = [];
+		const manager = new AgentManager({ idFactory: () => "agent-observed" });
+		manager.onActivityChange((snapshot) => activities.push(snapshot));
+		manager.onTerminalResult((event) => terminals.push(event));
+
+		const launch = manager.start({
+			params: {
+				subagent_type: "Explore",
+				prompt: "work",
+				description: "observed",
+			},
+			ctx: { cwd: "/tmp/project" },
+			registry: makeRegistry(),
+			runAgent: async ({ onActivity }) => {
+				onActivity?.({
+					currentActivity: "calling read",
+					turnCount: 1,
+					maxTurns: 2,
+					toolUseCount: 1,
+					usage: { tokens: 42 },
+				});
+				await gate.promise;
+				return {
+					content: [{ type: "text", text: "observed final" }],
+					details: { status: "completed", agentType: "Explore" },
+				};
+			},
+		});
+		await tick();
+
+		assert.equal(launch.details.status, "running");
+		assert.equal(
+			manager.getActivitySnapshot().running[0].currentActivity,
+			"calling read",
+		);
+		assert.equal(manager.getActivitySnapshot().running[0].turnCount, 1);
+		assert.equal(activities.length >= 2, true);
+
+		gate.resolve();
+		await tick();
+		assert.equal(terminals.length, 1);
+		assert.equal(terminals[0].agentId, "agent-observed");
+		assert.equal(terminals[0].result.details.status, "completed");
+	});
+
+	it("suppresses terminal notification when wait lookup consumes the result", async () => {
+		const gate = deferred();
+		const terminals = [];
+		const manager = new AgentManager({ idFactory: () => "agent-consumed" });
+		manager.onTerminalResult((event) => terminals.push(event));
+		const launch = manager.start({
+			params: {
+				subagent_type: "Explore",
+				prompt: "work",
+				description: "consumed",
+			},
+			ctx: { cwd: "/tmp/project" },
+			registry: makeRegistry(),
+			runAgent: async () => {
+				await gate.promise;
+				return {
+					content: [{ type: "text", text: "consumed final" }],
+					details: { status: "completed", agentType: "Explore" },
+				};
+			},
+		});
+		const waiting = manager.waitForResult({
+			agent_id: launch.details.agentId,
+			wait: true,
+		});
+
+		gate.resolve();
+		const result = await waiting;
+		await tick();
+		assert.equal(result.details.status, "completed");
+		assert.deepEqual(terminals, []);
+	});
+
 	it("registers result lookup over the same manager and clears records on shutdown", async () => {
 		const gate = deferred();
 		const manager = new AgentManager({ idFactory: () => "agent-shutdown" });

@@ -21,15 +21,39 @@ export {
 	normalizeMaxTurns,
 	resolveForegroundInvocation,
 } from "./src/invocation-config.ts";
+export {
+	buildNotificationPreview,
+	extractPassiveUsage,
+	formatCompactNumber,
+	mergePassiveUsage,
+} from "./src/usage.ts";
+export { statusNote } from "./src/status-note.ts";
+export {
+	SUBAGENT_WIDGET_ID,
+	buildAgentWidgetLines,
+	createAgentWidgetController,
+} from "./src/ui/agent-widget.ts";
+export {
+	renderAgentCall,
+	renderAgentResult,
+} from "./src/ui/agent-renderer.ts";
+export {
+	SUBAGENT_NOTIFICATION_TYPE,
+	buildSubagentNotificationPayload,
+	renderSubagentNotification,
+	sendSubagentNotification,
+} from "./src/ui/notification-renderer.ts";
 export { resolveModelRequest } from "./src/model-resolver.ts";
 export { buildAgentSystemPrompt } from "./src/prompts.ts";
 export type {
+	AgentActivityUpdate,
 	AgentToolDetailsLike,
 	AgentToolResultLike,
 	BackgroundAgentStatus,
 	BackgroundRunAgent,
 	GetSubagentResultParams,
 	StartBackgroundAgentOptions,
+	TerminalResultEvent,
 } from "./src/agent-manager.ts";
 export type {
 	AgentRunStatus,
@@ -64,6 +88,20 @@ export type {
 	ForegroundInvocation,
 	MaxTurnPlan,
 } from "./src/invocation-config.ts";
+export type {
+	PassiveUsageSnapshot,
+	PassiveUsageStats,
+} from "./src/usage.ts";
+export type {
+	AgentActivityItem,
+	AgentActivitySnapshot,
+	AgentWidgetController,
+	BuildAgentWidgetOptions,
+} from "./src/ui/agent-widget.ts";
+export type {
+	SubagentNotificationDetails,
+	SubagentNotificationPayload,
+} from "./src/ui/notification-renderer.ts";
 export type {
 	ModelLike,
 	ModelRegistryLike,

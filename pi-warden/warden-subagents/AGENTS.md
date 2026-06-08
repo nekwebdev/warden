@@ -20,13 +20,13 @@ Current package owns:
 Hard fences:
 
 - background launch/result lookup is allowed only through the package-local `AgentManager`, `Agent({ run_in_background: true })`, and `get_subagent_result` tool path;
-- no background steering, resume, notifications, persistent retention, scheduling, RPC, worktree, or UI overlays;
-- no UI;
+- native Pi widget and one-per-unconsumed-terminal completion notifications are allowed only through package-local UI/notification helpers;
+- no background steering, resume, persistent retention, scheduling, RPC, worktree, Warden Panel pane, `/agents` menu, or conversation overlay;
 - no scheduling;
 - no memory behavior;
 - no RPC behavior;
 - no worktree isolation;
-- no Pi command, renderer, scheduler, or background registration;
+- no Pi command, scheduler, or background registration outside package-local `Agent`/`get_subagent_result` tools and native renderers;
 - no root bootstrap, runner workflow, `warden agents ...`, shell integration, Nix, or dev-environment behavior.
 
 ## Agent runner rules

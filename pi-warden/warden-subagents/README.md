@@ -13,8 +13,8 @@ Current package scope:
 
 Still intentionally out of scope:
 
-- no background steering, resume, notifications, persistent retention, scheduling, RPC, worktree isolation, or UI overlays;
-- no UI;
+- no background steering, resume, persistent retention, scheduling, RPC, worktree isolation, Warden Panel pane, `/agents` menu, or conversation overlay;
+- native Pi widget and one-per-unconsumed-terminal completion notifications are in scope only for package-local background `Agent` activity;
 - no scheduling;
 - no memory behavior;
 - no RPC behavior;
@@ -196,7 +196,7 @@ Future slices may add subagent behavior inside this package only when packet sco
 - no root bootstrap changes;
 - no shell integration;
 - no Nix or dev-environment product behavior;
-- no background steering, resume, notifications, persistent retention, RPC behavior, scheduling, memory, UI, or worktree isolation until separate accepted slices define them.
+- no background steering, resume, persistent retention, RPC behavior, scheduling, memory, Warden Panel pane, `/agents` menu, conversation overlay, or worktree isolation until separate accepted slices define them.
 
 ## Upstream attribution
 

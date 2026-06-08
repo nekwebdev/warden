@@ -14,8 +14,11 @@ import {
 } from "./invocation-config.ts";
 import { resolveModelRequest } from "./model-resolver.ts";
 import { buildAgentSystemPrompt } from "./prompts.ts";
+import { renderAgentCall, renderAgentResult } from "./ui/agent-renderer.ts";
+import { extractPassiveUsage, type PassiveUsageSnapshot } from "./usage.ts";
 import {
 	AgentManager,
+	type AgentActivityUpdate,
 	type AgentToolResultLike,
 	createGetSubagentResultToolDefinition,
 } from "./agent-manager.ts";
@@ -38,7 +41,7 @@ export type AgentRunStatus =
 	| "aborted"
 	| "error";
 
-export interface AgentToolDetails {
+export interface AgentToolDetails extends PassiveUsageSnapshot {
 	status: AgentRunStatus;
 	agentId?: string;
 	agentType?: string;
@@ -93,6 +96,7 @@ export interface RunForegroundAgentOptions {
 	registry?: AgentTypeRegistry;
 	createChildSession?: CreateChildSession;
 	signal?: AbortSignal;
+	onActivity?: (update: AgentActivityUpdate) => void;
 }
 
 export interface CreateAgentToolDefinitionOptions {
@@ -174,6 +178,8 @@ export function createAgentToolDefinition(
 			"Agent accepts subagent_type, prompt, description, model, thinking, max_turns, run_in_background, resume, isolated, inherit_context, and isolation.",
 		],
 		parameters: AGENT_PARAMETERS_SCHEMA,
+		renderCall: renderAgentCall,
+		renderResult: renderAgentResult,
 		async execute(
 			_toolCallId: string,
 			params: ForegroundAgentParams,
@@ -198,13 +204,20 @@ export function createAgentToolDefinition(
 					ctx: safeCtx,
 					registry,
 					signal,
-					runAgent: ({ params: runParams, ctx, registry, signal }) =>
+					runAgent: ({
+						params: runParams,
+						ctx,
+						registry,
+						signal,
+						onActivity,
+					}) =>
 						runForegroundAgent({
 							params: runParams,
 							ctx,
 							registry,
 							createChildSession: options.createChildSession,
 							signal,
+							onActivity,
 						}) as Promise<AgentToolResultLike>,
 				}) as AgentToolResult;
 			}
@@ -292,6 +305,9 @@ export async function runForegroundAgent(
 	let activeTools: string[] = [];
 	let steered = false;
 	let aborted = false;
+	let turns = 0;
+	let toolUses = 0;
+	let latestActivity: PassiveUsageSnapshot = {};
 	let unsubscribe: (() => void) | undefined;
 	let abortListener: (() => void) | undefined;
 	try {
@@ -313,13 +329,33 @@ export async function runForegroundAgent(
 			options.signal?.addEventListener("abort", abortListener, { once: true });
 
 		activeTools = await enforceToolPolicy(child, agent);
+		options.onActivity?.({
+			currentActivity: "child session ready",
+			maxTurns: invocation.maxTurns,
+		});
 
 		const maxTurnPlan = normalizeMaxTurns(invocation.maxTurns);
-		if (maxTurnPlan.limit && child.subscribe) {
-			let turns = 0;
+		if (child.subscribe && (maxTurnPlan.limit || options.onActivity)) {
 			unsubscribe = child.subscribe((event) => {
+				const eventActivity = activityFromChildEvent(event, {
+					turns,
+					toolUses,
+					maxTurns: invocation.maxTurns,
+				});
+				if (event.type === "turn_end") turns += 1;
+				if (event.type === "tool_execution_start") toolUses += 1;
+				latestActivity = {
+					...latestActivity,
+					...eventActivity,
+					turnCount:
+						event.type === "turn_end" ? turns : eventActivity.turnCount,
+					toolUseCount:
+						event.type === "tool_execution_start"
+							? toolUses
+							: eventActivity.toolUseCount,
+				};
+				options.onActivity?.(latestActivity);
 				if (event.type !== "turn_end") return;
-				turns += 1;
 				if (turns === maxTurnPlan.limit && child?.steer) {
 					steered = true;
 					void child.steer(
@@ -327,7 +363,8 @@ export async function runForegroundAgent(
 					);
 				}
 				if (
-					turns > maxTurnPlan.limit! + maxTurnPlan.graceTurns &&
+					maxTurnPlan.limit &&
+					turns > maxTurnPlan.limit + maxTurnPlan.graceTurns &&
 					child?.abort
 				) {
 					aborted = true;
@@ -344,6 +381,7 @@ export async function runForegroundAgent(
 		return {
 			content: [{ type: "text", text: `${prefix}${finalText}` }],
 			details: {
+				...latestActivity,
 				status: aborted
 					? "aborted"
 					: steered && status === "completed"
@@ -427,6 +465,30 @@ async function createPiChildSession(input: {
 		thinkingLevel: input.thinking as never,
 	});
 	return result.session as unknown as ChildSessionLike;
+}
+
+function activityFromChildEvent(
+	event: Record<string, unknown>,
+	state: { turns: number; toolUses: number; maxTurns?: number },
+): PassiveUsageSnapshot {
+	const passive = extractPassiveUsage(event);
+	const type = typeof event.type === "string" ? event.type : undefined;
+	const toolName =
+		typeof event.toolName === "string" ? event.toolName : undefined;
+	return {
+		...passive,
+		turnCount: type === "turn_end" ? state.turns + 1 : passive.turnCount,
+		maxTurns: passive.maxTurns ?? state.maxTurns,
+		toolUseCount:
+			type === "tool_execution_start"
+				? state.toolUses + 1
+				: passive.toolUseCount,
+		currentActivity:
+			passive.currentActivity ??
+			(type === "tool_execution_start" && toolName
+				? `using ${toolName}`
+				: undefined),
+	};
 }
 
 async function enforceToolPolicy(

@@ -1,5 +1,14 @@
 import { resolveAgentType } from "./agent-types.ts";
 import type { ForegroundAgentParams } from "./invocation-config.ts";
+import {
+	extractPassiveUsage,
+	mergePassiveUsage,
+	type PassiveUsageSnapshot,
+} from "./usage.ts";
+import type {
+	AgentActivityItem,
+	AgentActivitySnapshot,
+} from "./ui/agent-widget.ts";
 import type { AgentTypeRegistry } from "./types.ts";
 
 export type BackgroundAgentStatus =
@@ -9,7 +18,7 @@ export type BackgroundAgentStatus =
 	| "error"
 	| "aborted";
 
-export interface AgentToolDetailsLike {
+export interface AgentToolDetailsLike extends PassiveUsageSnapshot {
 	status: string;
 	agentId?: string;
 	agentType?: string;
@@ -25,11 +34,19 @@ export interface AgentToolResultLike {
 	details: AgentToolDetailsLike;
 }
 
+export type AgentActivityUpdate = PassiveUsageSnapshot;
+
+export interface TerminalResultEvent {
+	agentId: string;
+	result: AgentToolResultLike;
+}
+
 export type BackgroundRunAgent = (input: {
 	params: ForegroundAgentParams;
 	ctx: Record<string, unknown>;
 	registry: AgentTypeRegistry;
 	signal: AbortSignal;
+	onActivity?: (update: AgentActivityUpdate) => void;
 }) => Promise<AgentToolResultLike>;
 
 export interface StartBackgroundAgentOptions {
@@ -48,9 +65,10 @@ export interface GetSubagentResultParams {
 export interface AgentManagerOptions {
 	maxConcurrency?: number;
 	idFactory?: () => string;
+	now?: () => number;
 }
 
-interface BackgroundRecord {
+interface BackgroundRecord extends PassiveUsageSnapshot {
 	id: string;
 	status: BackgroundAgentStatus;
 	params: ForegroundAgentParams;
@@ -61,11 +79,17 @@ interface BackgroundRecord {
 	agentType: string;
 	description?: string;
 	note?: string;
+	createdAt: number;
+	startedAt?: number;
+	updatedAt: number;
+	completedAt?: number;
 	controller: AbortController;
 	parentSignal?: AbortSignal;
 	parentAbortListener?: () => void;
 	result?: AgentToolResultLike;
 	waiters: Array<(result: AgentToolResultLike) => void>;
+	notificationConsumed: boolean;
+	notificationSent: boolean;
 }
 
 const GET_SUBAGENT_RESULT_PARAMETERS_SCHEMA = {
@@ -88,14 +112,49 @@ const GET_SUBAGENT_RESULT_PARAMETERS_SCHEMA = {
 export class AgentManager {
 	readonly maxConcurrency: number;
 	private readonly idFactory: () => string;
+	private readonly now: () => number;
 	private readonly records = new Map<string, BackgroundRecord>();
 	private readonly queue: string[] = [];
 	private readonly runningIds = new Set<string>();
+	private readonly activityCallbacks = new Set<
+		(snapshot: AgentActivitySnapshot) => void
+	>();
+	private readonly terminalCallbacks = new Set<
+		(event: TerminalResultEvent) => void
+	>();
 	private nextId = 1;
 
 	constructor(options: AgentManagerOptions = {}) {
 		this.maxConcurrency = Math.max(1, options.maxConcurrency ?? 4);
 		this.idFactory = options.idFactory ?? (() => `agent-${this.nextId++}`);
+		this.now = options.now ?? (() => Date.now());
+	}
+
+	onActivityChange(
+		callback: (snapshot: AgentActivitySnapshot) => void,
+	): () => void {
+		this.activityCallbacks.add(callback);
+		return () => this.activityCallbacks.delete(callback);
+	}
+
+	onTerminalResult(callback: (event: TerminalResultEvent) => void): () => void {
+		this.terminalCallbacks.add(callback);
+		return () => this.terminalCallbacks.delete(callback);
+	}
+
+	getActivitySnapshot(): AgentActivitySnapshot {
+		const active = [...this.records.values()].filter(
+			(record) => !isTerminal(record.status),
+		);
+		return {
+			running: active
+				.filter((record) => record.status === "running")
+				.map(activityItemFromRecord),
+			queued: active
+				.filter((record) => record.status === "queued")
+				.map(activityItemFromRecord),
+			queuedCount: active.filter((record) => record.status === "queued").length,
+		};
 	}
 
 	start(options: StartBackgroundAgentOptions): AgentToolResultLike {
@@ -130,6 +189,7 @@ export class AgentManager {
 			agentType = resolution.agent.type;
 		}
 
+		const timestamp = this.now();
 		const record: BackgroundRecord = {
 			id: this.idFactory(),
 			status: "queued",
@@ -141,14 +201,19 @@ export class AgentManager {
 			agentType,
 			description: options.params.description,
 			note,
+			createdAt: timestamp,
+			updatedAt: timestamp,
 			controller: new AbortController(),
 			parentSignal: options.signal,
 			waiters: [],
+			notificationConsumed: false,
+			notificationSent: false,
 		};
 
 		this.records.set(record.id, record);
 		this.queue.push(record.id);
 		this.attachParentAbort(record);
+		this.notifyActivity();
 		this.schedule();
 		return this.launchResult(record);
 	}
@@ -156,7 +221,11 @@ export class AgentManager {
 	getResult(params: GetSubagentResultParams): AgentToolResultLike {
 		const record = this.records.get(params.agent_id);
 		if (!record) return unknownIdResult(params.agent_id);
-		return record.result ?? this.nonTerminalResult(record);
+		const result = record.result ?? this.nonTerminalResult(record);
+		if (isTerminal(result.details.status as BackgroundAgentStatus)) {
+			record.notificationConsumed = true;
+		}
+		return result;
 	}
 
 	async waitForResult(
@@ -181,6 +250,9 @@ export class AgentManager {
 				if (settled) return;
 				settled = true;
 				removeWaiter();
+				if (isTerminal(result.details.status as BackgroundAgentStatus)) {
+					record.notificationConsumed = true;
+				}
 				if (waitSignal && onAbort) {
 					waitSignal.removeEventListener("abort", onAbort);
 				}
@@ -208,6 +280,7 @@ export class AgentManager {
 		this.queue.length = 0;
 		this.runningIds.clear();
 		this.records.clear();
+		this.notifyActivity();
 	}
 
 	getRecordCount(): number {
@@ -233,7 +306,10 @@ export class AgentManager {
 			return;
 		}
 		record.status = "running";
+		record.startedAt = this.now();
+		record.updatedAt = record.startedAt;
 		this.runningIds.add(record.id);
+		this.notifyActivity();
 		void (async () => {
 			try {
 				const result = await record.runAgent({
@@ -241,12 +317,17 @@ export class AgentManager {
 					ctx: record.ctx,
 					registry: record.registry,
 					signal: record.controller.signal,
+					onActivity: (update) => this.updateActivity(record, update),
 				});
 				if (record.status === "aborted") return;
 				const lifecycleStatus = terminalLifecycleStatus(result.details.status);
 				record.status = lifecycleStatus;
+				record.completedAt = this.now();
+				record.updatedAt = record.completedAt;
+				this.applyPassiveUsage(record, extractPassiveUsage(result.details));
 				record.result = withLifecycleDetails(result, record, lifecycleStatus);
 				this.resolveWaiters(record);
+				this.notifyTerminalIfNeeded(record);
 			} catch (error) {
 				if (record.status === "aborted" || record.controller.signal.aborted) {
 					this.markAborted(record, "Background agent aborted.");
@@ -254,16 +335,64 @@ export class AgentManager {
 				}
 				const message = error instanceof Error ? error.message : String(error);
 				record.status = "error";
+				record.completedAt = this.now();
+				record.updatedAt = record.completedAt;
 				record.result = textResult(
 					"error",
 					`Background agent ${record.id} failed: ${message}`,
 					this.baseDetails(record, { error: message }),
 				);
 				this.resolveWaiters(record);
+				this.notifyTerminalIfNeeded(record);
 			} finally {
 				if (this.runningIds.delete(record.id)) this.schedule();
+				this.notifyActivity();
 			}
 		})();
+	}
+
+	private updateActivity(
+		record: BackgroundRecord,
+		update: AgentActivityUpdate,
+	): void {
+		if (isTerminal(record.status)) return;
+		this.applyPassiveUsage(record, update);
+		record.updatedAt = this.now();
+		this.notifyActivity();
+	}
+
+	private applyPassiveUsage(
+		record: BackgroundRecord,
+		update: PassiveUsageSnapshot,
+	): void {
+		const merged = mergePassiveUsage(record, update);
+		record.turnCount = merged.turnCount;
+		record.maxTurns = merged.maxTurns;
+		record.toolUseCount = merged.toolUseCount;
+		record.usage = merged.usage;
+		record.compactionCount = merged.compactionCount;
+		record.currentActivity = merged.currentActivity;
+	}
+
+	private notifyActivity(): void {
+		if (this.activityCallbacks.size === 0) return;
+		const snapshot = this.getActivitySnapshot();
+		for (const callback of this.activityCallbacks) callback(snapshot);
+	}
+
+	private notifyTerminalIfNeeded(record: BackgroundRecord): void {
+		if (
+			record.notificationConsumed ||
+			record.notificationSent ||
+			!record.result ||
+			!isTerminal(record.status)
+		) {
+			return;
+		}
+		record.notificationSent = true;
+		for (const callback of this.terminalCallbacks) {
+			callback({ agentId: record.id, result: record.result });
+		}
 	}
 
 	private attachParentAbort(record: BackgroundRecord): void {
@@ -293,6 +422,8 @@ export class AgentManager {
 	private markAborted(record: BackgroundRecord, text: string): void {
 		if (isTerminal(record.status) && record.status !== "aborted") return;
 		record.status = "aborted";
+		record.completedAt = this.now();
+		record.updatedAt = record.completedAt;
 		record.controller.abort();
 		record.result = textResult(
 			"aborted",
@@ -300,6 +431,8 @@ export class AgentManager {
 			this.baseDetails(record),
 		);
 		this.resolveWaiters(record);
+		this.notifyTerminalIfNeeded(record);
+		this.notifyActivity();
 	}
 
 	private resolveWaiters(record: BackgroundRecord): void {
@@ -312,6 +445,12 @@ export class AgentManager {
 		}
 		const result = record.result ?? this.nonTerminalResult(record);
 		const waiters = record.waiters.splice(0);
+		if (
+			waiters.length > 0 &&
+			isTerminal(result.details.status as BackgroundAgentStatus)
+		) {
+			record.notificationConsumed = true;
+		}
 		for (const waiter of waiters) waiter(result);
 	}
 
@@ -362,6 +501,12 @@ export class AgentManager {
 			requestedAgentType: record.requestedAgentType,
 			description: record.description,
 			note: record.note,
+			turnCount: record.turnCount,
+			maxTurns: record.maxTurns,
+			toolUseCount: record.toolUseCount,
+			usage: record.usage,
+			compactionCount: record.compactionCount,
+			currentActivity: record.currentActivity,
 			...extra,
 		};
 	}
@@ -407,7 +552,33 @@ function withLifecycleDetails(
 				result.details.requestedAgentType ?? record.requestedAgentType,
 			description: result.details.description ?? record.description,
 			note: uniqueNotes(record.note, result.details.note),
+			turnCount: result.details.turnCount ?? record.turnCount,
+			maxTurns: result.details.maxTurns ?? record.maxTurns,
+			toolUseCount: result.details.toolUseCount ?? record.toolUseCount,
+			usage: result.details.usage ?? record.usage,
+			compactionCount: result.details.compactionCount ?? record.compactionCount,
+			currentActivity: result.details.currentActivity ?? record.currentActivity,
 		},
+	};
+}
+
+function activityItemFromRecord(record: BackgroundRecord): AgentActivityItem {
+	return {
+		agentId: record.id,
+		status: record.status,
+		agentType: record.agentType,
+		requestedAgentType: record.requestedAgentType,
+		description: record.description,
+		createdAt: record.createdAt,
+		startedAt: record.startedAt,
+		updatedAt: record.updatedAt,
+		completedAt: record.completedAt,
+		turnCount: record.turnCount,
+		maxTurns: record.maxTurns,
+		toolUseCount: record.toolUseCount,
+		usage: record.usage,
+		compactionCount: record.compactionCount,
+		currentActivity: record.currentActivity,
 	};
 }
 
@@ -440,6 +611,6 @@ function unknownIdResult(agentId: string): AgentToolResultLike {
 	return textResult("error", error, { agentId, error });
 }
 
-function isTerminal(status: BackgroundAgentStatus): boolean {
+function isTerminal(status: BackgroundAgentStatus | string): boolean {
 	return status === "completed" || status === "error" || status === "aborted";
 }
