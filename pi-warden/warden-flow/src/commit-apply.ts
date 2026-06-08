@@ -23,6 +23,7 @@ import type {
 	WardenCommitApplyPlanCommit,
 	WardenCommitApplyResult,
 	WardenCommitFailedCommand,
+	WardenCommitFile,
 	WardenCommitRepoDetails,
 	WardenCommitSnapshot,
 } from "./commit-types.js";
@@ -186,13 +187,46 @@ async function ensureNoStagedPathsBeforeCommit(
 		});
 	}
 	if (stagedBefore.paths.length === 0) return undefined;
+	const allowedStagedBefore = allowedPreexistingStagedPathsForCommit(
+		plan,
+		committed,
+		commit,
+	);
+	const unexpectedStagedBefore = stagedBefore.paths.filter(
+		(path) => !allowedStagedBefore.has(path),
+	);
+	if (unexpectedStagedBefore.length === 0) return undefined;
 	return failBeforeOrAfterMutation(exec, plan, committed, {
 		reason: "unexpected-staged-before-commit",
 		errors: [
-			`staged paths appeared before applying commit ${commit.subject}: ${formatPathList(stagedBefore.paths)}`,
+			`staged paths appeared before applying commit ${commit.subject}: ${formatPathList(unexpectedStagedBefore)}`,
 		],
 		signal,
 	});
+}
+
+function allowedPreexistingStagedPathsForCommit(
+	plan: PreparedApplyPlan,
+	committed: WardenCommitAppliedCommit[],
+	commit: WardenCommitApplyPlanCommit,
+): Set<string> {
+	if (committed.length > 0) return new Set();
+	const commitPaths = new Set(commit.paths);
+	return new Set(
+		(plan.snapshot.details.files ?? [])
+			.filter(
+				(file) => isSnapshotStagedRename(file) && commitPaths.has(file.path),
+			)
+			.map((file) => file.path),
+	);
+}
+
+function isSnapshotStagedRename(file: WardenCommitFile): boolean {
+	return (
+		file.indexStatus === "R" &&
+		file.state.includes("staged") &&
+		!file.state.includes("unstaged")
+	);
 }
 
 async function stageCommitPaths(

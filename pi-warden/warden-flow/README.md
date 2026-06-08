@@ -151,7 +151,7 @@ Use it when accepted work needs final closure documented, or when an existing cl
 
 `warden_commit_snapshot` is read-only. It reports compact git status, Warden boundaries, path risks, deterministic buckets, recent commit subjects, and a stable snapshot hash. It does not stage, commit, push, pull, fetch, rebase, reset, amend, tag, or create PRs.
 
-`warden_commit_apply` can create local commits only from an explicit plan after the user replies exactly `Commit`. It recomputes the snapshot, refuses when the hash changed, validates exact repo-relative paths, rejects risky/excluded paths by default, refuses mixed staged/unstaged or pre-existing staged changes, stages only exact paths, verifies the staged set before `git commit`, and returns commit hashes plus final `git status --short`.
+`warden_commit_apply` can create local commits only from an explicit plan after the user replies exactly `Commit`. It recomputes the snapshot, refuses when the hash changed, validates exact repo-relative paths, rejects risky/excluded paths by default, refuses mixed staged/unstaged changes, allows pre-existing staged renames only when their destination paths are included in the first planned commit, stages only exact paths, verifies the staged set before `git commit`, and returns commit hashes plus final `git status --short`.
 
 It never pushes, pulls, fetches, rebases, resets, amends, tags, stashes, checks out, cleans, restores, creates PRs, or runs remote git operations.
 

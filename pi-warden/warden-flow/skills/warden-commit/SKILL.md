@@ -37,7 +37,7 @@ Never push, pull, fetch, amend, rebase, reset, tag, stash, checkout, clean, rest
 - `confirmedUserIntent: "Commit"`;
 - exact planned commits and exact repo-relative file paths.
 
-`warden_commit_apply` validates current snapshot hash before mutation, stages only exact paths with argv-based `git add -- <path>`, verifies staged set before `git commit`, and creates local commits with exact provided messages.
+`warden_commit_apply` validates current snapshot hash before mutation, stages only exact paths with argv-based `git add -- <path>`, allows snapshot-verified staged renames only when their destination paths are included in the first planned commit, verifies staged set before `git commit`, and creates local commits with exact provided messages.
 
 It refuses by default for:
 
@@ -48,7 +48,7 @@ It refuses by default for:
 - duplicate paths;
 - risky/excluded paths such as `.env*`, secret-looking paths, `dist/**`, `node_modules/**`, cache/build/runtime output, and `.warden/work/**`;
 - mixed staged/unstaged files;
-- pre-existing staged changes.
+- pre-existing staged changes other than staged renames included in the first planned commit.
 
 `.warden/map.md` and `.warden/maps/**/map.md` are durable orientation docs and can be committed when otherwise safe. `.warden/work/**` is active slice state and excluded by default.
 
@@ -82,11 +82,13 @@ Treat each `warden_commit_snapshot` section as an input to review, not as a comp
 - Warnings:
   - Copy warnings into the visible plan.
   - If warnings mention risky/excluded paths, pre-existing staged changes, mixed staged/unstaged files, or unclear safety, stop or ask before planning apply.
+  - If changed files show staged paths, plan apply only when every staged path is a rename destination included in the first planned commit; otherwise stop or ask.
 - Changed files:
   - Inspect the exact diff for every path you may include before final grouping or message wording.
   - Preferred per-file command: `git diff -- <path>`.
   - Preferred related-file command: `git diff -- <path1> <path2> ...`.
   - Use `git diff --stat -- <paths>` or `git diff --name-status -- <paths>` only as overview; never use overview as the only evidence for non-trivial changes.
+  - For planned staged renames, inspect `git diff --staged --name-status` and use the destination path shown by `warden_commit_snapshot` in the first planned commit.
   - For large diffs, inspect bounded chunks with `git diff -- <paths> | sed -n '1,220p'`, then continue only as needed.
 - Boundaries:
   - Use boundary labels to avoid crossing unrelated Warden areas.

@@ -131,7 +131,7 @@ export function registerWardenCommit(pi: ExtensionAPI): void {
 			"Create local commits only from reviewed Warden commit plans after exact Commit confirmation and snapshot-hash validation.",
 		promptGuidelines: [
 			"Use warden_commit_apply only after warden_commit_snapshot and after the user replies exactly Commit to a fully displayed commit plan.",
-			"warden_commit_apply stages only exact repo-relative paths from the matching snapshot, refuses risky or mixed staged paths, creates local commits, and never pushes, pulls, fetches, rebases, resets, amends, tags, stashes, checks out, or creates PRs.",
+			"warden_commit_apply stages only exact repo-relative paths from the matching snapshot, allows snapshot-verified staged renames only when their destination paths are in the first planned commit, refuses risky or mixed staged paths, creates local commits, and never pushes, pulls, fetches, rebases, resets, amends, tags, stashes, checks out, or creates PRs.",
 		],
 		parameters: WARDEN_COMMIT_APPLY_PARAMETERS,
 		async execute(_toolCallId, params, signal, _onUpdate, ctx) {

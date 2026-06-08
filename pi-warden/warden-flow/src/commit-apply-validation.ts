@@ -290,13 +290,17 @@ function validateApplyPlanAgainstSnapshot(
 	for (const commit of input.commits) {
 		for (const path of commit.paths) validateSnapshotPath(path, files, errors);
 	}
-	appendPreexistingStagedErrors(details, errors);
+	appendPreexistingStagedErrors(input, details, errors);
 	return errors;
 }
 
+type SnapshotChangedFile = NonNullable<
+	WardenCommitSnapshotDetails["files"]
+>[number];
+
 function validateSnapshotPath(
 	path: string,
-	files: Map<string, NonNullable<WardenCommitSnapshotDetails["files"]>[number]>,
+	files: Map<string, SnapshotChangedFile>,
 	errors: string[],
 ): void {
 	const file = files.get(path);
@@ -317,6 +321,7 @@ function validateSnapshotPath(
 }
 
 function appendPreexistingStagedErrors(
+	input: WardenCommitApplyParams,
 	details: WardenCommitSnapshotDetails,
 	errors: string[],
 ): void {
@@ -324,8 +329,25 @@ function appendPreexistingStagedErrors(
 		file.state.includes("staged"),
 	);
 	if (stagedFiles.length === 0) return;
+	const firstCommitPaths = new Set(input.commits[0]?.paths ?? []);
+	const blockedStagedFiles = stagedFiles.filter(
+		(file) => !isAllowedPreexistingStagedRename(file, firstCommitPaths),
+	);
+	if (blockedStagedFiles.length === 0) return;
 	errors.push(
-		`pre-existing staged changes are not allowed by warden_commit_apply v2. Staged paths: ${formatPathList(stagedFiles.map((file) => file.path))}`,
+		`pre-existing staged changes are not allowed by warden_commit_apply v2 except staged renames included in the first planned commit. Staged paths: ${formatPathList(blockedStagedFiles.map((file) => file.path))}`,
+	);
+}
+
+function isAllowedPreexistingStagedRename(
+	file: SnapshotChangedFile,
+	firstCommitPaths: Set<string>,
+): boolean {
+	return (
+		file.indexStatus === "R" &&
+		file.state.includes("staged") &&
+		!file.state.includes("unstaged") &&
+		firstCommitPaths.has(file.path)
 	);
 }
 

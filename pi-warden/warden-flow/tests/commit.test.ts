@@ -139,6 +139,32 @@ function createSuccessfulApplyExec(path: string): CommitGitExec {
 	};
 }
 
+function createSuccessfulStagedRenameApplyExec(path: string): CommitGitExec {
+	const state: SuccessfulApplyState = { stagedPaths: [path], committed: false };
+	return async (_command, args) => {
+		const key = args.join(" ");
+		if (key === "rev-parse --is-inside-work-tree") return { stdout: "true\n" };
+		if (key === "rev-parse --show-toplevel") return { stdout: "/repo\n" };
+		if (key === "rev-parse --abbrev-ref HEAD") return { stdout: "main\n" };
+		if (key === "rev-parse --short HEAD") return { stdout: "abc1234\n" };
+		if (key === "status --porcelain=v1") {
+			return { stdout: state.committed ? "" : `R  src/old.ts -> ${path}` };
+		}
+		if (key === "diff --name-only --staged") {
+			return { stdout: state.committed ? "" : `${path}\n` };
+		}
+		if (key === "diff --name-only") return { stdout: "" };
+		if (key === "ls-files --others --exclude-standard") return { stdout: "" };
+		if (key.startsWith("log --oneline -n ")) return { stdout: "" };
+		const response = successfulApplyMutationResponse(key, args, state);
+		if (response) return response;
+		if (key === "status --short") {
+			return { stdout: state.committed ? "" : `R  ${path}` };
+		}
+		throw new Error(`unexpected git args: ${key}`);
+	};
+}
+
 async function snapshotHash(exec: CommitGitExec): Promise<string> {
 	const snapshot = await loadWardenCommitSnapshot(exec, {
 		cwd: "/repo",
@@ -554,6 +580,49 @@ describe("commit apply safety", () => {
 		);
 	});
 
+	it("allows a planned staged rename in the first commit", async () => {
+		const exec = createSuccessfulStagedRenameApplyExec("src/new.ts");
+		const hash = await snapshotHash(exec);
+		const result = await applyWardenCommitPlan(exec, {
+			baseCwd: "/repo",
+			input: {
+				...validApplyInput(),
+				snapshotHash: hash,
+				commits: [{ subject: "chore: rename fixture", paths: ["src/new.ts"] }],
+			},
+		});
+
+		assert.equal(result.details.ok, true, result.text);
+		assert.equal(result.details.commits?.length, 1);
+		assert.equal(result.details.finalStatus, "");
+	});
+
+	it("refuses a staged rename outside the first planned commit", async () => {
+		const exec = createStaticSnapshotExec({
+			status: ["R  src/old.ts -> src/new.ts", " M src/a.ts"].join("\n"),
+			staged: "src/new.ts\n",
+			unstaged: "src/a.ts\n",
+		});
+		const hash = await snapshotHash(exec);
+		const result = await applyWardenCommitPlan(exec, {
+			baseCwd: "/repo",
+			input: {
+				...validApplyInput(),
+				snapshotHash: hash,
+				commits: [
+					{ subject: "feat: first", paths: ["src/a.ts"] },
+					{ subject: "chore: rename fixture", paths: ["src/new.ts"] },
+				],
+			},
+		});
+
+		assert.equal(result.details.ok, false);
+		assert.match(
+			result.details.errors?.join("\n") ?? "",
+			/first planned commit/,
+		);
+	});
+
 	it("creates one local commit in a temporary git repo", {
 		skip: hasGit() ? false : "git unavailable",
 	}, async () => {
@@ -590,6 +659,60 @@ describe("commit apply safety", () => {
 			assert.equal(result.details.commits?.length, 1);
 			assert.equal(result.details.finalStatus, "");
 			assert.equal(runGit(repo, ["rev-list", "--count", "HEAD"]), "2");
+		} finally {
+			rmSync(repo, { recursive: true, force: true });
+		}
+	});
+
+	it("creates one local commit for a staged rename", {
+		skip: hasGit() ? false : "git unavailable",
+	}, async () => {
+		const repo = mkdtempSync(join(tmpdir(), "warden-commit-rename-"));
+		try {
+			runGit(repo, ["init"]);
+			runGit(repo, ["config", "user.name", "Warden Test"]);
+			runGit(repo, ["config", "user.email", "warden-test@example.invalid"]);
+			writeFileSync(join(repo, "old-name.txt"), "initial\n", "utf-8");
+			runGit(repo, ["add", "--", "old-name.txt"]);
+			runGit(repo, ["commit", "-m", "chore: initial"]);
+			runGit(repo, ["mv", "old-name.txt", "new-name.txt"]);
+
+			const snapshot = await loadWardenCommitSnapshot(realGitExec, {
+				cwd: repo,
+				includeRecentCommits: 0,
+			});
+			assert.ok(snapshot.details.snapshotHash);
+			assert.equal(snapshot.details.files?.[0]?.path, "new-name.txt");
+			assert.equal(snapshot.details.files?.[0]?.indexStatus, "R");
+
+			const result = await applyWardenCommitPlan(realGitExec, {
+				baseCwd: repo,
+				input: {
+					snapshotHash: snapshot.details.snapshotHash,
+					confirmedUserIntent: "Commit",
+					commits: [
+						{
+							subject: "chore(warden-flow): test staged rename apply",
+							paths: ["new-name.txt"],
+						},
+					],
+				},
+			});
+
+			assert.equal(result.details.ok, true, result.text);
+			assert.equal(result.details.commits?.length, 1);
+			assert.equal(result.details.finalStatus, "");
+			assert.match(
+				runGit(repo, [
+					"diff-tree",
+					"--no-commit-id",
+					"--name-status",
+					"-r",
+					"-M",
+					"HEAD",
+				]),
+				/R\d+\s+old-name\.txt\s+new-name\.txt/,
+			);
 		} finally {
 			rmSync(repo, { recursive: true, force: true });
 		}
