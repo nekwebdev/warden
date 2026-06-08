@@ -210,7 +210,7 @@ pi-warden/warden-theme/
 
 `pi-warden/warden-panel/` contains Warden panel framework and bundled panel extensions.
 
-`pi-warden/warden-theme/` contains Warden terminal-derived Pi theme resources.
+`pi-warden/warden-theme/` contains Warden Catppuccin Mocha-derived Pi theme resources.
 
 ### `nix-warden/`
 

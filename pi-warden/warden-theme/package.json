@@ -1,7 +1,7 @@
 {
   "name": "@nekwebdev/warden-theme",
   "version": "0.1.0",
-  "description": "Warden Pi Agent terminal-derived theme package",
+  "description": "Warden Pi Agent Catppuccin Mocha-derived theme package",
   "type": "module",
   "files": [
     "themes/**/*.json",
@@ -18,7 +18,8 @@
     "warden",
     "warden-theme",
     "theme",
-    "terminal-colors"
+    "catppuccin",
+    "catppuccin-mocha"
   ],
   "author": "nekwebdev",
   "license": "MIT",

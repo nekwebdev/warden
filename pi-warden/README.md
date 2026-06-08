@@ -167,12 +167,12 @@ pi-warden/warden-flow/AGENTS.md
 
 Package: `@nekwebdev/warden-theme`
 
-Warden's terminal-derived Pi theme package.
+Warden's Catppuccin Mocha-derived Pi theme package.
 
 Provides:
 
-- `themes/warden-terminal.json` — complete Pi theme using terminal default text and ANSI `0-15` vars;
-- README inventory mapping every current Pi theme color token to Pi-referenceable terminal/default/palette value forms.
+- `themes/warden-catppuccin-mocha.json` — complete Pi theme using official Catppuccin Mocha hex vars;
+- README inventory mapping every current Pi theme color token to its Catppuccin Mocha var and Pi-supported color value forms.
 
 Package docs:
 

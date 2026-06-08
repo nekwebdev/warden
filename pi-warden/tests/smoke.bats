@@ -48,7 +48,7 @@ setup() { PROJECT_ROOT=$(cd "$BATS_TEST_DIRNAME/.." && pwd -P); }
   run grep -F '"./themes"' "$PROJECT_ROOT/warden-theme/package.json"
   [ "$status" -eq 0 ]
 
-  [ -f "$PROJECT_ROOT/warden-theme/themes/warden-terminal.json" ]
+  [ -f "$PROJECT_ROOT/warden-theme/themes/warden-catppuccin-mocha.json" ]
 }
 
 @test "former warden-packages package is folded into warden-panel" {

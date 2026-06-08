@@ -72,8 +72,8 @@ Use only folders that fit the package.
   - Does not own general runner workflows or agent lifecycle commands.
 
 - `warden-theme/`
-  - Owns Warden terminal-derived Pi theme resources.
-  - Owns `themes/warden-terminal.json`, theme token inventory docs, and theme validation.
+  - Owns Warden Catppuccin Mocha-derived Pi theme resources.
+  - Owns `themes/warden-catppuccin-mocha.json`, theme token inventory docs, and theme validation.
   - Does not own Warden runner workflows, agent lifecycle commands, or terminal OSC probing.
 
 ## Scope rules
