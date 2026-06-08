@@ -16,6 +16,10 @@ setup() { PROJECT_ROOT=$(cd "$BATS_TEST_DIRNAME/.." && pwd -P); }
   [ -d "$PROJECT_ROOT/warden-flow/skills/warden-map" ]
   [ -d "$PROJECT_ROOT/warden-flow/skills/warden-close" ]
   [ -d "$PROJECT_ROOT/warden-flow/skills/warden-commit" ]
+
+  [ -d "$PROJECT_ROOT/warden-theme" ]
+  [ -f "$PROJECT_ROOT/warden-theme/package.json" ]
+  [ -d "$PROJECT_ROOT/warden-theme/themes" ]
 }
 
 @test "warden-panel declares package and bundled extension manifest" {
@@ -35,6 +39,16 @@ setup() { PROJECT_ROOT=$(cd "$BATS_TEST_DIRNAME/.." && pwd -P); }
 
   run grep -F '"./skills"' "$PROJECT_ROOT/warden-flow/package.json"
   [ "$status" -eq 0 ]
+}
+
+@test "warden-theme declares package and bundled theme resources" {
+  run grep -F '"name": "@nekwebdev/warden-theme"' "$PROJECT_ROOT/warden-theme/package.json"
+  [ "$status" -eq 0 ]
+
+  run grep -F '"./themes"' "$PROJECT_ROOT/warden-theme/package.json"
+  [ "$status" -eq 0 ]
+
+  [ -f "$PROJECT_ROOT/warden-theme/themes/warden-terminal.json" ]
 }
 
 @test "former warden-packages package is folded into warden-panel" {

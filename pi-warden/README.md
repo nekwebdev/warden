@@ -24,7 +24,8 @@ pi-warden/
 ├── AGENTS.md
 ├── tests/
 ├── warden-panel/
-└── warden-flow/
+├── warden-flow/
+└── warden-theme/
 ```
 
 Package manifests, source, tests, scripts, extensions, skills, prompts, themes, docs, configs, and web assets belong under the individual package folder:
@@ -162,6 +163,24 @@ pi-warden/warden-flow/README.md
 pi-warden/warden-flow/AGENTS.md
 ```
 
+### `warden-theme/`
+
+Package: `@nekwebdev/warden-theme`
+
+Warden's terminal-derived Pi theme package.
+
+Provides:
+
+- `themes/warden-terminal.json` — complete Pi theme using terminal default text and ANSI `0-15` vars;
+- README inventory mapping every current Pi theme color token to Pi-referenceable terminal/default/palette value forms.
+
+Package docs:
+
+```text
+pi-warden/warden-theme/README.md
+pi-warden/warden-theme/AGENTS.md
+```
+
 ## Scope boundary
 
 `pi-warden` packages provide Pi Agent package behavior after they are installed or loaded by Pi.
@@ -191,6 +210,7 @@ npm install --prefix pi-warden/warden-flow
 
 npm test --prefix pi-warden/warden-panel
 npm test --prefix pi-warden/warden-flow
+npm test --prefix pi-warden/warden-theme
 
 mise run test:pi-warden
 ```
@@ -204,6 +224,7 @@ From the Warden repo root, local packages can be loaded temporarily during devel
 ```sh
 pi -e ./pi-warden/warden-panel
 pi -e ./pi-warden/warden-flow
+pi -e ./pi-warden/warden-theme
 ```
 
 Or installed locally into a Pi environment:
@@ -211,6 +232,7 @@ Or installed locally into a Pi environment:
 ```sh
 pi install ./pi-warden/warden-panel
 pi install ./pi-warden/warden-flow
+pi install ./pi-warden/warden-theme
 ```
 
 Warden-managed Pi agent environments are created and launched by `run-warden/`, not by local package code in this directory.

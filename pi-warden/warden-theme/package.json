@@ -1,0 +1,45 @@
+{
+  "name": "@nekwebdev/warden-theme",
+  "version": "0.1.0",
+  "description": "Warden Pi Agent terminal-derived theme package",
+  "type": "module",
+  "files": [
+    "themes/**/*.json",
+    "scripts/**/*.mjs",
+    "tests/**/*.mjs",
+    "README.md",
+    "AGENTS.md",
+    "LICENSE"
+  ],
+  "keywords": [
+    "pi-package",
+    "pi",
+    "pi-agent",
+    "warden",
+    "warden-theme",
+    "theme",
+    "terminal-colors"
+  ],
+  "author": "nekwebdev",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/nekwebdev/warden.git",
+    "directory": "pi-warden/warden-theme"
+  },
+  "homepage": "https://github.com/nekwebdev/warden#readme",
+  "bugs": {
+    "url": "https://github.com/nekwebdev/warden/issues"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "test": "node scripts/run-tests.mjs"
+  },
+  "pi": {
+    "themes": [
+      "./themes"
+    ]
+  }
+}
