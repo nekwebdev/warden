@@ -4,12 +4,13 @@ Package-local guidance for `pi-warden/warden-subagents/`.
 
 ## Scope
 
-`@nekwebdev/warden-subagents` owns Warden's Pi subagent-type registry package and foreground `Agent` tool package work.
+`@nekwebdev/warden-subagents` owns Warden's Pi subagent-type registry package plus foreground `Agent` tool and background launch/result lookup package work.
 
 Current package owns:
 
 - package identity and manifest;
 - foreground `Agent` tool registration;
+- background `Agent` launch/result lookup around the foreground runner;
 - in-process child `createAgentSession` foreground runner;
 - functional registry API under `src/`;
 - embedded default agent types;
@@ -18,7 +19,8 @@ Current package owns:
 
 Hard fences:
 
-- no background execution;
+- background launch/result lookup is allowed only through the package-local `AgentManager`, `Agent({ run_in_background: true })`, and `get_subagent_result` tool path;
+- no background steering, resume, notifications, persistent retention, scheduling, RPC, worktree, or UI overlays;
 - no UI;
 - no scheduling;
 - no memory behavior;
@@ -27,13 +29,13 @@ Hard fences:
 - no Pi command, renderer, scheduler, or background registration;
 - no root bootstrap, runner workflow, `warden agents ...`, shell integration, Nix, or dev-environment behavior.
 
-## Foreground runner rules
+## Agent runner rules
 
-- Register only Claude-compatible `Agent` tool name in this slice.
-- Keep `run_in_background: true` and `resume` visibly unsupported and no-op for child session creation.
+- Register Claude-compatible `Agent` plus `get_subagent_result` for background result lookup.
+- `run_in_background: true` returns an agent id immediately and must use extension-instance `AgentManager` state; `resume` remains visibly unsupported and no-op for child session creation.
 - Unknown agent types must fall back to `general-purpose` with visible note.
 - Disabled agent types must return disabled status and start no child session.
-- Preserve status vocabulary: `completed`, `fallback`, `disabled`, `unsupported`, `steered`, `aborted`, `error`.
+- Preserve foreground status vocabulary: `completed`, `fallback`, `disabled`, `unsupported`, `steered`, `aborted`, `error`; background lifecycle may additionally use `queued` and `running` and must not use `fallback` as lifecycle state.
 - Agent frontmatter `model`, `thinking`, and `max_turns` win over caller fields.
 - Caller `isolated`/`isolation` fields are schema compatibility only and must not override resolved agent isolation in this slice.
 - Apply tool policy before first child prompt: create child session, inspect `getAllTools().sourceInfo` for extension-wide selectors, set active tools, then prompt.

@@ -6,6 +6,7 @@ const tests = [
 	"tests/agent-types.test.mjs",
 	"tests/custom-agents.test.mjs",
 	"tests/agent-runner.test.mjs",
+	"tests/agent-manager.test.mjs",
 ];
 
 const missing = tests.filter((file) => !existsSync(file));

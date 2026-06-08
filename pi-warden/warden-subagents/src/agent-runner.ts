@@ -14,6 +14,11 @@ import {
 } from "./invocation-config.ts";
 import { resolveModelRequest } from "./model-resolver.ts";
 import { buildAgentSystemPrompt } from "./prompts.ts";
+import {
+	AgentManager,
+	type AgentToolResultLike,
+	createGetSubagentResultToolDefinition,
+} from "./agent-manager.ts";
 import { loadAgentTypes, resolveAgentType } from "./agent-types.ts";
 import type {
 	AgentTypeConfig,
@@ -23,6 +28,8 @@ import type {
 } from "./types.ts";
 
 export type AgentRunStatus =
+	| "queued"
+	| "running"
 	| "completed"
 	| "fallback"
 	| "disabled"
@@ -33,6 +40,7 @@ export type AgentRunStatus =
 
 export interface AgentToolDetails {
 	status: AgentRunStatus;
+	agentId?: string;
 	agentType?: string;
 	requestedAgentType?: string;
 	description?: string;
@@ -90,6 +98,7 @@ export interface RunForegroundAgentOptions {
 export interface CreateAgentToolDefinitionOptions {
 	loadRegistry?: (ctx: Record<string, unknown>) => AgentTypeRegistry;
 	createChildSession?: CreateChildSession;
+	manager?: AgentManager;
 }
 
 const AGENT_PARAMETERS_SCHEMA = {
@@ -126,7 +135,7 @@ const AGENT_PARAMETERS_SCHEMA = {
 		run_in_background: {
 			type: "boolean",
 			description:
-				"Reserved for later slices; true is rejected in foreground mode.",
+				"When true, start the agent in background and return an agent id immediately.",
 		},
 		resume: {
 			type: "string",
@@ -157,11 +166,11 @@ export function createAgentToolDefinition(
 		name: "Agent",
 		label: "Agent",
 		description:
-			"Delegate one foreground task to a Warden subagent and return final text inline. Background and resume are unsupported in this slice.",
+			"Delegate a task to a Warden subagent. Foreground returns final text inline; run_in_background returns an agent id immediately for get_subagent_result.",
 		promptSnippet:
-			"Delegate one foreground task to a Warden subagent with Agent when a focused child session should handle it inline.",
+			"Delegate work to a Warden subagent with Agent; use run_in_background for asynchronous work that should return an id immediately.",
 		promptGuidelines: [
-			"Use Agent for foreground delegation only; do not request background runs or resume ids in this slice.",
+			"Agent with run_in_background: true returns an agent id immediately; use get_subagent_result with wait: true for completion instead of sleep or poll loops.",
 			"Agent accepts subagent_type, prompt, description, model, thinking, max_turns, run_in_background, resume, isolated, inherit_context, and isolation.",
 		],
 		parameters: AGENT_PARAMETERS_SCHEMA,
@@ -176,6 +185,29 @@ export function createAgentToolDefinition(
 			const registry =
 				options.loadRegistry?.(safeCtx) ??
 				loadAgentTypes({ cwd: String(safeCtx.cwd ?? process.cwd()) });
+			if (params.run_in_background === true) {
+				if (!options.manager) {
+					return textResult(
+						"error",
+						"Background Agent manager is unavailable. No background agent started.",
+						{ error: "Background Agent manager is unavailable." },
+					);
+				}
+				return options.manager.start({
+					params,
+					ctx: safeCtx,
+					registry,
+					signal,
+					runAgent: ({ params: runParams, ctx, registry, signal }) =>
+						runForegroundAgent({
+							params: runParams,
+							ctx,
+							registry,
+							createChildSession: options.createChildSession,
+							signal,
+						}) as Promise<AgentToolResultLike>,
+				}) as AgentToolResult;
+			}
 			return runForegroundAgent({
 				params,
 				ctx: safeCtx,
@@ -191,13 +223,6 @@ export async function runForegroundAgent(
 	options: RunForegroundAgentOptions,
 ): Promise<AgentToolResult> {
 	const requestedAgentType = options.params.subagent_type || "general-purpose";
-	if (options.params.run_in_background === true) {
-		return textResult(
-			"unsupported",
-			"Agent foreground slice does not support run_in_background: true. No child session started.",
-			{ requestedAgentType },
-		);
-	}
 	if (options.params.resume) {
 		return textResult(
 			"unsupported",
@@ -268,6 +293,7 @@ export async function runForegroundAgent(
 	let steered = false;
 	let aborted = false;
 	let unsubscribe: (() => void) | undefined;
+	let abortListener: (() => void) | undefined;
 	try {
 		child = await (options.createChildSession ?? createPiChildSession)({
 			cwd: cwdOf(options.ctx),
@@ -277,6 +303,14 @@ export async function runForegroundAgent(
 			signal: options.signal,
 			ctx: options.ctx,
 		});
+
+		abortListener = () => {
+			aborted = true;
+			void child?.abort?.();
+		};
+		if (options.signal?.aborted) abortListener();
+		else
+			options.signal?.addEventListener("abort", abortListener, { once: true });
 
 		activeTools = await enforceToolPolicy(child, agent);
 
@@ -328,6 +362,13 @@ export async function runForegroundAgent(
 		};
 	} catch (error) {
 		const message = error instanceof Error ? error.message : String(error);
+		if (aborted || options.signal?.aborted) {
+			return textResult("aborted", "Agent aborted.", {
+				agentType: agent.type,
+				requestedAgentType,
+				description: options.params.description,
+			});
+		}
 		return textResult("error", `Agent failed: ${message}`, {
 			agentType: agent.type,
 			requestedAgentType,
@@ -336,15 +377,27 @@ export async function runForegroundAgent(
 		});
 	} finally {
 		unsubscribe?.();
+		if (abortListener) {
+			options.signal?.removeEventListener("abort", abortListener);
+		}
 		child?.dispose?.();
 	}
 }
 
 export function wardenSubagentsRegister(
 	pi: Pick<ExtensionAPI, "registerTool">,
+	options: { manager?: AgentManager } = {},
 ): void {
+	const manager = options.manager ?? new AgentManager();
 	pi.registerTool(
-		createAgentToolDefinition() as Parameters<ExtensionAPI["registerTool"]>[0],
+		createAgentToolDefinition({ manager }) as unknown as Parameters<
+			ExtensionAPI["registerTool"]
+		>[0],
+	);
+	pi.registerTool(
+		createGetSubagentResultToolDefinition({ manager }) as unknown as Parameters<
+			ExtensionAPI["registerTool"]
+		>[0],
 	);
 }
 

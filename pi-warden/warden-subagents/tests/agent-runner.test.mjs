@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
 	buildAgentSystemPrompt,
+	AgentManager,
 	buildTaskPrompt,
 	createAgentToolDefinition,
 	enforceAllowedModelScope,
@@ -193,13 +194,15 @@ describe("foreground model helpers", () => {
 });
 
 describe("foreground Agent execution", () => {
-	it("blocks background and resume without starting child sessions", async () => {
+	it("starts background runs immediately with an agent id while resume stays unsupported", async () => {
 		let created = 0;
+		const manager = new AgentManager({ idFactory: () => "agent-bg" });
 		const tool = createAgentToolDefinition({
+			manager,
 			loadRegistry: () => makeRegistry(),
 			createChildSession: async () => {
 				created += 1;
-				throw new Error("should not create child session");
+				return fakeChildSession("background done");
 			},
 		});
 
@@ -227,35 +230,115 @@ describe("foreground Agent execution", () => {
 			makeCtx(),
 		);
 
-		assert.equal(created, 0);
-		assert.equal(background.details.status, "unsupported");
+		assert.equal(background.details.status, "running");
+		assert.equal(background.details.agentId, "agent-bg");
 		assert.match(
 			background.content[0].text,
-			/foreground slice does not support run_in_background/,
+			/Background agent agent-bg is running/,
 		);
 		assert.equal(resume.details.status, "unsupported");
 		assert.match(
 			resume.content[0].text,
 			/foreground slice does not support resume/,
 		);
+		await new Promise((resolve) => setImmediate(resolve));
+		assert.equal(created, 1);
 	});
 
-	it("returns disabled status without starting child sessions", async () => {
+	it("lets foreground agents bypass the background queue", async () => {
+		const gate = deferred();
+		let created = 0;
+		const manager = new AgentManager({
+			maxConcurrency: 1,
+			idFactory: () => "agent-blocked",
+		});
+		const backgroundAbort = new AbortController();
+		const tool = createAgentToolDefinition({
+			manager,
+			loadRegistry: () => makeRegistry(),
+			createChildSession: async () => {
+				created += 1;
+				if (created === 1) {
+					return fakeChildSession("background final", [], gate.promise);
+				}
+				return fakeChildSession("foreground final");
+			},
+		});
+
+		const background = await tool.execute(
+			"tool-background",
+			{
+				subagent_type: "Explore",
+				prompt: "Background",
+				description: "blocked",
+				run_in_background: true,
+			},
+			backgroundAbort.signal,
+			undefined,
+			makeCtx(),
+		);
+		await new Promise((resolve) => setImmediate(resolve));
+		const foreground = await tool.execute(
+			"tool-foreground",
+			{
+				subagent_type: "Explore",
+				prompt: "Foreground",
+				description: "inline",
+			},
+			undefined,
+			undefined,
+			makeCtx(),
+		);
+
+		assert.equal(background.details.status, "running");
+		assert.equal(foreground.details.status, "completed");
+		assert.equal(foreground.content[0].text, "foreground final");
+		assert.equal(created, 2);
+		backgroundAbort.abort();
+		gate.resolve();
+	});
+
+	it("returns disabled status without starting child sessions or background records", async () => {
 		let created = 0;
 		const disabled = { ...exploreAgent, type: "Audit", enabled: false };
-		const result = await runForegroundAgent({
-			params: { subagent_type: "Audit", prompt: "Audit", description: "check" },
-			ctx: makeCtx(),
-			registry: makeRegistry([disabled]),
+		const registry = makeRegistry([disabled]);
+		const manager = new AgentManager();
+		const backgroundTool = createAgentToolDefinition({
+			manager,
+			loadRegistry: () => registry,
 			createChildSession: async () => {
 				created += 1;
 				throw new Error("should not create child session");
 			},
 		});
+		const foreground = await runForegroundAgent({
+			params: { subagent_type: "Audit", prompt: "Audit", description: "check" },
+			ctx: makeCtx(),
+			registry,
+			createChildSession: async () => {
+				created += 1;
+				throw new Error("should not create child session");
+			},
+		});
+		const background = await backgroundTool.execute(
+			"tool-disabled",
+			{
+				subagent_type: "Audit",
+				prompt: "Audit",
+				description: "check",
+				run_in_background: true,
+			},
+			undefined,
+			undefined,
+			makeCtx(),
+		);
 
 		assert.equal(created, 0);
-		assert.equal(result.details.status, "disabled");
-		assert.match(result.content[0].text, /disabled/);
+		assert.equal(foreground.details.status, "disabled");
+		assert.equal(background.details.status, "disabled");
+		assert.equal(background.details.agentId, undefined);
+		assert.equal(manager.getRecordCount(), 0);
+		assert.match(background.content[0].text, /disabled/);
 	});
 
 	it("falls back unknown agent types to general-purpose with visible note", async () => {
@@ -298,7 +381,17 @@ describe("foreground Agent execution", () => {
 	});
 });
 
-function fakeChildSession(finalText, calls = []) {
+function deferred() {
+	let resolve;
+	let reject;
+	const promise = new Promise((res, rej) => {
+		resolve = res;
+		reject = rej;
+	});
+	return { promise, resolve, reject };
+}
+
+function fakeChildSession(finalText, calls = [], promptGate = undefined) {
 	return {
 		getAllTools() {
 			return [
@@ -312,6 +405,7 @@ function fakeChildSession(finalText, calls = []) {
 		},
 		async prompt(text) {
 			calls.push(["prompt", text]);
+			await promptGate;
 		},
 		getLastAssistantText() {
 			return finalText;

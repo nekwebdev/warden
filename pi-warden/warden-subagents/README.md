@@ -1,6 +1,6 @@
 # warden-subagents
 
-`@nekwebdev/warden-subagents` is Warden's Pi package home for subagent type definitions and foreground subagent delegation.
+`@nekwebdev/warden-subagents` is Warden's Pi package home for subagent type definitions, foreground subagent delegation, and background launch/result lookup.
 
 Current package scope:
 
@@ -8,11 +8,12 @@ Current package scope:
 - embedded default agent types;
 - custom agent markdown loading from project and global Pi agent directories;
 - foreground `Agent` tool that runs one child Pi agent session in-process and returns final text inline;
+- background `Agent` mode that returns an agent ID immediately and lets parents retrieve queued/running/completed/error/aborted state with `get_subagent_result`;
 - pure helper seams for invocation precedence, prompt/context construction, model resolution, off-by-default model scope enforcement, tool policy, and max-turn planning.
 
 Still intentionally out of scope:
 
-- no background execution;
+- no background steering, resume, notifications, persistent retention, scheduling, RPC, worktree isolation, or UI overlays;
 - no UI;
 - no scheduling;
 - no memory behavior;
@@ -43,12 +44,40 @@ Key parameters:
 - `thinking` — optional child thinking level; agent frontmatter `thinking` wins.
 - `max_turns` — optional explicit turn limit. At limit, child receives wrap-up steer; after 3 grace turns, runner aborts.
 - `inherit_context` — request compact parent conversation bridge. Resolved agent config still controls default context inheritance.
-- `run_in_background` and `resume` — schema-compatible foreground-blocked fields. They return visible unsupported status and start no child session.
+- `run_in_background` — when `true`, starts the child through the package-local background manager and returns visible text plus `details.agentId`/`details.status` immediately.
+- `resume` — schema-compatible blocked field. It returns visible unsupported status and starts no child session.
 - `isolated` and `isolation` — schema-compatible fields accepted for later slices. They cannot override resolved agent isolation in this foreground slice.
 
-Return content is final visible assistant text. `details.status` is one of `completed`, `fallback`, `disabled`, `unsupported`, `steered`, `aborted`, or `error`.
+Foreground return content is final visible assistant text. `details.status` is one of `completed`, `fallback`, `disabled`, `unsupported`, `steered`, `aborted`, or `error`. Background launch returns `queued` or `running`, and lookup returns `queued`, `running`, `completed`, `error`, or `aborted`; unknown background types fall back to `general-purpose` with `details.note` but keep lifecycle status vocabulary.
 
 Tool policy is applied before the child receives its task prompt. The runner creates the child session, expands extension-wide selectors from `getAllTools().sourceInfo`, calls `setActiveToolsByName` when available, then sends the prompt.
+
+## Background result lookup
+
+Use `Agent` with `run_in_background: true` to start work without blocking the parent turn:
+
+```json
+{
+  "subagent_type": "Explore",
+  "description": "Inspect tests",
+  "prompt": "Find narrow validation commands.",
+  "run_in_background": true
+}
+```
+
+The visible result includes the background agent ID and initial `queued` or `running` state. Use `get_subagent_result` with that ID to check state or retrieve final text:
+
+```json
+{ "agent_id": "agent-1" }
+```
+
+Use `wait: true` when the parent needs the final result and should wait for `completed`, `error`, or `aborted`:
+
+```json
+{ "agent_id": "agent-1", "wait": true }
+```
+
+The default background concurrency is 4 per extension session. Foreground calls bypass this queue. Session shutdown aborts active background work and clears in-memory records.
 
 ## Registry API
 
@@ -167,7 +196,7 @@ Future slices may add subagent behavior inside this package only when packet sco
 - no root bootstrap changes;
 - no shell integration;
 - no Nix or dev-environment product behavior;
-- no background execution, RPC behavior, scheduling, memory, UI, or worktree isolation until separate accepted slices define them.
+- no background steering, resume, notifications, persistent retention, RPC behavior, scheduling, memory, UI, or worktree isolation until separate accepted slices define them.
 
 ## Upstream attribution
 

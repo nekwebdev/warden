@@ -47,6 +47,7 @@ describe("warden-subagents package manifest", () => {
 			"AGENTS.md",
 			"LICENSE",
 			"index.ts",
+			"src/agent-manager.ts",
 			"src/agent-runner.ts",
 			"src/agent-types.ts",
 			"src/context.ts",
@@ -63,6 +64,7 @@ describe("warden-subagents package manifest", () => {
 			"tests/agent-types.test.mjs",
 			"tests/custom-agents.test.mjs",
 			"tests/agent-runner.test.mjs",
+			"tests/agent-manager.test.mjs",
 		];
 
 		for (const entry of requiredEntries) {
@@ -88,6 +90,7 @@ describe("warden-subagents package manifest", () => {
 			"index.ts",
 			"package.json",
 			"scripts/run-tests.mjs",
+			"src/agent-manager.ts",
 			"src/agent-runner.ts",
 			"src/agent-types.ts",
 			"src/context.ts",
@@ -98,6 +101,7 @@ describe("warden-subagents package manifest", () => {
 			"src/model-resolver.ts",
 			"src/prompts.ts",
 			"src/types.ts",
+			"tests/agent-manager.test.mjs",
 			"tests/agent-runner.test.mjs",
 			"tests/agent-types.test.mjs",
 			"tests/custom-agents.test.mjs",
@@ -114,7 +118,7 @@ describe("warden-subagents extension scaffold", () => {
 		assert.equal(mod.default, mod.wardenSubagents);
 	});
 
-	it("registers the foreground Agent tool without starting runtime work", async () => {
+	it("registers shared Agent/result tools and shutdown cleanup without starting runtime work", async () => {
 		const mod = await import(
 			pathToFileURL(resolve(packageRoot, "extensions/subagents/index.ts"))
 		);
@@ -122,16 +126,24 @@ describe("warden-subagents extension scaffold", () => {
 		assert.equal(typeof mod.default, "function");
 
 		const registeredTools = [];
+		const handlers = new Map();
 		const fakeApi = {
 			registerTool(tool) {
 				registeredTools.push(tool);
 			},
+			on(event, handler) {
+				handlers.set(event, handler);
+			},
 		};
 
 		assert.equal(mod.default(fakeApi), undefined);
-		assert.equal(registeredTools.length, 1);
-		assert.equal(registeredTools[0].name, "Agent");
+		assert.deepEqual(
+			registeredTools.map((tool) => tool.name),
+			["Agent", "get_subagent_result"],
+		);
 		assert.equal(typeof registeredTools[0].execute, "function");
+		assert.equal(typeof registeredTools[1].execute, "function");
+		assert.equal(typeof handlers.get("session_shutdown"), "function");
 	});
 
 	it("documents foreground scope fences and upstream attribution", () => {
@@ -141,7 +153,7 @@ describe("warden-subagents extension scaffold", () => {
 
 		for (const phrase of [
 			"foreground `Agent` tool",
-			"no background execution",
+			"background launch/result lookup",
 			"no RPC behavior",
 			"no worktree isolation",
 			"tintinweb/pi-subagents",

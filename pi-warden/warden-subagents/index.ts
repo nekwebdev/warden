@@ -1,4 +1,8 @@
 export {
+	AgentManager,
+	createGetSubagentResultToolDefinition,
+} from "./src/agent-manager.ts";
+export {
 	createAgentToolDefinition,
 	runForegroundAgent,
 	wardenSubagentsRegister,
@@ -19,6 +23,14 @@ export {
 } from "./src/invocation-config.ts";
 export { resolveModelRequest } from "./src/model-resolver.ts";
 export { buildAgentSystemPrompt } from "./src/prompts.ts";
+export type {
+	AgentToolDetailsLike,
+	AgentToolResultLike,
+	BackgroundAgentStatus,
+	BackgroundRunAgent,
+	GetSubagentResultParams,
+	StartBackgroundAgentOptions,
+} from "./src/agent-manager.ts";
 export type {
 	AgentRunStatus,
 	AgentToolDetails,
