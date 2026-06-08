@@ -15,6 +15,7 @@
 - [ ] pi-warden
 - [ ] warden-flow
 - [ ] warden-panel
+- [ ] warden-subagents
 - [ ] warden-theme
 - [ ] nix-warden
 - [ ] dev-warden

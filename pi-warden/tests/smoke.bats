@@ -17,6 +17,10 @@ setup() { PROJECT_ROOT=$(cd "$BATS_TEST_DIRNAME/.." && pwd -P); }
   [ -d "$PROJECT_ROOT/warden-flow/skills/warden-close" ]
   [ -d "$PROJECT_ROOT/warden-flow/skills/warden-commit" ]
 
+  [ -d "$PROJECT_ROOT/warden-subagents" ]
+  [ -f "$PROJECT_ROOT/warden-subagents/package.json" ]
+  [ -d "$PROJECT_ROOT/warden-subagents/extensions/subagents" ]
+
   [ -d "$PROJECT_ROOT/warden-theme" ]
   [ -f "$PROJECT_ROOT/warden-theme/package.json" ]
   [ -d "$PROJECT_ROOT/warden-theme/themes" ]
@@ -39,6 +43,16 @@ setup() { PROJECT_ROOT=$(cd "$BATS_TEST_DIRNAME/.." && pwd -P); }
 
   run grep -F '"./skills"' "$PROJECT_ROOT/warden-flow/package.json"
   [ "$status" -eq 0 ]
+}
+
+@test "warden-subagents declares package and no-op extension resources" {
+  run grep -F '"name": "@nekwebdev/warden-subagents"' "$PROJECT_ROOT/warden-subagents/package.json"
+  [ "$status" -eq 0 ]
+
+  run grep -F '"./extensions/subagents/index.ts"' "$PROJECT_ROOT/warden-subagents/package.json"
+  [ "$status" -eq 0 ]
+
+  [ -f "$PROJECT_ROOT/warden-subagents/extensions/subagents/index.ts" ]
 }
 
 @test "warden-theme declares package and bundled theme resources" {

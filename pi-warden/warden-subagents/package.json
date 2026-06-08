@@ -1,0 +1,57 @@
+{
+  "name": "@nekwebdev/warden-subagents",
+  "version": "0.1.0",
+  "description": "Warden Pi Agent subagents extension scaffold package",
+  "type": "module",
+  "files": [
+    "index.ts",
+    "extensions/**/*.ts",
+    "scripts/**/*.mjs",
+    "tests/**/*.mjs",
+    "README.md",
+    "AGENTS.md",
+    "LICENSE"
+  ],
+  "keywords": [
+    "pi-package",
+    "pi",
+    "pi-agent",
+    "warden",
+    "warden-subagents",
+    "subagents",
+    "extension"
+  ],
+  "author": "nekwebdev",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/nekwebdev/warden.git",
+    "directory": "pi-warden/warden-subagents"
+  },
+  "homepage": "https://github.com/nekwebdev/warden#readme",
+  "bugs": {
+    "url": "https://github.com/nekwebdev/warden/issues"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "test": "node scripts/run-tests.mjs"
+  },
+  "peerDependencies": {
+    "@earendil-works/pi-coding-agent": "*"
+  },
+  "devDependencies": {
+    "@earendil-works/pi-coding-agent": "*",
+    "@types/node": "^25.9.1",
+    "tsx": "^4.20.0"
+  },
+  "exports": {
+    ".": "./index.ts"
+  },
+  "pi": {
+    "extensions": [
+      "./extensions/subagents/index.ts"
+    ]
+  }
+}

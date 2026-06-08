@@ -56,11 +56,6 @@ Use only folders that fit the package.
 
 ## Current package boundaries
 
-- `warden-panel/`
-  - Owns Warden panel-related Pi behavior.
-  - Owns the panel framework, Display pane, Packages pane, pane registry, and pane action dispatch.
-  - Does not own Warden runner workflows.
-
 - `warden-flow/`
   - Owns Warden workflow/orientation Pi behavior.
   - Owns `/skill:warden-map`, map capsule injection, scoped map loading, and git context injection.
@@ -70,6 +65,16 @@ Use only folders that fit the package.
   - Owns `/warden:effort` and per-skill effort defaults for Warden Flow skills.
   - Declares `@nekwebdev/warden-panel` as its package dependency for Effort pane contribution through the public panel API.
   - Does not own general runner workflows or agent lifecycle commands.
+
+- `warden-panel/`
+  - Owns Warden panel-related Pi behavior.
+  - Owns the panel framework, Display pane, Packages pane, pane registry, and pane action dispatch.
+  - Does not own Warden runner workflows.
+
+- `warden-subagents/`
+  - Owns Warden's future Pi subagents extension package home.
+  - Current scaffold owns only package identity and a synchronous no-op extension factory.
+  - Does not own Agent runtime, background execution, RPC behavior, worktree isolation, runner workflows, or agent lifecycle commands.
 
 - `warden-theme/`
   - Owns Warden Catppuccin Mocha-derived Pi theme resources.
@@ -156,9 +161,11 @@ From the repo root:
 ```sh
 npm install --prefix pi-warden/warden-panel
 npm install --prefix pi-warden/warden-flow
+npm install --prefix pi-warden/warden-subagents
 
 npm test --prefix pi-warden/warden-panel
 npm test --prefix pi-warden/warden-flow
+npm test --prefix pi-warden/warden-subagents
 
 mise run test:pi-warden
 ```

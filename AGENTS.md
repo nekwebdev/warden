@@ -102,6 +102,7 @@ Current GitHub package/area labels:
 - `pi-warden`
 - `warden-flow`
 - `warden-panel`
+- `warden-subagents`
 - `warden-theme`
 - `nix-warden`
 - `dev-warden`

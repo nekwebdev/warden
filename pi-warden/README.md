@@ -23,8 +23,9 @@ pi-warden/
 ├── README.md
 ├── AGENTS.md
 ├── tests/
-├── warden-panel/
 ├── warden-flow/
+├── warden-panel/
+├── warden-subagents/
 └── warden-theme/
 ```
 
@@ -115,26 +116,6 @@ Effort defaults and runtime thinking-level behavior belong in package code and e
 
 ## Current packages
 
-### `warden-panel/`
-
-Package: `@nekwebdev/warden-panel`
-
-Warden's Pi Agent panel framework and bundled panel extensions.
-
-Provides:
-
-- `/warden` — opens the Warden panel on the first available pane;
-- `/warden:display` — opens the Display pane;
-- `/warden:packages` — opens the Packages pane;
-- shared panel framework APIs for other Warden packages.
-
-Package docs:
-
-```text
-pi-warden/warden-panel/README.md
-pi-warden/warden-panel/AGENTS.md
-```
-
 ### `warden-flow/`
 
 Package: `@nekwebdev/warden-flow`
@@ -161,6 +142,45 @@ Package docs:
 ```text
 pi-warden/warden-flow/README.md
 pi-warden/warden-flow/AGENTS.md
+```
+
+### `warden-panel/`
+
+Package: `@nekwebdev/warden-panel`
+
+Warden's Pi Agent panel framework and bundled panel extensions.
+
+Provides:
+
+- `/warden` — opens the Warden panel on the first available pane;
+- `/warden:display` — opens the Display pane;
+- `/warden:packages` — opens the Packages pane;
+- shared panel framework APIs for other Warden packages.
+
+Package docs:
+
+```text
+pi-warden/warden-panel/README.md
+pi-warden/warden-panel/AGENTS.md
+```
+
+### `warden-subagents/`
+
+Package: `@nekwebdev/warden-subagents`
+
+Warden's future Pi subagents extension package home.
+
+Current scaffold provides:
+
+- a synchronous no-op extension factory;
+- package identity exports;
+- explicit fences against Agent runtime, background execution, RPC behavior, and worktree isolation until later slices define them.
+
+Package docs:
+
+```text
+pi-warden/warden-subagents/README.md
+pi-warden/warden-subagents/AGENTS.md
 ```
 
 ### `warden-theme/`
@@ -207,9 +227,11 @@ From the Warden repo root:
 ```sh
 npm install --prefix pi-warden/warden-panel
 npm install --prefix pi-warden/warden-flow
+npm install --prefix pi-warden/warden-subagents
 
 npm test --prefix pi-warden/warden-panel
 npm test --prefix pi-warden/warden-flow
+npm test --prefix pi-warden/warden-subagents
 npm test --prefix pi-warden/warden-theme
 
 mise run test:pi-warden
@@ -224,6 +246,7 @@ From the Warden repo root, local packages can be loaded temporarily during devel
 ```sh
 pi -e ./pi-warden/warden-panel
 pi -e ./pi-warden/warden-flow
+pi -e ./pi-warden/warden-subagents
 pi -e ./pi-warden/warden-theme
 ```
 
@@ -232,6 +255,7 @@ Or installed locally into a Pi environment:
 ```sh
 pi install ./pi-warden/warden-panel
 pi install ./pi-warden/warden-flow
+pi install ./pi-warden/warden-subagents
 pi install ./pi-warden/warden-theme
 ```
 

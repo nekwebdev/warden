@@ -203,12 +203,15 @@ Current package areas include:
 ```text
 pi-warden/warden-flow/
 pi-warden/warden-panel/
+pi-warden/warden-subagents/
 pi-warden/warden-theme/
 ```
 
 `pi-warden/warden-flow/` contains Warden flow/orientation work, including map/docs/start/grill/TDD/close/commit skills plus related map/git-context, effort, and commit-safety extensions.
 
 `pi-warden/warden-panel/` contains Warden panel framework and bundled panel extensions.
+
+`pi-warden/warden-subagents/` contains Warden's inert scaffold for future Pi subagents extension work.
 
 `pi-warden/warden-theme/` contains Warden Catppuccin Mocha-derived Pi theme resources.
 
@@ -254,7 +257,7 @@ Issue templates, package auto-labeling, and the PR package/area checklist track 
 
 - root private package/bootstrap: `warden`;
 - top-level subproject/product areas: `run-warden`, `pi-warden`, `nix-warden`, and `dev-warden`;
-- direct Pi package folders with `package.json`: `warden-flow`, `warden-panel`, and `warden-theme`.
+- direct Pi package folders with `package.json`: `warden-flow`, `warden-panel`, `warden-subagents`, and `warden-theme`.
 
 Current labels use `pkg:<slug>`, for example `pkg:run-warden` or `pkg:warden-flow`.
 
