@@ -1,6 +1,6 @@
 # warden-subagents
 
-`@nekwebdev/warden-subagents` is Warden's Pi package home for subagent type definitions, foreground subagent delegation, and background launch/result lookup.
+`@nekwebdev/warden-subagents` is Warden's Pi package home for subagent type definitions, foreground subagent delegation, background launch/result lookup, and the read-only Warden Panel Subagents pane.
 
 Current package scope:
 
@@ -9,11 +9,12 @@ Current package scope:
 - custom agent markdown loading from project and global Pi agent directories;
 - foreground `Agent` tool that runs one child Pi agent session in-process and returns final text inline;
 - background `Agent` mode that returns an agent ID immediately and lets parents retrieve queued/running/completed/error/aborted state with `get_subagent_result`;
+- read-only Warden Panel Subagents pane opened by `/agents` and `/warden:agents`;
 - pure helper seams for invocation precedence, prompt/context construction, model resolution, off-by-default model scope enforcement, tool policy, and max-turn planning.
 
 Still intentionally out of scope:
 
-- no background steering, resume, persistent retention, scheduling, RPC, worktree isolation, Warden Panel pane, `/agents` menu, or conversation overlay;
+- no background steering, resume, persistent retention, scheduling, RPC, worktree isolation, conversation overlay, or panel admin controls;
 - native Pi widget and one-per-unconsumed-terminal completion notifications are in scope only for package-local background `Agent` activity;
 - no scheduling;
 - no memory behavior;
@@ -78,6 +79,16 @@ Use `wait: true` when the parent needs the final result and should wait for `com
 ```
 
 The default background concurrency is 4 per extension session. Foreground calls bypass this queue. Session shutdown aborts active background work and clears in-memory records.
+
+## Subagents pane
+
+Use `/agents` or `/warden:agents` to open Warden Panel focused on the Subagents pane. The pane renders a cached read-only snapshot loaded at command time from:
+
+- active package-local `AgentManager.getActivitySnapshot()` queued/running background agents;
+- default and custom agent types loaded from command `ctx.cwd`;
+- registry diagnostics as a concise count plus first message.
+
+The pane shows source and disabled indicators for agent types, zero-state text when no background agents are queued or running, and no create/edit/delete/stop/settings/scheduling rows or controls in this slice.
 
 ## Registry API
 
@@ -196,7 +207,7 @@ Future slices may add subagent behavior inside this package only when packet sco
 - no root bootstrap changes;
 - no shell integration;
 - no Nix or dev-environment product behavior;
-- no background steering, resume, persistent retention, RPC behavior, scheduling, memory, Warden Panel pane, `/agents` menu, conversation overlay, or worktree isolation until separate accepted slices define them.
+- no background steering, resume, persistent retention, RPC behavior, scheduling, memory, conversation overlay, worktree isolation, or panel admin controls until separate accepted slices define them.
 
 ## Upstream attribution
 

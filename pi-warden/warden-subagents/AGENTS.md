@@ -11,22 +11,24 @@ Current package owns:
 - package identity and manifest;
 - foreground `Agent` tool registration;
 - background `Agent` launch/result lookup around the foreground runner;
+- read-only Warden Panel Subagents pane plus `/agents` and `/warden:agents` aliases;
 - in-process child `createAgentSession` foreground runner;
 - functional registry API under `src/`;
 - embedded default agent types;
 - custom `.pi/agents/<name>.md` loading, normalization, diagnostics, and resolution;
-- package-local tests and docs for registry and foreground runner seams.
+- package-local tests and docs for registry, foreground runner, background activity, and read-only panel seams.
 
 Hard fences:
 
 - background launch/result lookup is allowed only through the package-local `AgentManager`, `Agent({ run_in_background: true })`, and `get_subagent_result` tool path;
 - native Pi widget and one-per-unconsumed-terminal completion notifications are allowed only through package-local UI/notification helpers;
-- no background steering, resume, persistent retention, scheduling, RPC, worktree, Warden Panel pane, `/agents` menu, or conversation overlay;
+- read-only Warden Panel pane work is limited to cached active background-agent snapshots and agent-type registry display;
+- no background steering, resume, persistent retention, scheduling, RPC, worktree, conversation overlay, or panel admin controls;
 - no scheduling;
 - no memory behavior;
 - no RPC behavior;
 - no worktree isolation;
-- no Pi command, scheduler, or background registration outside package-local `Agent`/`get_subagent_result` tools and native renderers;
+- no Pi command, scheduler, or background registration outside package-local `Agent`/`get_subagent_result` tools, native renderers, `/agents`, and `/warden:agents`;
 - no root bootstrap, runner workflow, `warden agents ...`, shell integration, Nix, or dev-environment behavior.
 
 ## Agent runner rules

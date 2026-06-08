@@ -37,6 +37,10 @@ describe("warden-subagents package manifest", () => {
 		);
 		assert.equal(pkg.devDependencies?.["@earendil-works/pi-coding-agent"], "*");
 		assert.equal(pkg.devDependencies?.tsx, "^4.20.0");
+		assert.equal(
+			pkg.dependencies?.["@nekwebdev/warden-panel"],
+			"file:../warden-panel",
+		);
 		assert.equal(pkg.exports?.["."], "./index.ts");
 		assert.deepEqual(pkg.pi?.extensions, ["./extensions/subagents/index.ts"]);
 	});
@@ -63,6 +67,7 @@ describe("warden-subagents package manifest", () => {
 			"src/ui/agent-renderer.ts",
 			"src/ui/agent-widget.ts",
 			"src/ui/notification-renderer.ts",
+			"src/ui/subagents-pane.ts",
 			"extensions/subagents/index.ts",
 			"scripts/run-tests.mjs",
 			"tests/package-scaffold.test.mjs",
@@ -74,6 +79,7 @@ describe("warden-subagents package manifest", () => {
 			"tests/agent-widget.test.mjs",
 			"tests/agent-renderer.test.mjs",
 			"tests/notification-renderer.test.mjs",
+			"tests/subagents-pane.test.mjs",
 		];
 
 		for (const entry of requiredEntries) {
@@ -114,6 +120,7 @@ describe("warden-subagents package manifest", () => {
 			"src/ui/agent-renderer.ts",
 			"src/ui/agent-widget.ts",
 			"src/ui/notification-renderer.ts",
+			"src/ui/subagents-pane.ts",
 			"src/usage.ts",
 			"tests/agent-manager.test.mjs",
 			"tests/agent-renderer.test.mjs",
@@ -123,6 +130,7 @@ describe("warden-subagents package manifest", () => {
 			"tests/custom-agents.test.mjs",
 			"tests/notification-renderer.test.mjs",
 			"tests/package-scaffold.test.mjs",
+			"tests/subagents-pane.test.mjs",
 			"tests/usage.test.mjs",
 		]);
 	});
@@ -144,10 +152,14 @@ describe("warden-subagents extension scaffold", () => {
 		assert.equal(typeof mod.default, "function");
 
 		const registeredTools = [];
+		const registeredCommands = [];
 		const handlers = new Map();
 		const fakeApi = {
 			registerTool(tool) {
 				registeredTools.push(tool);
+			},
+			registerCommand(name) {
+				registeredCommands.push(name);
 			},
 			on(event, handler) {
 				handlers.set(event, handler);
@@ -161,6 +173,7 @@ describe("warden-subagents extension scaffold", () => {
 		);
 		assert.equal(typeof registeredTools[0].execute, "function");
 		assert.equal(typeof registeredTools[1].execute, "function");
+		assert.deepEqual(registeredCommands, ["agents", "warden:agents"]);
 		assert.equal(typeof handlers.get("session_shutdown"), "function");
 	});
 
@@ -172,6 +185,7 @@ describe("warden-subagents extension scaffold", () => {
 		for (const phrase of [
 			"foreground `Agent` tool",
 			"background launch/result lookup",
+			"read-only Warden Panel Subagents pane",
 			"no RPC behavior",
 			"no worktree isolation",
 			"tintinweb/pi-subagents",

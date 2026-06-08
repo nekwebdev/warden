@@ -43,6 +43,19 @@ export {
 	renderSubagentNotification,
 	sendSubagentNotification,
 } from "./src/ui/notification-renderer.ts";
+export {
+	AGENTS_COMMAND,
+	SUBAGENTS_PANE_ID,
+	WARDEN_AGENTS_COMMAND,
+	buildSubagentsPaneSnapshot,
+	createSubagentsCommandHandler,
+	createSubagentsPane,
+	getSubagentsPaneSnapshot,
+	registerSubagentsCommands,
+	registerSubagentsPane,
+	renderSubagentsPane,
+	setSubagentsPaneSnapshot,
+} from "./src/ui/subagents-pane.ts";
 export { resolveModelRequest } from "./src/model-resolver.ts";
 export { buildAgentSystemPrompt } from "./src/prompts.ts";
 export type {
@@ -102,6 +115,10 @@ export type {
 	SubagentNotificationDetails,
 	SubagentNotificationPayload,
 } from "./src/ui/notification-renderer.ts";
+export type {
+	CreateSubagentsCommandHandlerOptions,
+	SubagentsPaneSnapshot,
+} from "./src/ui/subagents-pane.ts";
 export type {
 	ModelLike,
 	ModelRegistryLike,

@@ -6,6 +6,7 @@ All notable Warden changes are recorded here.
 
 ### Added
 
+- Added `@nekwebdev/warden-subagents` read-only Warden Panel Subagents pane opened by `/agents` and `/warden:agents`.
 - Added `@nekwebdev/warden-subagents` background `Agent` launch and `get_subagent_result` lookup with queued/running/completed/error/aborted lifecycle state.
 - Added `@nekwebdev/warden-subagents` native Pi background activity widget, Agent renderers, and one-per-unconsumed-terminal completion notifications.
 - Added `@nekwebdev/warden-subagents` agent-type registry APIs for default agents and custom `.pi/agents/<name>.md` loading while preserving inert runtime scope.

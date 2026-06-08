@@ -7,6 +7,10 @@ import {
 	sendSubagentNotification,
 	SUBAGENT_NOTIFICATION_TYPE,
 } from "../../src/ui/notification-renderer.ts";
+import {
+	registerSubagentsCommands,
+	registerSubagentsPane,
+} from "../../src/ui/subagents-pane.ts";
 
 export const WARDEN_SUBAGENTS_PACKAGE = "@nekwebdev/warden-subagents";
 
@@ -16,6 +20,8 @@ export function wardenSubagents(pi: ExtensionAPI): void {
 	let widget = createAgentWidgetController(undefined);
 
 	registerNotificationRenderer(pi);
+	registerSubagentsPane();
+	registerSubagentsCommands(pi, manager);
 	manager.onActivityChange((snapshot) => widget.update(snapshot));
 	manager.onTerminalResult((event) => {
 		if (currentCtx) sendSubagentNotification(pi, currentCtx, event.result);

@@ -39,6 +39,9 @@
   "scripts": {
     "test": "node scripts/run-tests.mjs"
   },
+  "dependencies": {
+    "@nekwebdev/warden-panel": "file:../warden-panel"
+  },
   "peerDependencies": {
     "@earendil-works/pi-coding-agent": "*"
   },
