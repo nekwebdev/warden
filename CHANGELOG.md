@@ -6,6 +6,7 @@ All notable Warden changes are recorded here.
 
 ### Added
 
+- `warden agents new` seeds fresh Pi agent environments with an `AGENTS.md` guidance template that substitutes only the agent name.
 - Warden Panel Packages pane can update tagged npm package entries from global Pi settings, reconcile changed installs, and report `old -> new` source changes.
 
 ### Changed

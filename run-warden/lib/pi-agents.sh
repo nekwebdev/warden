@@ -77,6 +77,27 @@ warden_agent_settings_path() {
 	printf '%s/settings.json\n' "$agent_dir"
 }
 
+warden_agent_guidance_template_path() {
+	printf '%s/templates/AGENTS-template.md\n' "$RUN_WARDEN_ROOT"
+}
+
+warden_agent_seed_guidance() {
+	agent_dir=$1
+	name=$2
+	template_path=$(warden_agent_guidance_template_path)
+	guidance_path=$agent_dir/AGENTS.md
+
+	if [ ! -r "$template_path" ]; then
+		printf '%s\n' "warden: agent guidance template is missing or unreadable: $template_path" >&2
+		return 1
+	fi
+	if [ -e "$guidance_path" ]; then
+		printf '%s\n' "warden: agent guidance already exists: $guidance_path" >&2
+		return 1
+	fi
+	sed "s/%agent_name%/$name/g" "$template_path" >"$guidance_path" || return 1
+}
+
 warden_agent_settings_node() {
 	if ! command -v node >/dev/null 2>&1; then
 		printf '%s\n' "warden: node is required to read and write agent settings.json" >&2
@@ -401,6 +422,10 @@ warden_agents_new() {
 		rm -rf "$agent_dir"
 		return 1
 	}
+	if ! warden_agent_seed_guidance "$agent_dir" "$name"; then
+		rm -rf "$agent_dir"
+		return 1
+	fi
 
 	if ! warden_agent_install_pi "$agent_dir"; then
 		rm -rf "$agent_dir"

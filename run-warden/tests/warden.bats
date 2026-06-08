@@ -102,6 +102,70 @@ SH
   grep -F "arg=@earendil-works/pi-coding-agent" "$BATS_TEST_TMPDIR/npm.log"
 }
 
+@test "agents new seeds AGENTS.md from template with agent name only" {
+  agents="$BATS_TEST_TMPDIR/agents"
+  run env HOME="$TEST_HOME" PATH="$FAKE_BIN:$PATH" WARDEN_AGENTS="$agents" NPM_LOG="$BATS_TEST_TMPDIR/npm.log" "$RUN_WARDEN_ROOT/bin/warden" agents new ada
+  [ "$status" -eq 0 ]
+  [ -f "$agents/ada/AGENTS.md" ]
+  node - "$RUN_WARDEN_ROOT/templates/AGENTS-template.md" "$agents/ada/AGENTS.md" <<'NODE'
+const fs = require('fs');
+const [templatePath, actualPath] = process.argv.slice(2);
+const template = fs.readFileSync(templatePath, 'utf8');
+const actual = fs.readFileSync(actualPath, 'utf8');
+const expected = template.split('%agent_name%').join('ada');
+if (actual !== expected) {
+  console.error('AGENTS.md did not match template with %agent_name% replaced');
+  process.exit(1);
+}
+if (actual.includes('%agent_name%')) {
+  console.error('AGENTS.md still contains %agent_name%');
+  process.exit(1);
+}
+for (const placeholder of ['%mission%', '%primary_scope%', '%out_of_scope%', '%testing%']) {
+  if (!actual.includes(placeholder)) {
+    console.error(`AGENTS.md missing untouched placeholder ${placeholder}`);
+    process.exit(1);
+  }
+}
+NODE
+}
+
+@test "agents new seeds guidance from runner root outside repository cwd" {
+  agents="$BATS_TEST_TMPDIR/agents"
+  elsewhere="$BATS_TEST_TMPDIR/elsewhere"
+  mkdir -p "$elsewhere"
+  cd "$elsewhere"
+
+  run env HOME="$TEST_HOME" PATH="$FAKE_BIN:$PATH" WARDEN_AGENTS="$agents" NPM_LOG="$BATS_TEST_TMPDIR/npm.log" "$RUN_WARDEN_ROOT/bin/warden" agents new ada
+  [ "$status" -eq 0 ]
+  grep -F "You are ada," "$agents/ada/AGENTS.md"
+}
+
+@test "agents update does not mutate existing AGENTS.md" {
+  agents="$BATS_TEST_TMPDIR/agents"
+  env HOME="$TEST_HOME" PATH="$FAKE_BIN:$PATH" WARDEN_AGENTS="$agents" NPM_LOG="$BATS_TEST_TMPDIR/install-npm.log" "$RUN_WARDEN_ROOT/bin/warden" agents new ada
+  printf '%s\n' 'unique guidance sentinel' >"$agents/ada/AGENTS.md"
+
+  run env HOME="$TEST_HOME" PATH="$FAKE_BIN:$PATH" WARDEN_AGENTS="$agents" NPM_LOG="$BATS_TEST_TMPDIR/update-npm.log" "$RUN_WARDEN_ROOT/bin/warden" agents update ada
+  [ "$status" -eq 0 ]
+  [ "$(cat "$agents/ada/AGENTS.md")" = "unique guidance sentinel" ]
+}
+
+@test "agents new fails before npm when AGENTS template is missing" {
+  agents="$BATS_TEST_TMPDIR/agents"
+  fixture_root="$BATS_TEST_TMPDIR/missing-template-fixture"
+  mkdir -p "$fixture_root"
+  cp -R "$RUN_WARDEN_ROOT" "$fixture_root/run-warden"
+  rm -f "$fixture_root/run-warden/templates/AGENTS-template.md"
+  expected_template="$fixture_root/run-warden/templates/AGENTS-template.md"
+
+  run env HOME="$TEST_HOME" PATH="$FAKE_BIN:$PATH" WARDEN_AGENTS="$agents" NPM_LOG="$BATS_TEST_TMPDIR/missing-template-npm.log" "$fixture_root/run-warden/bin/warden" agents new ada
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"warden: agent guidance template is missing or unreadable: $expected_template"* ]]
+  [ ! -e "$agents/ada" ]
+  [ ! -s "$BATS_TEST_TMPDIR/missing-template-npm.log" ]
+}
+
 @test "agents new defaults to XDG pi-agents root" {
   xdg="$BATS_TEST_TMPDIR/xdg"
   run env -u WARDEN_AGENTS HOME="$TEST_HOME" XDG_CONFIG_HOME="$xdg" PATH="$FAKE_BIN:$PATH" NPM_LOG="$BATS_TEST_TMPDIR/npm.log" "$RUN_WARDEN_ROOT/bin/warden" agents new ada
