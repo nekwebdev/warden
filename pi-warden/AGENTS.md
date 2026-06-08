@@ -71,6 +71,11 @@ Use only folders that fit the package.
   - Declares `@nekwebdev/warden-panel` as its package dependency for Effort pane contribution through the public panel API.
   - Does not own general runner workflows or agent lifecycle commands.
 
+- `warden-theme/`
+  - Owns Warden terminal-derived Pi theme resources.
+  - Owns `themes/warden-terminal.json`, theme token inventory docs, and theme validation.
+  - Does not own Warden runner workflows, agent lifecycle commands, or terminal OSC probing.
+
 ## Scope rules
 
 - Do not put package manifests, package source, package tests, package scripts, or package build systems directly under `pi-warden/`.

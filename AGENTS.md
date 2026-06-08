@@ -78,6 +78,41 @@ Expectations:
 - If tooling is unavailable, report exactly what could not be run and why.
 - Do not claim verification unless the command actually ran.
 
+## GitHub hygiene
+
+Keep GitHub package/area hygiene lists aligned with Warden's current package-like ecosystem units, not only Pi packages.
+
+Package/area list surfaces:
+
+- `.github/workflows/label-issues.yml` package label list;
+- `.github/ISSUE_TEMPLATE/bug_report.yml` package/area dropdown;
+- `.github/ISSUE_TEMPLATE/feature_request.yml` package/area dropdown;
+- `.github/pull_request_template.md` package/area checklist.
+
+Package-like unit sources:
+
+- root private npm package from `package.json`: `warden`;
+- top-level Warden subproject/product areas: `run-warden`, `pi-warden`, `nix-warden`, and `dev-warden`;
+- direct Pi package folders under `pi-warden/<package>/` that contain `package.json`.
+
+Current GitHub package/area labels:
+
+- `warden`
+- `run-warden`
+- `pi-warden`
+- `warden-flow`
+- `warden-panel`
+- `warden-theme`
+- `nix-warden`
+- `dev-warden`
+
+Rules:
+
+- Use exact package/area slugs for GitHub labels: `pkg:<slug>`.
+- Include `pi-warden` for package-area issues, but do not treat `pi-warden/` itself as a Pi package.
+- When adding, removing, or renaming a package-like unit, update every GitHub package/area list surface in the same change.
+- Keep `README.md` and relevant nested `AGENTS.md` package inventories current when package membership changes.
+
 ## Scope and docs
 
 - Do not add product behavior to `nix-warden/` or `dev-warden/` as bootstrap, runner, or package collateral.

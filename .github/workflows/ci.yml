@@ -1,0 +1,66 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    defaults:
+      run:
+        shell: bash
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: |
+            pi-warden/warden-panel/package-lock.json
+            pi-warden/warden-flow/package-lock.json
+
+      - name: Set up mise
+        uses: jdx/mise-action@v4
+
+      - name: Install Pi package dependencies
+        run: |
+          set -euo pipefail
+          for lockfile in pi-warden/*/package-lock.json; do
+            [ -f "$lockfile" ] || continue
+            npm ci --prefix "$(dirname "$lockfile")"
+          done
+
+      - name: Show tool versions
+        run: |
+          node --version
+          npm --version
+          mise --version
+          bats --version
+
+      - name: Check shell syntax
+        run: |
+          set -euo pipefail
+          sh -n warden
+          sh -n run-warden/bin/warden
+          sh -n run-warden/lib/*.sh
+          sh -n run-warden/shell/*.sh
+
+      - name: Run tests
+        run: mise run test

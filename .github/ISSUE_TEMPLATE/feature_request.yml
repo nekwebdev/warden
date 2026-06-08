@@ -1,0 +1,65 @@
+name: Feature Request
+description: Suggest a Warden feature or improvement
+labels: ["enhancement"]
+body:
+  - type: dropdown
+    id: package
+    attributes:
+      label: Package or area
+      description: Which Warden ecosystem unit does this relate to? Select all that apply; use Not package-specific for broad docs, hygiene, or uncertain scope.
+      multiple: true
+      options:
+        - warden
+        - run-warden
+        - pi-warden
+        - warden-flow
+        - warden-panel
+        - warden-theme
+        - nix-warden
+        - dev-warden
+        - Not package-specific
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: What do you want to change?
+      description: Describe the feature or improvement.
+    validations:
+      required: true
+
+  - type: textarea
+    id: why
+    attributes:
+      label: Why?
+      description: What problem does this solve? What use case does it support?
+    validations:
+      required: true
+
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      description: What should be true when this is done?
+      placeholder: |
+        - ...
+        - ...
+    validations:
+      required: false
+
+  - type: textarea
+    id: constraints
+    attributes:
+      label: Boundaries or safety notes
+      description: Relevant Warden boundaries, consent requirements, compatibility concerns, or migration constraints.
+    validations:
+      required: false
+
+  - type: textarea
+    id: how
+    attributes:
+      label: How? (optional)
+      description: Suggested implementation approach, alternatives, or constraints.
+    validations:
+      required: false

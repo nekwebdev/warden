@@ -201,11 +201,16 @@ pi-warden/<package>/
 Current package areas include:
 
 ```text
-pi-warden/warden-panel/
 pi-warden/warden-flow/
+pi-warden/warden-panel/
+pi-warden/warden-theme/
 ```
 
 `pi-warden/warden-flow/` contains Warden flow/orientation work, including map/docs/start/grill/TDD/close/commit skills plus related map/git-context, effort, and commit-safety extensions.
+
+`pi-warden/warden-panel/` contains Warden panel framework and bundled panel extensions.
+
+`pi-warden/warden-theme/` contains Warden terminal-derived Pi theme resources.
 
 ### `nix-warden/`
 
@@ -242,6 +247,18 @@ mise run test:dev-warden
 The root and runner suites use Bats where present.
 
 The `pi-warden` task runs package test suites for package folders that contain `package.json`.
+
+## GitHub hygiene
+
+Issue templates, package auto-labeling, and the PR package/area checklist track Warden's package-like ecosystem units across the whole repo:
+
+- root private package/bootstrap: `warden`;
+- top-level subproject/product areas: `run-warden`, `pi-warden`, `nix-warden`, and `dev-warden`;
+- direct Pi package folders with `package.json`: `warden-flow`, `warden-panel`, and `warden-theme`.
+
+Current labels use `pkg:<slug>`, for example `pkg:run-warden` or `pkg:warden-flow`.
+
+When any package-like unit is added, removed, or renamed, update the package/area lists in `.github/` plus `AGENTS.md` and relevant package inventory docs.
 
 ## Agent guidance
 
