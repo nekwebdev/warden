@@ -1,7 +1,11 @@
 import { spawnSync } from "node:child_process";
 import { existsSync } from "node:fs";
 
-const tests = ["tests/package-scaffold.test.mjs"];
+const tests = [
+	"tests/package-scaffold.test.mjs",
+	"tests/agent-types.test.mjs",
+	"tests/custom-agents.test.mjs",
+];
 
 const missing = tests.filter((file) => !existsSync(file));
 if (missing.length > 0) {

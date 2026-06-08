@@ -72,8 +72,8 @@ Use only folders that fit the package.
   - Does not own Warden runner workflows.
 
 - `warden-subagents/`
-  - Owns Warden's future Pi subagents extension package home.
-  - Current scaffold owns only package identity and a synchronous no-op extension factory.
+  - Owns Warden's Pi subagent-type registry package and future Pi subagents extension package home.
+  - Owns functional registry APIs, embedded default agent types, custom `.pi/agents/<name>.md` loading, config normalization, diagnostics, and the synchronous no-op extension factory.
   - Does not own Agent runtime, background execution, RPC behavior, worktree isolation, runner workflows, or agent lifecycle commands.
 
 - `warden-theme/`

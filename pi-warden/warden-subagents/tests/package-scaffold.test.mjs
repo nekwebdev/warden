@@ -47,9 +47,15 @@ describe("warden-subagents package manifest", () => {
 			"AGENTS.md",
 			"LICENSE",
 			"index.ts",
+			"src/agent-types.ts",
+			"src/custom-agents.ts",
+			"src/default-agents.ts",
+			"src/types.ts",
 			"extensions/subagents/index.ts",
 			"scripts/run-tests.mjs",
 			"tests/package-scaffold.test.mjs",
+			"tests/agent-types.test.mjs",
+			"tests/custom-agents.test.mjs",
 		];
 
 		for (const entry of requiredEntries) {
@@ -75,6 +81,12 @@ describe("warden-subagents package manifest", () => {
 			"index.ts",
 			"package.json",
 			"scripts/run-tests.mjs",
+			"src/agent-types.ts",
+			"src/custom-agents.ts",
+			"src/default-agents.ts",
+			"src/types.ts",
+			"tests/agent-types.test.mjs",
+			"tests/custom-agents.test.mjs",
 			"tests/package-scaffold.test.mjs",
 		]);
 	});

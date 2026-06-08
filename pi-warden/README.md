@@ -168,12 +168,14 @@ pi-warden/warden-panel/AGENTS.md
 
 Package: `@nekwebdev/warden-subagents`
 
-Warden's future Pi subagents extension package home.
+Warden's Pi subagent-type registry package and future subagents extension home.
 
-Current scaffold provides:
+Current package provides:
 
-- a synchronous no-op extension factory;
-- package identity exports;
+- a tested registry API for default and custom agent types;
+- embedded `general-purpose`, `Explore`, and `Plan` default definitions;
+- custom `.pi/agents/<name>.md` loading with project-over-global precedence, case-insensitive resolution, normalized config, and structured diagnostics;
+- a synchronous no-op extension factory that performs no Pi API access;
 - explicit fences against Agent runtime, background execution, RPC behavior, and worktree isolation until later slices define them.
 
 Package docs:

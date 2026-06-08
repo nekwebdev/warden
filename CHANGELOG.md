@@ -6,6 +6,7 @@ All notable Warden changes are recorded here.
 
 ### Added
 
+- Added `@nekwebdev/warden-subagents` agent-type registry APIs for default agents and custom `.pi/agents/<name>.md` loading while preserving inert runtime scope.
 - Added inert `@nekwebdev/warden-subagents` Pi package scaffold for future subagents extension work.
 - `warden agents new` seeds fresh Pi agent environments with an `AGENTS.md` guidance template that substitutes only the agent name.
 - Warden Panel Packages pane can update tagged npm package entries from global Pi settings, reconcile changed installs, and report `old -> new` source changes.

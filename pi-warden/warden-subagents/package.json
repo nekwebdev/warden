@@ -1,10 +1,11 @@
 {
   "name": "@nekwebdev/warden-subagents",
   "version": "0.1.0",
-  "description": "Warden Pi Agent subagents extension scaffold package",
+  "description": "Warden Pi Agent subagents registry and inert extension package",
   "type": "module",
   "files": [
     "index.ts",
+    "src/**/*.ts",
     "extensions/**/*.ts",
     "scripts/**/*.mjs",
     "tests/**/*.mjs",
