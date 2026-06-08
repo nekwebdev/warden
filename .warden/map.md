@@ -2,7 +2,7 @@
 
 Reviewed: 2026-06-06
 Scope: repository root
-Evidence basis: root/subproject AGENTS and README files; `.mise.toml`; Bats/package test entry points; Pi package manifests; existing scoped maps; CHANGELOG.md; bounded git history.
+Evidence basis: root/subproject AGENTS and README files; `mise.toml`; Bats/package test entry points; Pi package manifests; existing scoped maps; CHANGELOG.md; bounded git history.
 Git basis: main@76a529e
 
 <!-- warden-map:inject:start -->
@@ -17,7 +17,7 @@ Git basis: main@76a529e
 
 ## Repository Purpose
 
-Warden is a monorepo for an operating-environment workflow: bootstrap, runner commands, shell integration, Pi Agent package work, future NixOS config, and future developer-environment support. Evidence comes from `README.md`, `AGENTS.md`, `.mise.toml`, shell scripts, package manifests, tests, and recent git history.
+Warden is a monorepo for an operating-environment workflow: bootstrap, runner commands, shell integration, Pi Agent package work, future NixOS config, and future developer-environment support. Evidence comes from `README.md`, `AGENTS.md`, `mise.toml`, shell scripts, package manifests, tests, and recent git history.
 
 First-run promise is central: user can clone anywhere, run `./warden`, choose or accept `WARDEN_HOME`, approve any move/install, and reach delegated runner without surprise overwrites.
 
@@ -33,7 +33,7 @@ First-run promise is central: user can clone anywhere, run `./warden`, choose or
 | `nix-warden/` | Future NixOS/system package | Skeleton only; canonical active path after bootstrap is `$WARDEN_HOME/nix-warden`. |
 | `dev-warden/` | Future developer-environment package | Skeleton only; independently testable smoke boundary. |
 | `tests/root/` | Root bootstrap tests | Bats fixtures copy repo into temp dirs and verify first-run movement, no-overwrite safety, doctor, shell integration. |
-| `.mise.toml` | Dev task runner config | Defines all test tasks and package test loop for `pi-warden/*/package.json`. |
+| `mise.toml` | Dev task runner config | Defines all test tasks and package test loop for `pi-warden/*/package.json`. |
 | `.gitignore` | Generated/local-state boundary | Ignores `node_modules/`, build outputs, `.pi/`, `.pi-lens/`, `pi-lens/`, env files, temp/cache. |
 | `.warden/` | Warden map files | Orientation reference only; capsules may be injected by `@nekwebdev/warden-flow`'s `warden-map` extension. |
 

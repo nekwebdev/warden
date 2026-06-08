@@ -165,7 +165,7 @@ If no cwd is configured, Warden preserves the caller's current working directory
 ├── dev-warden/    # future developer-environment area
 ├── AGENTS.md      # repo-wide agent guidance
 ├── README.md      # human-facing project entrypoint
-└── .mise.toml     # dev tool and test task definitions
+└── mise.toml      # dev tool and test task definitions
 ```
 
 ## Subproject boundaries

@@ -40,7 +40,7 @@ Expected package shape from guidance:
 
 ## Local Entry Points
 
-- `mise run test:pi-warden` runs package-area smoke tests and each package's `npm test` via `.mise.toml` package loop.
+- `mise run test:pi-warden` runs package-area smoke tests and each package's `npm test` via `mise.toml` package loop.
 - Package manifests advertise Pi resources:
   - `warden-panel/package.json` has `pi.extensions: ["./extensions/*/index.ts"]`.
   - `warden-flow/package.json` has `pi.extensions`, `pi.skills: ["./skills"]`, and package dependency on `@nekwebdev/warden-panel` for Effort pane contribution.
