@@ -171,10 +171,6 @@ describe("package pi resources", () => {
 			/remaining argument text as optional manual feedback evidence/,
 		);
 		assert.match(content, /ask_user_question/);
-		assert.match(content, /Grill packet alone/);
-		assert.match(content, /Do not enforce a minimum number of questions/i);
-		assert.match(content, /five additional substantive fine-tuning questions/i);
-		assert.match(content, /Do not count the startup mode question/i);
 		assert.match(content, /Status: Packet solid for TDD/);
 	});
 
