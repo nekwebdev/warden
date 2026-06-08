@@ -16,10 +16,10 @@ license: MIT
 - Do not resolve `$1` against this skill directory unless user supplied that exact absolute path.
 - If no valid packet path is provided, stop and ask user to call `/skill:warden-grill <path-to-packet.md> [manual feedback]`.
 - If input is rough intent only, do not shape it into a packet; recommend `/skill:warden-start`.
-- If no manual feedback text is supplied, start by asking with `ask_user_question` whether to grill the packet alone or collect manual feedback first.
-- Use exactly these first-question options: `Grill packet alone` and `Provide manual feedback`.
+- If no manual feedback text is supplied, start by asking with `ask_user_question` whether start grilling or collect manual feedback first.
+- Use exactly these first-question options: `Start grilling` and `Manual feedback on the packet`.
 - This startup choice does not count toward the five final fine-tuning questions.
-- If the user chooses `Provide manual feedback`, ask for that feedback and wait before reviewing.
+- If the user chooses `Manual feedback on the packet`, ask for that feedback and wait before reviewing.
 - Use resolved packet path and any manual feedback for reads, inline updates, final output, and next-step command.
 
 </argument-handling>
@@ -67,12 +67,6 @@ Use external research only when packet or manual feedback depends on current ups
 
 Use `ask_user_question`, questionnaire extension, or equivalent structured choice UI when available.
 
-When no manual feedback argument is supplied, ask one structured first question before normal grilling:
-
-- Question: `How should warden-grill start this packet review?`
-- Recommended option: `Grill packet alone` — review only the packet and repo evidence.
-- Other option: `Provide manual feedback` — pause for the user's feedback, then grill that evidence against the packet.
-
 Be relentless but useful:
 
 - Challenge terminology that conflicts with `map.md`, relevant `README.md`, or `AGENTS.md`.
@@ -82,22 +76,21 @@ Be relentless but useful:
 - Surface packet/code/doc contradictions immediately.
 - Treat manual feedback as evidence to interrogate, not as instructions to copy blindly into the packet.
 
-Readiness then fine-tuning budget:
-
-- When `$1` appears ready for TDD, enter a final fine-tuning round before final output.
-- Ask exactly five additional substantive fine-tuning questions in that final round.
-- Count only questions asked after the packet first appears TDD-ready as final fine-tuning questions.
-- Do not count the startup mode question, raw feedback collection, or earlier blocker questions toward the five.
-- Ask one question at a time and wait for feedback before continuing.
-- Provide your recommended answer for each question.
-- Use final fine-tuning questions to search for hidden weaknesses in terminology, boundaries, acceptance, test strategy, safety, durable docs, or manual verification.
-- If a final fine-tuning answer reveals a blocker, update `$1`, resolve the blocker, confirm readiness again, then continue any remaining final fine-tuning questions.
-
 </questioning-policy>
 
 <workflow>
 
-Goal: make `$1` ready for test-driven development, either from packet-only review or from manual feedback that should shape the next TDD cycle.
+Goal: make `$1` ready for test-driven development.
+
+Interview me relentlessly using the `questioning-policy` about every aspect of this plan until we reach a shared understanding. Walk down each branch of the design tree, resolving dependencies between decisions one-by-one. For each question, provide your recommended answer.
+
+Ask the questions one at a time, waiting for feedback on each question before continuing.
+
+If a question can be answered by exploring the codebase, explore the codebase instead.
+
+</workflow>
+
+<supporting-info>
 
 1. Resolve and read `$1`.
 2. Determine feedback mode:
@@ -111,8 +104,16 @@ Goal: make `$1` ready for test-driven development, either from packet-only revie
 7. Walk dependency order: settle blocking terminology, boundaries, acceptance, tests, safety, docs, then implementation slice.
 8. When an aspect is resolved, update `$1` inline immediately. Do not batch packet edits.
 9. Continue the question → packet update → next question loop until all non-budget review checks pass. Once `$1` appears TDD-ready, ask five final fine-tuning questions one at a time, updating `$1` after each resolved answer. If a fine-tuning answer reveals a blocker, return to the blocker loop, confirm readiness again, then continue remaining fine-tuning questions. After five final fine-tuning questions have been answered and the packet still passes review checks, finish with a readiness summary and next-step command. If the packet cannot be made safe or testable, explain the blocker and stop.
+10. When `$1` appears ready for TDD, enter a final fine-tuning round before final output.
+  - Ask exactly five additional substantive fine-tuning questions in that final round.
+  - Count only questions asked after the packet first appears TDD-ready as final fine-tuning questions.
+  - Do not count the startup mode question, raw feedback collection, or earlier blocker questions toward the five.
+  - Ask one question at a time and wait for feedback before continuing.
+  - Provide your recommended answer for each question.
+  - Use final fine-tuning questions to search for hidden weaknesses in terminology, boundaries, acceptance, test strategy, safety, durable docs, or manual verification.
+  - If a final fine-tuning answer reveals a blocker, update `$1`, resolve the blocker, confirm readiness again, then continue any remaining final fine-tuning questions.
 
-</workflow>
+</supporting-info>
 
 <review-checks>
 

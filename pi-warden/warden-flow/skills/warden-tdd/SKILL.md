@@ -53,7 +53,9 @@ Protect preexisting dirty paths as user work unless packet explicitly names them
 
 Keep edits inside packet work area and outside files-not-to-touch. Avoid unrelated dirty files.
 
-If code exploration reveals packet contradiction, missing decision, or needed scope change, stop and ask user. Do not rewrite the packet and continue. Do not edit the packet as part of this skill unless user explicitly changes task to packet revision.
+If code exploration reveals packet contradiction, missing decision, or needed scope change, stop and ask user. Do not rewrite the packet and continue.
+
+Packet evidence is the only routine packet edit this skill may make. Append or update a compact `## TDD Evidence` section in `packet.md` as the work proceeds. Do not change packet scope, acceptance behavior, safety guidance, docs decisions, files-not-to-touch, or ownership guidance unless user explicitly changes task to packet revision.
 
 Never claim tests, builds, or manual verification ran unless commands/checks actually ran.
 
@@ -84,17 +86,16 @@ Test commands come from the packet first, then nearest package guidance, then re
 2. Read required repo/package guidance and inspect `git status --short`.
 3. Apply `<scope-gates>`. Stop if packet is not implementable as one safe slice.
 4. Inspect only enough code/docs/tests to choose the smallest verification surface.
-5. Test-first pass:
-   - Choose the smallest automated check that can fail for the packet's acceptance behavior.
-   - Add or update only that failing check.
-   - Run the narrow test command from packet or nearest guidance.
-   - Confirm failure for the expected reason.
-6. If packet clearly explains no automated test fits, do not invent a fake test. Note the reason, then use existing validation/manual checks required by packet or guidance.
-7. Implement the smallest code/docs change needed for the slice.
-8. Run the narrow test again and confirm it passes.
-9. Run broader tests only when packet or package guidance requires them, or when changed surface affects shared assumptions.
-10. Manually verify the packet's human-visible checks.
-11. Report result using `<output-format>`.
+5. Run a RED → GREEN → TRIANGULATE → REFACTOR cycle and leave evidence in `packet.md`:
+   - RED: choose the smallest automated check that can fail for the packet's acceptance behavior, add or update only that failing check, run the narrow command from packet or nearest guidance, confirm failure for the expected reason, and record command plus expected failure in `## TDD Evidence`.
+   - GREEN: implement the smallest valid code/docs change needed for that acceptance behavior, run the narrow check again, confirm it passes, and record the passing command/result in `## TDD Evidence`.
+   - TRIANGULATE: when first green could be overfit, acceptance has a boundary, or a second focused example would prove the general behavior, add one more narrow contrast/edge/example inside the packet slice, run it red, make it green, and record the example plus result. If triangulation would add no value or broaden scope, record that decision instead.
+   - REFACTOR: with checks green, inspect changed surface for duplication, unclear names, poor seams, or avoidable coupling. Refactor only to improve design without changing behavior, rerun the narrow check, and record the refactor result. If no refactor is needed, record the no-op reason.
+6. Repeat the cycle only for additional acceptance behavior already inside the packet slice. Do not expand scope to chase unrelated coverage or cleanup.
+7. If packet clearly explains no automated test fits, do not invent a fake test. Record the no-automated-test reason in `## TDD Evidence`, then use existing validation/manual checks required by packet or guidance.
+8. Run broader tests only when packet or package guidance requires them, or when changed surface affects shared assumptions.
+9. Manually verify the packet's human-visible checks and record the outcome in `## TDD Evidence`.
+10. Report result using `<output-format>`.
 
 </workflow>
 
@@ -108,9 +109,12 @@ Before final response, verify:
 - edits stayed within packet work area;
 - files-not-to-touch were not changed;
 - unresolved packet contradictions caused a stop instead of silent scope changes;
+- `packet.md` evidence edits were limited to `## TDD Evidence` and did not revise packet scope;
 - failing check was added/updated before implementation when automated testing fit;
 - failure reason was expected before implementation;
 - narrow test passed after implementation;
+- triangulation was performed for overfit/boundary risk, or skipped with a recorded reason;
+- refactor happened only while green, or was skipped with a recorded no-op reason;
 - broader tests were run when required, or skipped with exact reason;
 - manual verification ran, or skipped with exact reason;
 - result reports only commands/checks actually run;
