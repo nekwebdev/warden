@@ -47,15 +47,22 @@ describe("warden-subagents package manifest", () => {
 			"AGENTS.md",
 			"LICENSE",
 			"index.ts",
+			"src/agent-runner.ts",
 			"src/agent-types.ts",
+			"src/context.ts",
 			"src/custom-agents.ts",
 			"src/default-agents.ts",
+			"src/enabled-models.ts",
+			"src/invocation-config.ts",
+			"src/model-resolver.ts",
+			"src/prompts.ts",
 			"src/types.ts",
 			"extensions/subagents/index.ts",
 			"scripts/run-tests.mjs",
 			"tests/package-scaffold.test.mjs",
 			"tests/agent-types.test.mjs",
 			"tests/custom-agents.test.mjs",
+			"tests/agent-runner.test.mjs",
 		];
 
 		for (const entry of requiredEntries) {
@@ -81,10 +88,17 @@ describe("warden-subagents package manifest", () => {
 			"index.ts",
 			"package.json",
 			"scripts/run-tests.mjs",
+			"src/agent-runner.ts",
 			"src/agent-types.ts",
+			"src/context.ts",
 			"src/custom-agents.ts",
 			"src/default-agents.ts",
+			"src/enabled-models.ts",
+			"src/invocation-config.ts",
+			"src/model-resolver.ts",
+			"src/prompts.ts",
 			"src/types.ts",
+			"tests/agent-runner.test.mjs",
 			"tests/agent-types.test.mjs",
 			"tests/custom-agents.test.mjs",
 			"tests/package-scaffold.test.mjs",
@@ -93,42 +107,40 @@ describe("warden-subagents package manifest", () => {
 });
 
 describe("warden-subagents extension scaffold", () => {
-	it("re-exports package identity and default no-op extension", async () => {
+	it("re-exports package identity and default foreground extension", async () => {
 		const mod = await import(pathToFileURL(resolve(packageRoot, "index.ts")));
 		assert.equal(mod.WARDEN_SUBAGENTS_PACKAGE, "@nekwebdev/warden-subagents");
 		assert.equal(typeof mod.default, "function");
 		assert.equal(mod.default, mod.wardenSubagents);
 	});
 
-	it("loads without touching Pi registration or runtime APIs", async () => {
+	it("registers the foreground Agent tool without starting runtime work", async () => {
 		const mod = await import(
 			pathToFileURL(resolve(packageRoot, "extensions/subagents/index.ts"))
 		);
 		assert.equal(mod.WARDEN_SUBAGENTS_PACKAGE, "@nekwebdev/warden-subagents");
 		assert.equal(typeof mod.default, "function");
 
-		const touched = [];
-		const fakeApi = new Proxy(
-			{},
-			{
-				get(_target, property) {
-					touched.push(String(property));
-					throw new Error(`unexpected Pi API access: ${String(property)}`);
-				},
+		const registeredTools = [];
+		const fakeApi = {
+			registerTool(tool) {
+				registeredTools.push(tool);
 			},
-		);
+		};
 
 		assert.equal(mod.default(fakeApi), undefined);
-		assert.deepEqual(touched, []);
+		assert.equal(registeredTools.length, 1);
+		assert.equal(registeredTools[0].name, "Agent");
+		assert.equal(typeof registeredTools[0].execute, "function");
 	});
 
-	it("documents scope fences and upstream attribution", () => {
+	it("documents foreground scope fences and upstream attribution", () => {
 		const readme = readFileSync(resolve(packageRoot, "README.md"), "utf-8");
 		const agents = readFileSync(resolve(packageRoot, "AGENTS.md"), "utf-8");
 		const combined = `${readme}\n${agents}`;
 
 		for (const phrase of [
-			"no Agent runtime",
+			"foreground `Agent` tool",
 			"no background execution",
 			"no RPC behavior",
 			"no worktree isolation",

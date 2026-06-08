@@ -1,24 +1,54 @@
 # warden-subagents
 
-`@nekwebdev/warden-subagents` is Warden's Pi package home for subagent type definitions and future subagent extension work.
+`@nekwebdev/warden-subagents` is Warden's Pi package home for subagent type definitions and foreground subagent delegation.
 
 Current package scope:
 
 - tested agent-type registry API;
 - embedded default agent types;
 - custom agent markdown loading from project and global Pi agent directories;
-- synchronous no-op Pi extension factory that performs no Pi API access.
+- foreground `Agent` tool that runs one child Pi agent session in-process and returns final text inline;
+- pure helper seams for invocation precedence, prompt/context construction, model resolution, off-by-default model scope enforcement, tool policy, and max-turn planning.
 
-Still intentionally inert:
+Still intentionally out of scope:
 
-- no Agent runtime;
 - no background execution;
 - no UI;
 - no scheduling;
 - no memory behavior;
 - no RPC behavior;
 - no worktree isolation;
-- no command, tool, renderer, scheduler, or background registration.
+- no runner workflow or `warden agents ...` lifecycle behavior.
+
+## Foreground `Agent` tool
+
+The extension registers Claude-compatible tool name `Agent`.
+
+Minimal use:
+
+```json
+{
+  "subagent_type": "Explore",
+  "description": "Find repo evidence without writes",
+  "prompt": "Inspect package tests and summarize likely verification commands."
+}
+```
+
+Key parameters:
+
+- `subagent_type` — agent type to run. Unknown names fall back to `general-purpose` with visible note.
+- `prompt` — delegated child task.
+- `description` — short human-readable task label.
+- `model` — optional caller model request such as `provider/modelId`, `haiku`, or `sonnet`; agent frontmatter `model` wins.
+- `thinking` — optional child thinking level; agent frontmatter `thinking` wins.
+- `max_turns` — optional explicit turn limit. At limit, child receives wrap-up steer; after 3 grace turns, runner aborts.
+- `inherit_context` — request compact parent conversation bridge. Resolved agent config still controls default context inheritance.
+- `run_in_background` and `resume` — schema-compatible foreground-blocked fields. They return visible unsupported status and start no child session.
+- `isolated` and `isolation` — schema-compatible fields accepted for later slices. They cannot override resolved agent isolation in this foreground slice.
+
+Return content is final visible assistant text. `details.status` is one of `completed`, `fallback`, `disabled`, `unsupported`, `steered`, `aborted`, or `error`.
+
+Tool policy is applied before the child receives its task prompt. The runner creates the child session, expands extension-wide selectors from `getAllTools().sourceInfo`, calls `setActiveToolsByName` when available, then sends the prompt.
 
 ## Registry API
 
@@ -50,8 +80,6 @@ Built-in defaults:
 - `Explore` — read-only standalone default with `read`, `grep`, `find`, and `ls`.
 - `Plan` — read-only standalone default with `read`, `grep`, `find`, and `ls`.
 
-Default metadata is registry configuration only. This package does not execute subagents.
-
 ## Custom agent locations
 
 Custom agents are markdown files named `.pi/agents/<name>.md` or `<global-agent-dir>/agents/<name>.md`.
@@ -68,8 +96,6 @@ Precedence:
 3. nearest project agents.
 
 Higher-precedence filename stems override lower definitions. `enabled: false` masks lower definitions and resolves as `disabled`.
-
-Within one directory, case-fold duplicate filename stems are deterministic: sorted filenames are processed first-wins; later duplicates are ignored with diagnostics.
 
 Filename stem is canonical type key. Frontmatter `name`, when present, is display metadata only and never changes lookup key.
 
@@ -107,7 +133,7 @@ Supported fields:
 - `max_turns` — positive integer.
 - `prompt_mode` — `replace` or `append`.
 - `inherit_context` — boolean.
-- `run_in_background` — boolean metadata only in this slice.
+- `run_in_background` — boolean metadata only; foreground tool rejects background runs.
 
 List fields trim entries, de-duplicate entries, and warn on non-string values.
 
@@ -141,7 +167,7 @@ Future slices may add subagent behavior inside this package only when packet sco
 - no root bootstrap changes;
 - no shell integration;
 - no Nix or dev-environment product behavior;
-- no Agent runtime, background execution, RPC behavior, scheduling, memory, or worktree isolation until separate accepted slices define them.
+- no background execution, RPC behavior, scheduling, memory, UI, or worktree isolation until separate accepted slices define them.
 
 ## Upstream attribution
 

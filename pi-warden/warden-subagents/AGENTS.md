@@ -4,30 +4,41 @@ Package-local guidance for `pi-warden/warden-subagents/`.
 
 ## Scope
 
-`@nekwebdev/warden-subagents` owns Warden's Pi subagent-type registry package and future Pi subagents extension work.
+`@nekwebdev/warden-subagents` owns Warden's Pi subagent-type registry package and foreground `Agent` tool package work.
 
 Current package owns:
 
 - package identity and manifest;
-- synchronous no-op extension factory;
+- foreground `Agent` tool registration;
+- in-process child `createAgentSession` foreground runner;
 - functional registry API under `src/`;
 - embedded default agent types;
 - custom `.pi/agents/<name>.md` loading, normalization, diagnostics, and resolution;
-- package-local registry tests and docs.
-
-Preserve inert runtime behavior unless a later packet explicitly scopes runtime work.
+- package-local tests and docs for registry and foreground runner seams.
 
 Hard fences:
 
-- no Agent runtime;
 - no background execution;
 - no UI;
 - no scheduling;
 - no memory behavior;
 - no RPC behavior;
 - no worktree isolation;
-- no Pi command, tool, renderer, scheduler, or background registration;
+- no Pi command, renderer, scheduler, or background registration;
 - no root bootstrap, runner workflow, `warden agents ...`, shell integration, Nix, or dev-environment behavior.
+
+## Foreground runner rules
+
+- Register only Claude-compatible `Agent` tool name in this slice.
+- Keep `run_in_background: true` and `resume` visibly unsupported and no-op for child session creation.
+- Unknown agent types must fall back to `general-purpose` with visible note.
+- Disabled agent types must return disabled status and start no child session.
+- Preserve status vocabulary: `completed`, `fallback`, `disabled`, `unsupported`, `steered`, `aborted`, `error`.
+- Agent frontmatter `model`, `thinking`, and `max_turns` win over caller fields.
+- Caller `isolated`/`isolation` fields are schema compatibility only and must not override resolved agent isolation in this slice.
+- Apply tool policy before first child prompt: create child session, inspect `getAllTools().sourceInfo` for extension-wide selectors, set active tools, then prompt.
+- Keep model scope enforcement pure and off by default. Do not read or write real Pi settings for model scope in this slice.
+- Parent context inheritance must include recent visible user/assistant text only, exclude tool payloads/results, cap at 6000 characters, and include a truncation marker when capped.
 
 ## Registry implementation rules
 
@@ -36,7 +47,7 @@ Hard fences:
 - Use structured diagnostics for caller display; do not print from registry code.
 - Treat custom-agent filename stem as canonical type key. Frontmatter `name` is display metadata only.
 - Keep default agent prompt bodies Warden-owned; do not vendor upstream prompt bodies.
-- Normalize metadata only. Do not execute tool, extension, model, thinking, isolation, memory, background, or prompt semantics in this package slice.
+- Normalize registry metadata in registry code; execute foreground runtime semantics only in runner/tool code.
 
 ## Attribution
 

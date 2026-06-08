@@ -28,7 +28,7 @@ function writeAgent(dir, fileName, content) {
 }
 
 describe("default agent registry", () => {
-	it("exports functional registry API alongside inert extension export", async () => {
+	it("exports functional registry API alongside foreground Agent extension export", async () => {
 		const mod = await registryModule();
 		assert.equal(typeof mod.default, "function");
 		assert.equal(typeof mod.loadAgentTypes, "function");

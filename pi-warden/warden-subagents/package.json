@@ -1,7 +1,7 @@
 {
   "name": "@nekwebdev/warden-subagents",
   "version": "0.1.0",
-  "description": "Warden Pi Agent subagents registry and inert extension package",
+  "description": "Warden Pi Agent subagents registry and foreground Agent tool package",
   "type": "module",
   "files": [
     "index.ts",
