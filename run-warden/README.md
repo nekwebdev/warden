@@ -63,9 +63,9 @@ functions/warden.fish
 
 `warden agents set <name> cwd <dir>` writes `warden.agent.cwd` to the agent-local `settings.json`, preserving unrelated Pi settings. `dir` must already exist and must be absolute or start with `~`.
 
-`warden agents show` prints the agent dir, Pi executable, Pi Lens dir, settings path, effective cwd, and the complete formatted `settings.json`. `--json` emits the same information as JSON. `warden agents list --json` emits an array of agent summaries.
+`warden agents show` prints the agent dir, Pi executable, Pi Lens dir, context-mode dir, settings path, effective cwd, and the complete formatted `settings.json`. `--json` emits the same information as JSON. `warden agents list --json` emits an array of agent summaries.
 
-`warden pi <name> ...` reads configured cwd from agent-local settings, changes to it when present, then runs the local Pi executable with `PI_CODING_AGENT_DIR` and `PILENS_DATA_DIR` pointed inside the agent directory. Without configured cwd, it preserves the caller's current working directory. Inside tmux, it renames the current window to `󱚤 <name>` before launch, then restores the previous window name and automatic rename setting after Pi exits; missing or failing tmux commands are ignored.
+`warden pi <name> ...` reads configured cwd from agent-local settings, changes to it when present, then runs the local Pi executable with `PI_CODING_AGENT_DIR`, `PILENS_DATA_DIR`, and `CONTEXT_MODE_DIR` pointed inside the agent directory. `PILENS_DATA_DIR` is `$PI_CODING_AGENT_DIR/pi-lens`; `CONTEXT_MODE_DIR` is `$PI_CODING_AGENT_DIR/context-mode`. Without configured cwd, it preserves the caller's current working directory. Inside tmux, it renames the current window to `󱚤 <name>` before launch, then restores the previous window name and automatic rename setting after Pi exits; missing or failing tmux commands are ignored.
 
 ## Scope boundary
 

@@ -156,7 +156,9 @@ Pi and agent settings: `$PI_CODING_AGENT_DIR/settings.json`.
 
 MCP servers settings: `$PI_CODING_AGENT_DIR/mcp.json`.
 
-Pi-lens cache: `$PILENS_DATA_DIR`.
+Pi-lens cache: `$PILENS_DATA_DIR` (`$PI_CODING_AGENT_DIR/pi-lens`).
+
+Context-mode storage: `$CONTEXT_MODE_DIR` (`$PI_CODING_AGENT_DIR/context-mode`).
 
 Default cwd: `$PI_CODING_AGENT_DIR/settings.json` `warden.agent.cwd`.
 

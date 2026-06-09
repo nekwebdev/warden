@@ -28,6 +28,7 @@ cat > "$prefix/node_modules/.bin/pi" <<'PI'
 printf 'PI_BIN=%s\n' "$0" >>"$PI_LOG"
 printf 'PI_CODING_AGENT_DIR=%s\n' "$PI_CODING_AGENT_DIR" >>"$PI_LOG"
 printf 'PILENS_DATA_DIR=%s\n' "$PILENS_DATA_DIR" >>"$PI_LOG"
+printf 'CONTEXT_MODE_DIR=%s\n' "$CONTEXT_MODE_DIR" >>"$PI_LOG"
 printf 'PWD=%s\n' "$(pwd)" >>"$PI_LOG"
 printf 'argc=%s\n' "$#" >>"$PI_LOG"
 for arg do printf 'arg=%s\n' "$arg" >>"$PI_LOG"; done
@@ -246,6 +247,9 @@ NODE
   grep -F "PI_BIN=$agents/ada/npm/node_modules/.bin/pi" "$BATS_TEST_TMPDIR/pi.log"
   grep -F "PI_CODING_AGENT_DIR=$agents/ada" "$BATS_TEST_TMPDIR/pi.log"
   grep -F "PILENS_DATA_DIR=$agents/ada/pi-lens" "$BATS_TEST_TMPDIR/pi.log"
+  grep -F "CONTEXT_MODE_DIR=$agents/ada/context-mode" "$BATS_TEST_TMPDIR/pi.log"
+  [ -d "$agents/ada/pi-lens" ]
+  [ -d "$agents/ada/context-mode" ]
   grep -F "arg=--flag" "$BATS_TEST_TMPDIR/pi.log"
   grep -F "arg=two words" "$BATS_TEST_TMPDIR/pi.log"
 }
@@ -302,6 +306,7 @@ NODE
   run env HOME="$TEST_HOME" PATH="$FAKE_BIN:$PATH" WARDEN_AGENTS="$agents" NPM_LOG="$BATS_TEST_TMPDIR/update-npm.log" PI_LOG="$BATS_TEST_TMPDIR/pi.log" "$RUN_WARDEN_ROOT/bin/warden" pi ada update
   [ "$status" -eq 0 ]
   grep -F "PI_BIN=$agents/ada/npm/node_modules/.bin/pi" "$BATS_TEST_TMPDIR/pi.log"
+  grep -F "CONTEXT_MODE_DIR=$agents/ada/context-mode" "$BATS_TEST_TMPDIR/pi.log"
   grep -F "argc=2" "$BATS_TEST_TMPDIR/pi.log"
   grep -F "arg=update" "$BATS_TEST_TMPDIR/pi.log"
   grep -F "arg=--extensions" "$BATS_TEST_TMPDIR/pi.log"
@@ -350,6 +355,8 @@ NODE
   grep -F "arg=@earendil-works/pi-coding-agent" "$BATS_TEST_TMPDIR/npm.log"
   grep -F "PI_BIN=$agents/ada/npm/node_modules/.bin/pi" "$BATS_TEST_TMPDIR/pi.log"
   grep -F "PI_CODING_AGENT_DIR=$agents/ada" "$BATS_TEST_TMPDIR/pi.log"
+  grep -F "PILENS_DATA_DIR=$agents/ada/pi-lens" "$BATS_TEST_TMPDIR/pi.log"
+  grep -F "CONTEXT_MODE_DIR=$agents/ada/context-mode" "$BATS_TEST_TMPDIR/pi.log"
   grep -F "arg=--version" "$BATS_TEST_TMPDIR/pi.log"
 }
 
@@ -470,6 +477,7 @@ JSON
   [[ "$output" == *"agent dir: $agents/sentinel"* ]]
   [[ "$output" == *"pi bin: $agents/sentinel/npm/node_modules/.bin/pi"* ]]
   [[ "$output" == *"pi-lens dir: $agents/sentinel/pi-lens"* ]]
+  [[ "$output" == *"context-mode dir: $agents/sentinel/context-mode"* ]]
   [[ "$output" == *"settings: $agents/sentinel/settings.json"* ]]
   [[ "$output" == *"configured cwd: $project"* ]]
   [[ "$output" == *"effective cwd: $project"* ]]
@@ -489,7 +497,7 @@ JSON
   expected_cwd=$(pwd -P)
   run env HOME="$TEST_HOME" PATH="$FAKE_BIN:$PATH" WARDEN_AGENTS="$agents" "$RUN_WARDEN_ROOT/bin/warden" agents show sentinel --json
   [ "$status" -eq 0 ]
-  printf '%s' "$output" | node -e 'const expected = process.argv[1]; let data=""; process.stdin.on("data", c => data += c); process.stdin.on("end", () => { const parsed = JSON.parse(data); if (parsed.name !== "sentinel") process.exit(1); if (!parsed.settingsPath.endsWith("/settings.json")) process.exit(1); if (parsed.effectiveCwd !== expected) process.exit(1); });' "$expected_cwd"
+  printf '%s' "$output" | node -e 'const expected = process.argv[1]; const expectedAgent = process.argv[2]; let data=""; process.stdin.on("data", c => data += c); process.stdin.on("end", () => { const parsed = JSON.parse(data); if (parsed.name !== "sentinel") process.exit(1); if (!parsed.settingsPath.endsWith("/settings.json")) process.exit(1); if (parsed.effectiveCwd !== expected) process.exit(1); if (parsed.piLensDir !== `${expectedAgent}/pi-lens`) process.exit(1); if (parsed.contextModeDir !== `${expectedAgent}/context-mode`) process.exit(1); });' "$expected_cwd" "$agents/sentinel"
 }
 
 @test "agents list prints agents and list json emits valid array" {
@@ -595,6 +603,7 @@ NODE
   grep -F "warden pi <name>" "$repo_root/README.md"
   grep -F "renames the current tmux window" "$repo_root/README.md"
   grep -F "WARDEN_AGENTS" "$repo_root/README.md"
+  grep -F "CONTEXT_MODE_DIR" "$repo_root/README.md"
   grep -F "warden.agent.cwd" "$repo_root/README.md"
 }
 

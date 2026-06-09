@@ -72,6 +72,11 @@ warden_agent_pi_lens_dir() {
 	printf '%s/pi-lens\n' "$agent_dir"
 }
 
+warden_agent_context_mode_dir() {
+	agent_dir=$1
+	printf '%s/context-mode\n' "$agent_dir"
+}
+
 warden_agent_settings_path() {
 	agent_dir=$1
 	printf '%s/settings.json\n' "$agent_dir"
@@ -250,7 +255,7 @@ function cwdStatus(cwd) {
   return "missing";
 }
 
-function buildInfo(settingsPath, agentName, agentDir, piBin, piLensDir) {
+function buildInfo(settingsPath, agentName, agentDir, piBin, piLensDir, contextModeDir) {
   const settings = readSettingsFile(settingsPath);
   const cwd = configuredCwd(settingsPath, settings);
   return {
@@ -258,6 +263,7 @@ function buildInfo(settingsPath, agentName, agentDir, piBin, piLensDir) {
     agentDir,
     piBin,
     piLensDir,
+    contextModeDir,
     settingsPath,
     configuredCwd: cwd || null,
     effectiveCwd: effectiveCwd(cwd) || null,
@@ -307,8 +313,8 @@ switch (op) {
   }
   case "info-json": {
     const settingsPath = first;
-    const [agentDir, piBin, piLensDir] = rest;
-    process.stdout.write(`${JSON.stringify(buildInfo(settingsPath, name, agentDir, piBin, piLensDir), null, 2)}\n`);
+    const [agentDir, piBin, piLensDir, contextModeDir] = rest;
+    process.stdout.write(`${JSON.stringify(buildInfo(settingsPath, name, agentDir, piBin, piLensDir, contextModeDir), null, 2)}\n`);
     break;
   }
   case "list-json": {
@@ -326,7 +332,8 @@ switch (op) {
       const settingsPath = path.join(agentDir, "settings.json");
       const piBin = path.join(agentDir, "npm", "node_modules", ".bin", "pi");
       const piLensDir = path.join(agentDir, "pi-lens");
-      return buildInfo(settingsPath, agentName, agentDir, piBin, piLensDir);
+      const contextModeDir = path.join(agentDir, "context-mode");
+      return buildInfo(settingsPath, agentName, agentDir, piBin, piLensDir, contextModeDir);
     });
     process.stdout.write(`${JSON.stringify(infos, null, 2)}\n`);
     break;
@@ -367,7 +374,8 @@ warden_agent_settings_info_json() {
 	agent_dir=$3
 	pi_bin=$4
 	pi_lens_dir=$5
-	warden_agent_settings_node info-json "$settings_path" "$name" "$agent_dir" "$pi_bin" "$pi_lens_dir"
+	context_mode_dir=$6
+	warden_agent_settings_node info-json "$settings_path" "$name" "$agent_dir" "$pi_bin" "$pi_lens_dir" "$context_mode_dir"
 }
 
 warden_agent_prepare_npm_config() {
@@ -418,7 +426,7 @@ warden_agents_new() {
 	fi
 
 	mkdir "$agent_dir" || return 1
-	mkdir -p "$agent_dir/pi-lens" || {
+	mkdir -p "$agent_dir/pi-lens" "$agent_dir/context-mode" || {
 		rm -rf "$agent_dir"
 		return 1
 	}
@@ -594,13 +602,14 @@ warden_agents_show() {
 	agent_dir=$(warden_agent_require_existing_dir "$name") || return $?
 	pi_bin=$(warden_agent_pi_bin "$agent_dir")
 	pi_lens_dir=$(warden_agent_pi_lens_dir "$agent_dir")
+	context_mode_dir=$(warden_agent_context_mode_dir "$agent_dir")
 	settings_path=$(warden_agent_settings_path "$agent_dir")
 	configured_cwd=$(warden_agent_settings_get_cwd "$settings_path" "$name") || return 1
 	effective_cwd=$(warden_agent_effective_cwd_for_display "$configured_cwd") || return 1
 	cwd_status=$(warden_agent_cwd_status_for_display "$configured_cwd") || return 1
 
 	if [ "$json" -eq 1 ]; then
-		warden_agent_settings_info_json "$settings_path" "$name" "$agent_dir" "$pi_bin" "$pi_lens_dir"
+		warden_agent_settings_info_json "$settings_path" "$name" "$agent_dir" "$pi_bin" "$pi_lens_dir" "$context_mode_dir"
 		return $?
 	fi
 
@@ -609,6 +618,7 @@ warden_agents_show() {
 	printf 'agent dir: %s\n' "$agent_dir"
 	printf 'pi bin: %s\n' "$pi_bin"
 	printf 'pi-lens dir: %s\n' "$pi_lens_dir"
+	printf 'context-mode dir: %s\n' "$context_mode_dir"
 	printf 'settings: %s\n' "$settings_path"
 	if [ -n "$configured_cwd" ]; then
 		printf 'configured cwd: %s\n' "$configured_cwd"
@@ -711,8 +721,9 @@ warden_pi_run_local() {
 	agent_dir=$1
 	pi_bin=$2
 	pi_lens_dir=$3
-	shift 3
-	if PI_CODING_AGENT_DIR="$agent_dir" PILENS_DATA_DIR="$pi_lens_dir" "$pi_bin" "$@"; then
+	context_mode_dir=$4
+	shift 4
+	if PI_CODING_AGENT_DIR="$agent_dir" PILENS_DATA_DIR="$pi_lens_dir" CONTEXT_MODE_DIR="$context_mode_dir" "$pi_bin" "$@"; then
 		pi_status=0
 	else
 		pi_status=$?
@@ -725,17 +736,18 @@ warden_pi_run_with_tmux_window() {
 	agent_dir=$2
 	pi_bin=$3
 	pi_lens_dir=$4
-	shift 4
+	context_mode_dir=$5
+	shift 5
 	warden_pi_rename_tmux_window "$name"
 	trap 'warden_pi_reset_tmux_window' EXIT
 	if [ "${1:-}" = "update" ]; then
-		if warden_pi_update "$name" "$agent_dir" "$pi_bin" "$pi_lens_dir" "$@"; then
+		if warden_pi_update "$name" "$agent_dir" "$pi_bin" "$pi_lens_dir" "$context_mode_dir" "$@"; then
 			pi_status=0
 		else
 			pi_status=$?
 		fi
 	else
-		if warden_pi_run_local "$agent_dir" "$pi_bin" "$pi_lens_dir" "$@"; then
+		if warden_pi_run_local "$agent_dir" "$pi_bin" "$pi_lens_dir" "$context_mode_dir" "$@"; then
 			pi_status=0
 		else
 			pi_status=$?
@@ -751,7 +763,8 @@ warden_pi_update() {
 	agent_dir=$2
 	pi_bin=$3
 	pi_lens_dir=$4
-	shift 4
+	context_mode_dir=$5
+	shift 5
 
 	update_source=
 	update_self_flag=0
@@ -841,7 +854,7 @@ warden_pi_update() {
 	fi
 
 	if [ "$update_invalid" -eq 1 ] || [ "$update_has_self" -eq 0 ]; then
-		if warden_pi_run_local "$agent_dir" "$pi_bin" "$pi_lens_dir" "$@"; then
+		if warden_pi_run_local "$agent_dir" "$pi_bin" "$pi_lens_dir" "$context_mode_dir" "$@"; then
 			return 0
 		else
 			return $?
@@ -849,7 +862,7 @@ warden_pi_update() {
 	fi
 
 	if [ "$update_has_extensions" -eq 1 ]; then
-		PI_CODING_AGENT_DIR="$agent_dir" PILENS_DATA_DIR="$pi_lens_dir" "$pi_bin" update --extensions || return $?
+		PI_CODING_AGENT_DIR="$agent_dir" PILENS_DATA_DIR="$pi_lens_dir" CONTEXT_MODE_DIR="$context_mode_dir" "$pi_bin" update --extensions || return $?
 	fi
 	warden_agent_update_pi "$name" "$agent_dir"
 }
@@ -888,14 +901,15 @@ warden_pi() {
 	warden_agent_cd_to_configured_cwd "$name" "$configured_cwd" || return $?
 
 	pi_lens_dir=$(warden_agent_pi_lens_dir "$agent_dir")
-	mkdir -p "$pi_lens_dir" || return 1
+	context_mode_dir=$(warden_agent_context_mode_dir "$agent_dir")
+	mkdir -p "$pi_lens_dir" "$context_mode_dir" || return 1
 	if [ -n "${TMUX:-}" ]; then
-		warden_pi_run_with_tmux_window "$name" "$agent_dir" "$pi_bin" "$pi_lens_dir" "$@"
+		warden_pi_run_with_tmux_window "$name" "$agent_dir" "$pi_bin" "$pi_lens_dir" "$context_mode_dir" "$@"
 		return $?
 	fi
 	if [ "${1:-}" = "update" ]; then
-		warden_pi_update "$name" "$agent_dir" "$pi_bin" "$pi_lens_dir" "$@"
+		warden_pi_update "$name" "$agent_dir" "$pi_bin" "$pi_lens_dir" "$context_mode_dir" "$@"
 		return $?
 	fi
-	PI_CODING_AGENT_DIR="$agent_dir" PILENS_DATA_DIR="$pi_lens_dir" exec "$pi_bin" "$@"
+	PI_CODING_AGENT_DIR="$agent_dir" PILENS_DATA_DIR="$pi_lens_dir" CONTEXT_MODE_DIR="$context_mode_dir" exec "$pi_bin" "$@"
 }
