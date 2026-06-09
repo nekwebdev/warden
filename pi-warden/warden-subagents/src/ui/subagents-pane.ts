@@ -14,6 +14,7 @@ import { loadAgentTypes as loadAgentTypesDefault } from "../agent-types.ts";
 import type { AgentManager } from "../agent-manager.ts";
 import type { AgentActivitySnapshot } from "./agent-widget.ts";
 import type { AgentTypeConfig, AgentTypeRegistry } from "../types.ts";
+import type { ScheduleJob } from "../schedule-store.ts";
 
 export const SUBAGENTS_PANE_ID = "subagents";
 export const AGENTS_COMMAND = "agents";
@@ -22,6 +23,7 @@ export const WARDEN_AGENTS_COMMAND = "warden:agents";
 export type SubagentsPaneSnapshot = {
 	readonly activity: AgentActivitySnapshot;
 	readonly registry: AgentTypeRegistry;
+	readonly scheduled: readonly ScheduleJob[];
 };
 
 type SnapshotReader = () => SubagentsPaneSnapshot;
@@ -39,6 +41,9 @@ type OpenWardenPanelLike = (
 export type CreateSubagentsCommandHandlerOptions = {
 	readonly pi?: ExtensionAPI;
 	readonly manager: SubagentsPanelManager;
+	readonly scheduledJobs?: () =>
+		| Promise<readonly ScheduleJob[]>
+		| readonly ScheduleJob[];
 	readonly loadAgentTypes?: LoadAgentTypes;
 	readonly openPanel?: OpenWardenPanelLike;
 	readonly commandLabel?: `/${string}`;
@@ -47,6 +52,7 @@ export type CreateSubagentsCommandHandlerOptions = {
 const emptySnapshot: SubagentsPaneSnapshot = {
 	activity: { running: [], queued: [], queuedCount: 0 },
 	registry: { agents: [], diagnostics: [] },
+	scheduled: [],
 };
 
 let cachedSnapshot: SubagentsPaneSnapshot = emptySnapshot;
@@ -64,6 +70,7 @@ export function setSubagentsPaneSnapshot(
 export function buildSubagentsPaneSnapshot(input: {
 	readonly activity: AgentActivitySnapshot;
 	readonly registry: AgentTypeRegistry;
+	readonly scheduled?: readonly ScheduleJob[];
 }): SubagentsPaneSnapshot {
 	return {
 		activity: {
@@ -75,6 +82,7 @@ export function buildSubagentsPaneSnapshot(input: {
 			agents: [...input.registry.agents],
 			diagnostics: [...input.registry.diagnostics],
 		},
+		scheduled: [...(input.scheduled ?? [])],
 	};
 }
 
@@ -104,12 +112,16 @@ export function registerSubagentsPane(): void {
 export function registerSubagentsCommands(
 	pi: ExtensionAPI,
 	manager: SubagentsPanelManager,
+	scheduledJobs?: () =>
+		| Promise<readonly ScheduleJob[]>
+		| readonly ScheduleJob[],
 ): void {
 	pi.registerCommand(AGENTS_COMMAND, {
 		description: "Open Warden subagents",
 		handler: createSubagentsCommandHandler({
 			pi,
 			manager,
+			scheduledJobs,
 			commandLabel: "/agents",
 		}),
 	});
@@ -118,6 +130,7 @@ export function registerSubagentsCommands(
 		handler: createSubagentsCommandHandler({
 			pi,
 			manager,
+			scheduledJobs,
 			commandLabel: "/warden:agents",
 		}),
 	});
@@ -140,10 +153,12 @@ export function createSubagentsCommandHandler(
 			return;
 		}
 		const registry = loadAgentTypes({ cwd: ctx.cwd });
+		const scheduled = (await options.scheduledJobs?.()) ?? [];
 		setSubagentsPaneSnapshot(
 			buildSubagentsPaneSnapshot({
 				activity: options.manager.getActivitySnapshot(),
 				registry,
+				scheduled,
 			}),
 		);
 		await openPanel(options.pi, ctx, { initialPaneId: SUBAGENTS_PANE_ID });
@@ -171,6 +186,9 @@ export function renderSubagentsPane(
 	const lines: string[] = [];
 	lines.push(ctx.theme.bold(ctx.theme.fg("text", "Active background agents")));
 	appendActivityLines(lines, snapshot.activity, ctx);
+	lines.push("");
+	lines.push(ctx.theme.bold(ctx.theme.fg("text", "Scheduled jobs")));
+	appendScheduledJobLines(lines, snapshot.scheduled ?? [], ctx);
 	lines.push("");
 	lines.push(ctx.theme.bold(ctx.theme.fg("text", "Agent types")));
 	appendAgentTypeLines(lines, snapshot.registry.agents, ctx);
@@ -201,6 +219,36 @@ function appendActivityLines(
 		for (const item of activity.queued)
 			lines.push(formatActivityItem(item, ctx));
 	}
+}
+
+function appendScheduledJobLines(
+	lines: string[],
+	jobs: readonly ScheduleJob[],
+	ctx: WardenPanelPaneContext,
+): void {
+	if (jobs.length === 0) {
+		lines.push(ctx.theme.fg("muted", "No scheduled jobs."));
+		return;
+	}
+	for (const job of jobs) lines.push(formatScheduledJob(job, ctx));
+}
+
+function formatScheduledJob(
+	job: ScheduleJob,
+	ctx: WardenPanelPaneContext,
+): string {
+	const agentType =
+		job.agentType ??
+		job.requestedAgentType ??
+		job.params.subagent_type ??
+		"general-purpose";
+	const description = job.description ?? job.params.description;
+	const descriptionPart = description ? ` — ${description}` : "";
+	const lastStatus = job.lastStatus ?? job.status;
+	return ctx.theme.fg(
+		"text",
+		`  ${job.id} [${job.status}] ${agentType}${descriptionPart} · next ${job.nextRunAt} · last ${lastStatus} · runs ${job.runCount}`,
+	);
 }
 
 function formatActivityItem(

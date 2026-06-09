@@ -8,6 +8,7 @@ export interface ForegroundAgentParams {
 	thinking?: AgentThinkingLevel;
 	max_turns?: number;
 	run_in_background?: boolean;
+	schedule?: string;
 	resume?: string;
 	isolated?: boolean;
 	inherit_context?: boolean;

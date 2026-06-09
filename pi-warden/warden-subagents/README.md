@@ -1,6 +1,6 @@
 # warden-subagents
 
-`@nekwebdev/warden-subagents` is Warden's Pi package home for subagent type definitions, foreground subagent delegation, background launch/result lookup, and the read-only Warden Panel Subagents pane.
+`@nekwebdev/warden-subagents` is Warden's Pi package home for subagent type definitions, foreground subagent delegation, background launch/result lookup, one-shot scheduled subagent jobs, and the read-only Warden Panel Subagents pane.
 
 Current package scope:
 
@@ -10,14 +10,15 @@ Current package scope:
 - foreground `Agent` tool that runs one child Pi agent session in-process and returns final text inline;
 - caller-requested worktree isolation for `Agent({ isolation: "worktree" })` runs;
 - background `Agent` mode that returns an agent ID immediately and lets parents retrieve queued/running/completed/error/aborted state with `get_subagent_result`;
+- session-scoped one-shot `Agent({ schedule })` jobs stored under Pi session storage and surfaced in `/agents`;
 - read-only Warden Panel Subagents pane opened by `/agents` and `/warden:agents`;
 - pure helper seams for invocation precedence, prompt/context construction, scoped memory prompt extras, model resolution, off-by-default model scope enforcement, tool policy, and max-turn planning.
 
 Still intentionally out of scope:
 
-- no background steering, resume, persistent retention, scheduling, RPC, conversation overlay, or panel admin controls;
+- no background steering, resume, persistent retention, cron/interval recurrence, RPC, conversation overlay, or panel admin controls;
 - native Pi widget and one-per-unconsumed-terminal completion notifications are in scope only for package-local background `Agent` activity;
-- no scheduling;
+- no scheduling beyond session-scoped one-shot `Agent({ schedule })` jobs;
 - memory behavior is limited to explicit `memory: project|local|user` prompt extras, safe `MEMORY.md` index reads, read-only fallback, and selected-directory creation for write-capable explicit subagent runs;
 - no RPC behavior;
 - no custom-agent frontmatter `isolation: worktree` semantics or transcript JSONL streaming yet;
@@ -47,10 +48,11 @@ Key parameters:
 - `max_turns` — optional explicit turn limit. At limit, child receives wrap-up steer; after 3 grace turns, runner aborts.
 - `inherit_context` — request compact parent conversation bridge. Resolved agent config still controls default context inheritance.
 - `run_in_background` — when `true`, starts the child through the package-local background manager and returns visible text plus `details.agentId`/`details.status` immediately.
+- `schedule` — optional one-shot future run. Accepts positive relative `+10s`, `+5m`, `+2h`, `+1d` values or absolute ISO timestamps with explicit timezone (`Z` or offset).
 - `resume` — schema-compatible blocked field. It returns visible unsupported status and starts no child session.
 - `isolated` and `isolation` — compatibility fields except exact `isolation: "worktree"`, which requests strict temporary git worktree isolation for this call. Other values remain no-ops.
 
-Foreground return content is final visible assistant text. `details.status` is one of `completed`, `fallback`, `disabled`, `unsupported`, `steered`, `aborted`, or `error`. Background launch returns `queued` or `running`, and lookup returns `queued`, `running`, `completed`, `error`, or `aborted`; unknown background types fall back to `general-purpose` with `details.note` but keep lifecycle status vocabulary.
+Foreground return content is final visible assistant text. `details.status` is one of `completed`, `fallback`, `disabled`, `unsupported`, `steered`, `aborted`, or `error`. Scheduled launch returns `scheduled` with `details.scheduleId` and `details.nextRunAt`. Background launch returns `queued` or `running`, and lookup returns `queued`, `running`, `completed`, `error`, or `aborted`; unknown background types fall back to `general-purpose` with `details.note` but keep lifecycle status vocabulary.
 
 Tool policy is applied before the child receives its task prompt. The runner creates the child session, expands extension-wide selectors from `getAllTools().sourceInfo`, calls `setActiveToolsByName` when available, then sends the prompt.
 
@@ -103,15 +105,46 @@ Use `wait: true` when the parent needs the final result and should wait for `com
 
 The default background concurrency is 4 per extension session. Foreground calls bypass this queue. Session shutdown aborts active background work and clears in-memory records.
 
+## One-shot scheduling
+
+Use `Agent` with `schedule` to persist a one-shot future background run scoped to the current Pi session:
+
+```json
+{
+  "subagent_type": "Explore",
+  "description": "Inspect after delay",
+  "prompt": "Inspect package tests and summarize findings.",
+  "schedule": "+10s"
+}
+```
+
+Accepted schedule formats:
+
+- positive relative values with units `s`, `m`, `h`, or `d`: `+10s`, `+5m`, `+2h`, `+1d`;
+- absolute ISO timestamps with explicit timezone, such as `2026-06-08T12:30:00Z` or `2026-06-08T13:30:00+01:00`.
+
+Rejected formats include zero, negative, decimal, unknown units, timezone-less ISO strings, cron, and interval strings. Cron and interval errors say those forms are deferred.
+
+Scheduled calls cannot combine with `inherit_context`, `resume`, or `run_in_background`. They return immediately with `details.status: "scheduled"`, a session-local `schedule-<n>` id, and next run time; no child session starts at schedule time. Stored jobs keep caller prompt/params only, never a parent context snapshot, and fire later with `inherit_context: false` through the existing background `AgentManager` while the same compatible session runtime is alive or rearmed.
+
+Schedule state is Warden-named under Pi session storage:
+
+```text
+<ctx.sessionManager.getSessionDir()>/warden-subagent-schedules/<ctx.sessionManager.getSessionId()>.json
+```
+
+Writes use an exclusive `.lock` file plus temp-file rename. Print/json headless schedule calls persist and return immediately; timers are unref'd and do not keep headless processes alive.
+
 ## Subagents pane
 
 Use `/agents` or `/warden:agents` to open Warden Panel focused on the Subagents pane. The pane renders a cached read-only snapshot loaded at command time from:
 
 - active package-local `AgentManager.getActivitySnapshot()` queued/running background agents;
+- session-scoped scheduled jobs with id, agent type, description, next run, last status, and run count;
 - default and custom agent types loaded from command `ctx.cwd`;
 - registry diagnostics as a concise count plus first message.
 
-The pane shows source and disabled indicators for agent types, zero-state text when no background agents are queued or running, and no create/edit/delete/stop/settings/scheduling rows or controls in this slice.
+The pane shows source and disabled indicators for agent types, zero-state text when no background agents or scheduled jobs exist, and no create/edit/delete/stop/settings/remove/admin controls in this slice.
 
 ## Registry API
 
@@ -230,7 +263,7 @@ Future slices may add subagent behavior inside this package only when packet sco
 - no root bootstrap changes;
 - no shell integration;
 - no Nix or dev-environment product behavior;
-- no background steering, resume, persistent retention, RPC behavior, scheduling, conversation overlay, custom-agent worktree frontmatter, transcript JSONL streaming, broad orphan worktree pruning, or panel admin controls until separate accepted slices define them.
+- no background steering, resume, persistent retention, RPC behavior, cron/interval scheduling, conversation overlay, custom-agent worktree frontmatter, transcript JSONL streaming, broad orphan worktree pruning, or panel admin controls until separate accepted slices define them.
 
 ## Upstream attribution
 

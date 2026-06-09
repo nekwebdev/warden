@@ -10,6 +10,7 @@ import {
 	buildSubagentsPaneSnapshot,
 	createSubagentsCommandHandler,
 	createSubagentsPane,
+	getSubagentsPaneSnapshot,
 	registerSubagentsPane,
 	renderSubagentsPane,
 } from "../src/ui/subagents-pane.ts";
@@ -104,6 +105,45 @@ describe("Subagents pane rendering", () => {
 		}
 	});
 
+	it("renders scheduled jobs with id, agent type, description, next run, last status, and run count", () => {
+		const text = textFrom(
+			renderSubagentsPane(
+				{
+					activity: { running: [], queued: [], queuedCount: 0 },
+					registry: { agents: [agent()], diagnostics: [] },
+					scheduled: [
+						{
+							id: "schedule-1",
+							status: "pending",
+							params: {
+								subagent_type: "Explore",
+								prompt: "Inspect later.",
+								description: "Inspect tests",
+							},
+							cwd: "/tmp/project",
+							nextRunAt: "2026-06-08T12:00:10.000Z",
+							createdAt: "2026-06-08T12:00:00.000Z",
+							updatedAt: "2026-06-08T12:00:00.000Z",
+							runCount: 0,
+							lastStatus: "pending",
+							requestedAgentType: "Explore",
+							description: "Inspect tests",
+						},
+					],
+				},
+				paneContext(),
+				80,
+				true,
+			),
+		);
+
+		assert.match(text, /Scheduled jobs/);
+		assert.match(text, /schedule-1.*\[pending\].*Explore.*Inspect tests/);
+		assert.match(text, /next 2026-06-08T12:00:10\.000Z/);
+		assert.match(text, /last pending/);
+		assert.match(text, /runs 0/);
+	});
+
 	it("renders active queued and running background-agent summary from manager snapshot", () => {
 		const snapshot = buildSubagentsPaneSnapshot({
 			activity: {
@@ -184,6 +224,18 @@ describe("Subagents command and pane registration", () => {
 		};
 		const handler = createSubagentsCommandHandler({
 			manager,
+			scheduledJobs: () => [
+				{
+					id: "schedule-1",
+					status: "pending",
+					params: { prompt: "later" },
+					cwd: "/tmp/project",
+					nextRunAt: "2026-06-08T12:00:10.000Z",
+					createdAt: "2026-06-08T12:00:00.000Z",
+					updatedAt: "2026-06-08T12:00:00.000Z",
+					runCount: 0,
+				},
+			],
 			loadAgentTypes(options) {
 				calls.push(options.cwd);
 				return {
@@ -202,6 +254,17 @@ describe("Subagents command and pane registration", () => {
 
 		assert.deepEqual(calls, ["/tmp/project", "/tmp/project"]);
 		assert.deepEqual(opened, [SUBAGENTS_PANE_ID, SUBAGENTS_PANE_ID]);
+		assert.equal(
+			textFrom(
+				renderSubagentsPane(
+					getSubagentsPaneSnapshot(),
+					paneContext(),
+					80,
+					true,
+				),
+			).includes("schedule-1"),
+			true,
+		);
 	});
 
 	it("notifies instead of throwing in non-interactive mode", async () => {

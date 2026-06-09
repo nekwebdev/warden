@@ -31,6 +31,10 @@ import {
 } from "./worktree.ts";
 import { extractPassiveUsage, type PassiveUsageSnapshot } from "./usage.ts";
 import {
+	scheduleErrorResult,
+	validateScheduledAgentParams,
+} from "./schedule.ts";
+import {
 	AgentManager,
 	type AgentActivityUpdate,
 	type AgentToolResultLike,
@@ -47,6 +51,7 @@ import type {
 export type AgentRunStatus =
 	| "queued"
 	| "running"
+	| "scheduled"
 	| "completed"
 	| "fallback"
 	| "disabled"
@@ -64,6 +69,8 @@ export interface AgentToolDetails extends PassiveUsageSnapshot {
 	activeTools?: string[];
 	note?: string;
 	error?: string;
+	scheduleId?: string;
+	nextRunAt?: string;
 	worktree?: WorktreeDetails;
 }
 
@@ -116,10 +123,18 @@ export interface RunForegroundAgentOptions {
 	runId?: string;
 }
 
+export interface ScheduledAgentLike {
+	schedule(
+		params: ForegroundAgentParams,
+		ctx: Record<string, unknown>,
+	): Promise<AgentToolResultLike>;
+}
+
 export interface CreateAgentToolDefinitionOptions {
 	loadRegistry?: (ctx: Record<string, unknown>) => AgentTypeRegistry;
 	createChildSession?: CreateChildSession;
 	manager?: AgentManager;
+	scheduler?: ScheduledAgentLike;
 }
 
 interface AgentMemoryPromptPlan {
@@ -173,6 +188,11 @@ const AGENT_PARAMETERS_SCHEMA = {
 			description:
 				"When true, start the agent in background and return an agent id immediately.",
 		},
+		schedule: {
+			type: "string",
+			description:
+				"Optional one-shot schedule: positive relative +10s/+5m/+2h/+1d or timezone-explicit ISO timestamp.",
+		},
 		resume: {
 			type: "string",
 			description: "Reserved for later slices; rejected in foreground mode.",
@@ -202,12 +222,13 @@ export function createAgentToolDefinition(
 		name: "Agent",
 		label: "Agent",
 		description:
-			"Delegate a task to a Warden subagent. Foreground returns final text inline; run_in_background returns an agent id immediately for get_subagent_result.",
+			"Delegate a task to a Warden subagent. Foreground returns final text inline; run_in_background returns an agent id immediately for get_subagent_result; schedule persists a one-shot future background run.",
 		promptSnippet:
-			"Delegate work to a Warden subagent with Agent; use run_in_background for asynchronous work that should return an id immediately.",
+			"Delegate work to a Warden subagent with Agent; use run_in_background for asynchronous work or schedule for one-shot future work.",
 		promptGuidelines: [
 			"Agent with run_in_background: true returns an agent id immediately; use get_subagent_result with wait: true for completion instead of sleep or poll loops.",
-			"Agent accepts subagent_type, prompt, description, model, thinking, max_turns, run_in_background, resume, isolated, inherit_context, and isolation.",
+			"Agent with schedule returns details.status: scheduled and starts no child session until the scheduled time in a compatible session runtime.",
+			"Agent accepts subagent_type, prompt, description, model, thinking, max_turns, run_in_background, schedule, resume, isolated, inherit_context, and isolation.",
 		],
 		parameters: AGENT_PARAMETERS_SCHEMA,
 		renderCall: renderAgentCall,
@@ -220,6 +241,21 @@ export function createAgentToolDefinition(
 			ctx?: Record<string, unknown>,
 		): Promise<AgentToolResult> {
 			const safeCtx = ctx ?? {};
+			if (params.schedule) {
+				const validation = validateScheduledAgentParams(params);
+				if (validation.status === "error") {
+					return scheduleErrorResult(validation.message) as AgentToolResult;
+				}
+				if (!options.scheduler) {
+					return scheduleErrorResult(
+						"Scheduled Agent manager is unavailable. No schedule persisted.",
+					) as AgentToolResult;
+				}
+				return (await options.scheduler.schedule(
+					params,
+					safeCtx,
+				)) as AgentToolResult;
+			}
 			const registry =
 				options.loadRegistry?.(safeCtx) ??
 				loadAgentTypes({ cwd: String(safeCtx.cwd ?? process.cwd()) });
@@ -501,13 +537,14 @@ export async function runForegroundAgent(
 
 export function wardenSubagentsRegister(
 	pi: Pick<ExtensionAPI, "registerTool">,
-	options: { manager?: AgentManager } = {},
+	options: { manager?: AgentManager; scheduler?: ScheduledAgentLike } = {},
 ): void {
 	const manager = options.manager ?? new AgentManager();
 	pi.registerTool(
-		createAgentToolDefinition({ manager }) as unknown as Parameters<
-			ExtensionAPI["registerTool"]
-		>[0],
+		createAgentToolDefinition({
+			manager,
+			scheduler: options.scheduler,
+		}) as unknown as Parameters<ExtensionAPI["registerTool"]>[0],
 	);
 	pi.registerTool(
 		createGetSubagentResultToolDefinition({ manager }) as unknown as Parameters<

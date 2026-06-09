@@ -13,6 +13,7 @@ Current package owns:
 - caller-requested `Agent({ isolation: "worktree" })` temporary git worktree isolation;
 - background `Agent` launch/result lookup around the foreground runner;
 - read-only Warden Panel Subagents pane plus `/agents` and `/warden:agents` aliases;
+- session-scoped one-shot `Agent({ schedule })` jobs with Warden-named Pi session storage and `/agents` visibility;
 - scoped custom-agent memory prompt extras for explicit `memory: project|local|user` frontmatter;
 - in-process child `createAgentSession` foreground runner;
 - functional registry API under `src/`;
@@ -25,21 +26,22 @@ Hard fences:
 - background launch/result lookup is allowed only through the package-local `AgentManager`, `Agent({ run_in_background: true })`, and `get_subagent_result` tool path;
 - native Pi widget and one-per-unconsumed-terminal completion notifications are allowed only through package-local UI/notification helpers;
 - read-only Warden Panel pane work is limited to cached active background-agent snapshots and agent-type registry display;
-- no background steering, resume, persistent retention, scheduling, RPC, conversation overlay, or panel admin controls;
-- no scheduling;
+- no background steering, resume, persistent retention, cron/interval recurrence, RPC, conversation overlay, or panel admin controls;
+- no scheduling beyond session-scoped one-shot `Agent({ schedule })` jobs;
 - no memory behavior beyond explicit `memory: project|local|user` prompt extras, safe `MEMORY.md` index reads, read-only fallback, and selected-directory creation for write-capable explicit subagent runs;
 - no RPC behavior;
 - no custom-agent frontmatter `isolation: worktree`, transcript JSONL streaming, or broad orphan worktree pruning;
-- no Pi command, scheduler, or background registration outside package-local `Agent`/`get_subagent_result` tools, native renderers, `/agents`, and `/warden:agents`;
+- no Pi command, scheduler, or background registration outside package-local `Agent`/`get_subagent_result` tools, one-shot schedule runtime, native renderers, `/agents`, and `/warden:agents`;
 - no root bootstrap, runner workflow, `warden agents ...`, shell integration, Nix, or dev-environment behavior.
 
 ## Agent runner rules
 
 - Register Claude-compatible `Agent` plus `get_subagent_result` for background result lookup.
 - `run_in_background: true` returns an agent id immediately and must use extension-instance `AgentManager` state; `resume` remains visibly unsupported and no-op for child session creation.
+- `Agent({ schedule })` accepts one-shot positive relative `+Ns/+Nm/+Nh/+Nd` values and timezone-explicit ISO timestamps only. It stores caller prompt/params in `<ctx.sessionManager.getSessionDir()>/warden-subagent-schedules/<ctx.sessionManager.getSessionId()>.json`, rejects `inherit_context`, `resume`, and `run_in_background`, forces no parent-context bridge, and fires through package-local `AgentManager` when the same session runtime is alive or rearmed. Cron, interval recurrence, settings toggles, removal/admin controls, and cross-session daemons stay deferred.
 - Unknown agent types must fall back to `general-purpose` with visible note.
 - Disabled agent types must return disabled status and start no child session.
-- Preserve foreground status vocabulary: `completed`, `fallback`, `disabled`, `unsupported`, `steered`, `aborted`, `error`; background lifecycle may additionally use `queued` and `running` and must not use `fallback` as lifecycle state.
+- Preserve foreground status vocabulary: `completed`, `fallback`, `disabled`, `unsupported`, `steered`, `aborted`, `error`; scheduled launch may return `scheduled`; background lifecycle may additionally use `queued` and `running` and must not use `fallback` as lifecycle state.
 - Agent frontmatter `model`, `thinking`, and `max_turns` win over caller fields.
 - Exact caller `isolation: "worktree"` enables package-owned temporary git worktree isolation; all other caller `isolated`/`isolation` values stay compatibility no-ops.
 - Worktree isolation must validate a clean committed parent git checkout before child start, run child cwd in the matching temp worktree path, add only a system-prompt worktree notice, auto-commit successful changed work with `git add -A` and `--no-verify`, persist via `pi-agent-<id>` branch collision suffixes, report `details.worktree`, and preserve changed failed worktrees for recovery.

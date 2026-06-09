@@ -8,6 +8,20 @@ export {
 	wardenSubagentsRegister,
 } from "./src/agent-runner.ts";
 export {
+	parseOneShotSchedule,
+	scheduleErrorResult,
+	scheduledTextResult,
+	validateScheduledAgentParams,
+} from "./src/schedule.ts";
+export {
+	ScheduleStore,
+	resolveScheduleStorePath,
+} from "./src/schedule-store.ts";
+export {
+	ScheduledAgentManager,
+	sanitizeScheduledParams,
+} from "./src/scheduler.ts";
+export {
 	DEFAULT_AGENT_TYPES,
 	loadAgentTypes,
 	resolveAgentType,
@@ -82,6 +96,7 @@ export type {
 	CreateAgentToolDefinitionOptions,
 	CreateChildSession,
 	RunForegroundAgentOptions,
+	ScheduledAgentLike,
 } from "./src/agent-runner.ts";
 export type {
 	AgentIsolation,
@@ -109,6 +124,19 @@ export type {
 	ForegroundInvocation,
 	MaxTurnPlan,
 } from "./src/invocation-config.ts";
+export type {
+	ScheduleParseResult,
+	ScheduledAgentDetails,
+	ScheduledAgentParamsValidation,
+} from "./src/schedule.ts";
+export type {
+	AddScheduleJobInput,
+	ScheduleJob,
+	ScheduleJobStatus,
+	ScheduleJobUpdate,
+	ScheduleStoreOptions,
+} from "./src/schedule-store.ts";
+export type { ScheduledAgentManagerOptions } from "./src/scheduler.ts";
 export type {
 	PassiveUsageSnapshot,
 	PassiveUsageStats,
