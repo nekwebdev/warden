@@ -47,6 +47,7 @@ export type BackgroundRunAgent = (input: {
 	registry: AgentTypeRegistry;
 	signal: AbortSignal;
 	onActivity?: (update: AgentActivityUpdate) => void;
+	agentId: string;
 }) => Promise<AgentToolResultLike>;
 
 export interface StartBackgroundAgentOptions {
@@ -311,6 +312,7 @@ export class AgentManager {
 		this.runningIds.add(record.id);
 		this.notifyActivity();
 		void (async () => {
+			if (record.params.isolation === "worktree") await Promise.resolve();
 			try {
 				const result = await record.runAgent({
 					params: record.params,
@@ -318,6 +320,7 @@ export class AgentManager {
 					registry: record.registry,
 					signal: record.controller.signal,
 					onActivity: (update) => this.updateActivity(record, update),
+					agentId: record.id,
 				});
 				if (record.status === "aborted") return;
 				const lifecycleStatus = terminalLifecycleStatus(result.details.status);

@@ -6,6 +6,7 @@ All notable Warden changes are recorded here.
 
 ### Added
 
+- Added `@nekwebdev/warden-subagents` caller-requested `Agent({ isolation: "worktree" })` temporary git worktree isolation with strict clean-check validation, worktree cwd mapping, auto-commit branch persistence, and merge guidance.
 - Added `@nekwebdev/warden-subagents` custom-agent memory prompt extras for explicit `memory: project|local|user` scopes with safe index reads, read-only fallback, and selected-directory creation for write-capable subagent runs.
 - Added `@nekwebdev/warden-subagents` read-only Warden Panel Subagents pane opened by `/agents` and `/warden:agents`.
 - Added `@nekwebdev/warden-subagents` background `Agent` launch and `get_subagent_result` lookup with queued/running/completed/error/aborted lifecycle state.

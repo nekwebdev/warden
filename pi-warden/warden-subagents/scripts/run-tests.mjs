@@ -8,6 +8,7 @@ const tests = [
 	"tests/memory.test.mjs",
 	"tests/agent-runner.test.mjs",
 	"tests/agent-manager.test.mjs",
+	"tests/worktree.test.mjs",
 	"tests/usage.test.mjs",
 	"tests/agent-widget.test.mjs",
 	"tests/agent-renderer.test.mjs",

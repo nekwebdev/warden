@@ -64,6 +64,7 @@ describe("warden-subagents package manifest", () => {
 			"src/prompts.ts",
 			"src/status-note.ts",
 			"src/types.ts",
+			"src/worktree.ts",
 			"src/usage.ts",
 			"src/ui/agent-renderer.ts",
 			"src/ui/agent-widget.ts",
@@ -77,6 +78,7 @@ describe("warden-subagents package manifest", () => {
 			"tests/memory.test.mjs",
 			"tests/agent-runner.test.mjs",
 			"tests/agent-manager.test.mjs",
+			"tests/worktree.test.mjs",
 			"tests/usage.test.mjs",
 			"tests/agent-widget.test.mjs",
 			"tests/agent-renderer.test.mjs",
@@ -125,6 +127,7 @@ describe("warden-subagents package manifest", () => {
 			"src/ui/notification-renderer.ts",
 			"src/ui/subagents-pane.ts",
 			"src/usage.ts",
+			"src/worktree.ts",
 			"tests/agent-manager.test.mjs",
 			"tests/agent-renderer.test.mjs",
 			"tests/agent-runner.test.mjs",
@@ -136,6 +139,7 @@ describe("warden-subagents package manifest", () => {
 			"tests/package-scaffold.test.mjs",
 			"tests/subagents-pane.test.mjs",
 			"tests/usage.test.mjs",
+			"tests/worktree.test.mjs",
 		]);
 	});
 });
@@ -191,7 +195,7 @@ describe("warden-subagents extension scaffold", () => {
 			"background launch/result lookup",
 			"read-only Warden Panel Subagents pane",
 			"no RPC behavior",
-			"no worktree isolation",
+			"caller-requested worktree isolation",
 			"tintinweb/pi-subagents",
 			"2933ca1d8d30e4e229b6c683f20190423fdd1ed3",
 			"MIT",

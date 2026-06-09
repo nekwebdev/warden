@@ -8,18 +8,19 @@ Current package scope:
 - embedded default agent types;
 - custom agent markdown loading from project and global Pi agent directories;
 - foreground `Agent` tool that runs one child Pi agent session in-process and returns final text inline;
+- caller-requested worktree isolation for `Agent({ isolation: "worktree" })` runs;
 - background `Agent` mode that returns an agent ID immediately and lets parents retrieve queued/running/completed/error/aborted state with `get_subagent_result`;
 - read-only Warden Panel Subagents pane opened by `/agents` and `/warden:agents`;
 - pure helper seams for invocation precedence, prompt/context construction, scoped memory prompt extras, model resolution, off-by-default model scope enforcement, tool policy, and max-turn planning.
 
 Still intentionally out of scope:
 
-- no background steering, resume, persistent retention, scheduling, RPC, worktree isolation, conversation overlay, or panel admin controls;
+- no background steering, resume, persistent retention, scheduling, RPC, conversation overlay, or panel admin controls;
 - native Pi widget and one-per-unconsumed-terminal completion notifications are in scope only for package-local background `Agent` activity;
 - no scheduling;
 - memory behavior is limited to explicit `memory: project|local|user` prompt extras, safe `MEMORY.md` index reads, read-only fallback, and selected-directory creation for write-capable explicit subagent runs;
 - no RPC behavior;
-- no worktree isolation;
+- no custom-agent frontmatter `isolation: worktree` semantics or transcript JSONL streaming yet;
 - no runner workflow or `warden agents ...` lifecycle behavior.
 
 ## Foreground `Agent` tool
@@ -47,11 +48,23 @@ Key parameters:
 - `inherit_context` — request compact parent conversation bridge. Resolved agent config still controls default context inheritance.
 - `run_in_background` — when `true`, starts the child through the package-local background manager and returns visible text plus `details.agentId`/`details.status` immediately.
 - `resume` — schema-compatible blocked field. It returns visible unsupported status and starts no child session.
-- `isolated` and `isolation` — schema-compatible fields accepted for later slices. They cannot override resolved agent isolation in this foreground slice.
+- `isolated` and `isolation` — compatibility fields except exact `isolation: "worktree"`, which requests strict temporary git worktree isolation for this call. Other values remain no-ops.
 
 Foreground return content is final visible assistant text. `details.status` is one of `completed`, `fallback`, `disabled`, `unsupported`, `steered`, `aborted`, or `error`. Background launch returns `queued` or `running`, and lookup returns `queued`, `running`, `completed`, `error`, or `aborted`; unknown background types fall back to `general-purpose` with `details.note` but keep lifecycle status vocabulary.
 
 Tool policy is applied before the child receives its task prompt. The runner creates the child session, expands extension-wide selectors from `getAllTools().sourceInfo`, calls `setActiveToolsByName` when available, then sends the prompt.
+
+## Worktree isolation
+
+`Agent({ isolation: "worktree" })` validates that the parent cwd is in a git repo with at least one commit and a clean checkout. Uncommitted tracked files and untracked non-ignored files block the run; ignored files are allowed. The child runs in a temporary OS-dir worktree with a Warden-owned prefix, rooted at committed `HEAD`. When parent cwd is a repo subdirectory, child cwd maps to the same relative subdirectory in the worktree.
+
+The child system prompt gets a worktree notice with temp path, parent cwd, branch persistence rule, and committed-files-only warning. Delegated user task text is unchanged. Ignored or untracked artifacts such as `node_modules` may be absent.
+
+Successful no-change runs remove the temp worktree. Successful changed runs stage all worktree changes with `git add -A`, commit with `--no-verify` as `Subagent <id>: <description>` (falling back to agent type), create `pi-agent-<id>` or next `-2`/`-3` branch, report `details.worktree` plus exact `git merge <branch>` guidance, then remove the worktree. Child `error`/`aborted` with changes, commit failures, and branch failures preserve the worktree path for manual recovery and do not auto-commit failed child work.
+
+Background worktree setup happens when queued work starts. The launch call still returns the background agent ID immediately; setup failures surface through `get_subagent_result`.
+
+Custom-agent frontmatter `isolation: worktree`, transcript JSONL streaming, and broad orphan worktree pruning are deferred.
 
 Custom-agent memory prompt extras are active only for explicit string scopes:
 
@@ -217,7 +230,7 @@ Future slices may add subagent behavior inside this package only when packet sco
 - no root bootstrap changes;
 - no shell integration;
 - no Nix or dev-environment product behavior;
-- no background steering, resume, persistent retention, RPC behavior, scheduling, conversation overlay, worktree isolation, or panel admin controls until separate accepted slices define them.
+- no background steering, resume, persistent retention, RPC behavior, scheduling, conversation overlay, custom-agent worktree frontmatter, transcript JSONL streaming, broad orphan worktree pruning, or panel admin controls until separate accepted slices define them.
 
 ## Upstream attribution
 

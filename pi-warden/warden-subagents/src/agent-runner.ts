@@ -22,6 +22,13 @@ import {
 } from "./memory.ts";
 import { buildAgentSystemPrompt } from "./prompts.ts";
 import { renderAgentCall, renderAgentResult } from "./ui/agent-renderer.ts";
+import {
+	buildWorktreePromptExtra,
+	completeWorktreeIsolation,
+	createWorktreeIsolation,
+	type WorktreeDetails,
+	type WorktreeIsolationPlan,
+} from "./worktree.ts";
 import { extractPassiveUsage, type PassiveUsageSnapshot } from "./usage.ts";
 import {
 	AgentManager,
@@ -57,6 +64,7 @@ export interface AgentToolDetails extends PassiveUsageSnapshot {
 	activeTools?: string[];
 	note?: string;
 	error?: string;
+	worktree?: WorktreeDetails;
 }
 
 export interface AgentToolResult {
@@ -104,6 +112,8 @@ export interface RunForegroundAgentOptions {
 	createChildSession?: CreateChildSession;
 	signal?: AbortSignal;
 	onActivity?: (update: AgentActivityUpdate) => void;
+	runIdFactory?: () => string;
+	runId?: string;
 }
 
 export interface CreateAgentToolDefinitionOptions {
@@ -232,6 +242,7 @@ export function createAgentToolDefinition(
 						registry,
 						signal,
 						onActivity,
+						agentId,
 					}) =>
 						runForegroundAgent({
 							params: runParams,
@@ -240,6 +251,7 @@ export function createAgentToolDefinition(
 							createChildSession: options.createChildSession,
 							signal,
 							onActivity,
+							runId: agentId,
 						}) as Promise<AgentToolResultLike>,
 				}) as AgentToolResult;
 			}
@@ -317,11 +329,36 @@ export async function runForegroundAgent(
 		cwd: cwdOf(options.ctx),
 		agentDir: agentDirOf(options.ctx),
 	});
+	let worktree: WorktreeIsolationPlan | undefined;
+	if (options.params.isolation === "worktree") {
+		try {
+			worktree = createWorktreeIsolation({
+				cwd: cwdOf(options.ctx),
+				runId: options.runId ?? options.runIdFactory?.() ?? defaultRunId(),
+			});
+		} catch (error) {
+			const message = error instanceof Error ? error.message : String(error);
+			return textResult(
+				"error",
+				`Agent worktree isolation failed: ${message}`,
+				{
+					agentType: agent.type,
+					requestedAgentType,
+					description: options.params.description,
+					error: message,
+				},
+			);
+		}
+	}
+	const promptExtras = [
+		...(memoryPromptPlan ? [memoryPromptPlan.block] : []),
+		...(worktree ? [buildWorktreePromptExtra(worktree)] : []),
+	];
 	const systemPrompt = buildAgentSystemPrompt({
 		agentPrompt: agent.prompt,
 		promptMode: agent.promptMode,
 		parentSystemPrompt: getParentSystemPrompt(options.ctx),
-		promptExtras: memoryPromptPlan ? [memoryPromptPlan.block] : undefined,
+		promptExtras: promptExtras.length > 0 ? promptExtras : undefined,
 	});
 	const taskPrompt = buildTaskPrompt({
 		prompt: invocation.prompt,
@@ -340,7 +377,7 @@ export async function runForegroundAgent(
 	let abortListener: (() => void) | undefined;
 	try {
 		child = await (options.createChildSession ?? createPiChildSession)({
-			cwd: cwdOf(options.ctx),
+			cwd: worktree?.childCwd ?? cwdOf(options.ctx),
 			systemPrompt,
 			model: scopedModel?.status === "allowed" ? scopedModel.model : undefined,
 			thinking: invocation.thinking,
@@ -408,41 +445,51 @@ export async function runForegroundAgent(
 			getFinalAssistantText(child) ||
 			"Agent completed without final assistant text.";
 		const prefix = note ? `${note}\n\n` : "";
-		return {
-			content: [{ type: "text", text: `${prefix}${finalText}` }],
-			details: {
-				...latestActivity,
-				status: aborted
-					? "aborted"
-					: steered && status === "completed"
-						? "steered"
-						: status,
-				agentType: agent.type,
-				requestedAgentType,
-				description: options.params.description,
-				activeTools,
-				note:
-					note ??
-					(modelResolution.status === "unresolved"
-						? modelResolution.note
-						: undefined),
+		const finalStatus = aborted
+			? "aborted"
+			: steered && status === "completed"
+				? "steered"
+				: status;
+		return finalizeWorktreeResult(
+			{
+				content: [{ type: "text", text: `${prefix}${finalText}` }],
+				details: {
+					...latestActivity,
+					status: finalStatus,
+					agentType: agent.type,
+					requestedAgentType,
+					description: options.params.description,
+					activeTools,
+					note:
+						note ??
+						(modelResolution.status === "unresolved"
+							? modelResolution.note
+							: undefined),
+				},
 			},
-		};
+			{ worktree, agentType: agent.type },
+		);
 	} catch (error) {
 		const message = error instanceof Error ? error.message : String(error);
 		if (aborted || options.signal?.aborted) {
-			return textResult("aborted", "Agent aborted.", {
+			return finalizeWorktreeResult(
+				textResult("aborted", "Agent aborted.", {
+					agentType: agent.type,
+					requestedAgentType,
+					description: options.params.description,
+				}),
+				{ worktree, agentType: agent.type },
+			);
+		}
+		return finalizeWorktreeResult(
+			textResult("error", `Agent failed: ${message}`, {
 				agentType: agent.type,
 				requestedAgentType,
 				description: options.params.description,
-			});
-		}
-		return textResult("error", `Agent failed: ${message}`, {
-			agentType: agent.type,
-			requestedAgentType,
-			description: options.params.description,
-			error: message,
-		});
+				error: message,
+			}),
+			{ worktree, agentType: agent.type },
+		);
 	} finally {
 		unsubscribe?.();
 		if (abortListener) {
@@ -467,6 +514,52 @@ export function wardenSubagentsRegister(
 			ExtensionAPI["registerTool"]
 		>[0],
 	);
+}
+
+function finalizeWorktreeResult(
+	result: AgentToolResult,
+	input: { worktree?: WorktreeIsolationPlan; agentType: string },
+): AgentToolResult {
+	if (!input.worktree) return result;
+	const completion = completeWorktreeIsolation({
+		plan: input.worktree,
+		status: result.details.status as Extract<
+			AgentRunStatus,
+			"completed" | "fallback" | "steered" | "aborted" | "error"
+		>,
+		description: result.details.description,
+		agentType: input.agentType,
+	});
+	const text = result.content[0]?.text ?? "";
+	if (completion.status === "failed") {
+		return {
+			content: [
+				{
+					type: "text",
+					text: `${completion.note}\n\nChild result before persistence failure:\n${text}`,
+				},
+			],
+			details: {
+				...result.details,
+				status: "error",
+				error: completion.error,
+				worktree: completion.details,
+			},
+		};
+	}
+	return {
+		content: [
+			{
+				type: "text",
+				text: [text, completion.note].filter(Boolean).join("\n\n"),
+			},
+		],
+		details: { ...result.details, worktree: completion.details },
+	};
+}
+
+function defaultRunId(): string {
+	return `run-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
 async function createPiChildSession(input: {

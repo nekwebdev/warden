@@ -10,6 +10,7 @@ Current package owns:
 
 - package identity and manifest;
 - foreground `Agent` tool registration;
+- caller-requested `Agent({ isolation: "worktree" })` temporary git worktree isolation;
 - background `Agent` launch/result lookup around the foreground runner;
 - read-only Warden Panel Subagents pane plus `/agents` and `/warden:agents` aliases;
 - scoped custom-agent memory prompt extras for explicit `memory: project|local|user` frontmatter;
@@ -24,11 +25,11 @@ Hard fences:
 - background launch/result lookup is allowed only through the package-local `AgentManager`, `Agent({ run_in_background: true })`, and `get_subagent_result` tool path;
 - native Pi widget and one-per-unconsumed-terminal completion notifications are allowed only through package-local UI/notification helpers;
 - read-only Warden Panel pane work is limited to cached active background-agent snapshots and agent-type registry display;
-- no background steering, resume, persistent retention, scheduling, RPC, worktree, conversation overlay, or panel admin controls;
+- no background steering, resume, persistent retention, scheduling, RPC, conversation overlay, or panel admin controls;
 - no scheduling;
 - no memory behavior beyond explicit `memory: project|local|user` prompt extras, safe `MEMORY.md` index reads, read-only fallback, and selected-directory creation for write-capable explicit subagent runs;
 - no RPC behavior;
-- no worktree isolation;
+- no custom-agent frontmatter `isolation: worktree`, transcript JSONL streaming, or broad orphan worktree pruning;
 - no Pi command, scheduler, or background registration outside package-local `Agent`/`get_subagent_result` tools, native renderers, `/agents`, and `/warden:agents`;
 - no root bootstrap, runner workflow, `warden agents ...`, shell integration, Nix, or dev-environment behavior.
 
@@ -40,7 +41,9 @@ Hard fences:
 - Disabled agent types must return disabled status and start no child session.
 - Preserve foreground status vocabulary: `completed`, `fallback`, `disabled`, `unsupported`, `steered`, `aborted`, `error`; background lifecycle may additionally use `queued` and `running` and must not use `fallback` as lifecycle state.
 - Agent frontmatter `model`, `thinking`, and `max_turns` win over caller fields.
-- Caller `isolated`/`isolation` fields are schema compatibility only and must not override resolved agent isolation in this slice.
+- Exact caller `isolation: "worktree"` enables package-owned temporary git worktree isolation; all other caller `isolated`/`isolation` values stay compatibility no-ops.
+- Worktree isolation must validate a clean committed parent git checkout before child start, run child cwd in the matching temp worktree path, add only a system-prompt worktree notice, auto-commit successful changed work with `git add -A` and `--no-verify`, persist via `pi-agent-<id>` branch collision suffixes, report `details.worktree`, and preserve changed failed worktrees for recovery.
+- Background worktree validation/setup belongs at queued run start; initial background launch still returns agent id immediately.
 - Apply tool policy before first child prompt: create child session, inspect `getAllTools().sourceInfo` for extension-wide selectors, set active tools, then prompt.
 - Keep model scope enforcement pure and off by default. Do not read or write real Pi settings for model scope in this slice.
 - Parent context inheritance must include recent visible user/assistant text only, exclude tool payloads/results, cap at 6000 characters, and include a truncation marker when capped.
