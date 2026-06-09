@@ -24,20 +24,22 @@ usage() {
 usage: warden [command]
 
 commands:
-  welcome              print welcome and next steps
-  doctor               run readiness checks
+  welcome                    print welcome and next steps
+  help                       show this help
+  doctor                     run readiness checks
+  shell status               show bash/zsh/fish integration status
+  shell install              install selected shell integration after consent
+  shell remove               remove guarded shell integration blocks
+  shell init bash            print manual bash integration snippet
+  shell init zsh             print manual zsh integration snippet
+  shell init fish            print manual fish integration snippet
   agents new [NAME]          create isolated Pi agent environment
-  agents update NAME         update Warden-managed Pi runtime
-  agents set NAME cwd DIR    set agent launch working directory
-  agents unset NAME cwd      unset agent launch working directory
-  agents show NAME [--json]  show agent paths and settings
   agents list [--json]       list agent environments
-  pi NAME [ARGS...]          run Pi inside an isolated agent environment
-  shell status         show bash/zsh/fish integration status
-  shell install        install selected shell integration after consent
-  shell remove         remove guarded shell integration blocks
-  shell snippet SHELL  print manual snippet for bash, zsh, or fish
-  help                 show this help
+  agents NAME update-pi      update Warden-managed Pi runtime
+  agents NAME cwd DIR        set agent launch working directory
+  agents NAME show [--json]  show agent paths and settings
+  pi NAME [ARGS...]          run Pi inside isolated agent environment
+  @NAME [ARGS...]            run Pi inside isolated agent environment
 EOF
 }
 
@@ -46,19 +48,31 @@ if [ $# -gt 0 ]; then shift; fi
 
 case "$command_name" in
   welcome) warden_welcome ;;
+  help|-h|--help) usage ;;
   doctor) warden_doctor ;;
   pi) warden_pi "$@" ;;
+  @*)
+    agent_name=${command_name#@}
+    warden_pi "$agent_name" "$@"
+    ;;
   agents)
     subcommand=${1:-}
     if [ $# -gt 0 ]; then shift; fi
     case "$subcommand" in
       new) warden_agents_new "$@" ;;
-      update) warden_agents_update "$@" ;;
-      set) warden_agents_set "$@" ;;
-      unset) warden_agents_unset "$@" ;;
-      show) warden_agents_show "$@" ;;
       list) warden_agents_list "$@" ;;
-      *) usage >&2; exit 2 ;;
+      "") usage >&2; exit 2 ;;
+      *)
+        name=$subcommand
+        verb=${1:-}
+        if [ $# -gt 0 ]; then shift; fi
+        case "$verb" in
+          update-pi) warden_agents_update "$name" "$@" ;;
+          cwd) warden_agents_set "$name" "$@" ;;
+          show) warden_agents_show "$name" "$@" ;;
+          *) usage >&2; exit 2 ;;
+        esac
+        ;;
     esac
     ;;
   shell)
@@ -68,10 +82,9 @@ case "$command_name" in
       status) warden_shell_status ;;
       install) warden_shell_install ;;
       remove) warden_shell_remove ;;
-      snippet) warden_shell_snippet "${1:-}" ;;
+      init) warden_shell_init "${1:-}" ;;
       *) usage >&2; exit 2 ;;
     esac
     ;;
-  help|-h|--help) usage ;;
   *) printf '%s\n' "warden: unknown command: $command_name" >&2; usage >&2; exit 2 ;;
 esac

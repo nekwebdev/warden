@@ -81,7 +81,7 @@ warden_doctor() {
 	if warden_shell_has_any_integration; then
 		printf 'ok - shell integration installed for at least one shell\n'
 	else
-		printf 'not ok - shell integration not installed; run ./warden shell install or ./warden shell snippet bash|zsh|fish\n'
+		printf 'not ok - shell integration not installed; run ./warden shell install or ./warden shell init bash|zsh|fish\n'
 	fi
 	warden_doctor_pi_agent_hints
 	[ "$failures" -eq 0 ]

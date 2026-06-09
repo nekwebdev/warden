@@ -63,22 +63,23 @@ After shell integration, `run-warden/bin` is on `PATH` and the delegated CLI is 
 warden help
 warden doctor
 warden shell status
+warden shell install
 warden shell remove
-warden shell snippet bash
-warden shell snippet zsh
-warden shell snippet fish
+warden shell init bash
+warden shell init zsh
+warden shell init fish
 ```
 
 Pi agent environment commands:
 
 ```sh
-warden agents new [name]
-warden agents update <name>
-warden agents set <name> cwd <dir>
-warden agents unset <name> cwd
-warden agents show <name> [--json]
+warden agents new [NAME]
 warden agents list [--json]
-warden pi <name> ...
+warden agents NAME update-pi
+warden agents NAME cwd DIR
+warden agents NAME show [--json]
+warden pi NAME [ARGS...]
+warden @NAME [ARGS...]
 ```
 
 ## Shell integration
@@ -127,11 +128,15 @@ Rejected names include:
 .
 ..
 <empty>
+new
+list
 ```
 
-`warden agents new <name>` creates an isolated Pi environment and installs the Pi runtime into that agent's local npm prefix.
+`warden agents new [NAME]` creates an isolated Pi environment and installs the Pi runtime into that agent's local npm prefix.
 
-`warden agents set <name> cwd <dir>` stores the launch cwd for that agent in its local settings file as `warden.agent.cwd`.
+`warden agents NAME update-pi` updates the Warden-managed Pi runtime in an existing agent.
+
+`warden agents NAME cwd DIR` stores the launch cwd for that agent in its local settings file as `warden.agent.cwd`.
 
 Example settings shape:
 
@@ -145,7 +150,9 @@ Example settings shape:
 }
 ```
 
-`warden pi <name> ...` runs the agent-local Pi executable with agent-local data paths:
+`warden agents NAME show [--json]` shows agent paths, settings, and effective cwd.
+
+`warden pi NAME ...` runs the agent-local Pi executable with agent-local data paths:
 
 ```sh
 PI_CODING_AGENT_DIR="$AGENT_DIR"
@@ -153,7 +160,9 @@ PILENS_DATA_DIR="$AGENT_DIR/pi-lens"
 CONTEXT_MODE_DIR="$AGENT_DIR/context-mode"
 ```
 
-If no cwd is configured, Warden preserves the caller's current working directory. When run inside tmux, `warden pi <name> ...` renames the current tmux window to `󱚤 <name>` before launch, then restores the previous window name and automatic rename setting after Pi exits; missing or failing tmux commands are ignored.
+`warden @NAME ...` is a direct alias for `warden pi NAME ...` after stripping `@`.
+
+If no cwd is configured, Warden preserves the caller's current working directory. When run inside tmux, `warden pi NAME ...` renames the current tmux window to `󱚤 NAME` before launch, then restores the previous window name and automatic rename setting after Pi exits; missing or failing tmux commands are ignored.
 
 ## Repository layout
 

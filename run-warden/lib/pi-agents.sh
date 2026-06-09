@@ -25,6 +25,11 @@ warden_agent_validate_name() {
 		printf '%s\n' "Agent names must use A-Z, a-z, 0-9, dot, underscore, or dash; '/' and path segments '.'/'..' are not allowed." >&2
 		return 2
 		;;
+	new | list)
+		printf '%s\n' "warden: reserved agent name: $name" >&2
+		printf '%s\n' "Agent names 'new' and 'list' are reserved for Warden commands." >&2
+		return 2
+		;;
 	*[!ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789._-]*)
 		printf '%s\n' "warden: invalid agent name: $name" >&2
 		printf '%s\n' "Agent names must use A-Z, a-z, 0-9, dot, underscore, or dash; '/' and path segments '.'/'..' are not allowed." >&2
@@ -39,7 +44,7 @@ warden_agents_prompt_name() {
 		return 0
 	fi
 	if [ ! -t 0 ]; then
-		printf '%s\n' "usage: warden agents new [name]" >&2
+		printf '%s\n' "usage: warden agents new [NAME]" >&2
 		return 2
 	fi
 	printf 'Agent name: ' >&2
@@ -412,7 +417,7 @@ warden_agent_update_pi() {
 
 warden_agents_new() {
 	if [ $# -gt 1 ]; then
-		printf '%s\n' "usage: warden agents new [name]" >&2
+		printf '%s\n' "usage: warden agents new [NAME]" >&2
 		return 2
 	fi
 	name=$(warden_agents_prompt_name "${1:-}") || return $?
@@ -551,7 +556,7 @@ warden_agent_cd_to_configured_cwd() {
 
 warden_agents_update() {
 	if [ $# -ne 1 ]; then
-		printf '%s\n' "usage: warden agents update NAME" >&2
+		printf '%s\n' "usage: warden agents NAME update-pi" >&2
 		return 2
 	fi
 	name=$1
@@ -560,12 +565,12 @@ warden_agents_update() {
 }
 
 warden_agents_set() {
-	if [ $# -ne 3 ] || [ "${2:-}" != "cwd" ]; then
-		printf '%s\n' "usage: warden agents set NAME cwd DIR" >&2
+	if [ $# -ne 2 ]; then
+		printf '%s\n' "usage: warden agents NAME cwd DIR" >&2
 		return 2
 	fi
 	name=$1
-	cwd_value=$3
+	cwd_value=$2
 	agent_dir=$(warden_agent_require_existing_dir "$name") || return $?
 	warden_agent_resolve_cwd_for_set "$cwd_value" >/dev/null || return $?
 	settings_path=$(warden_agent_settings_path "$agent_dir")
@@ -575,7 +580,7 @@ warden_agents_set() {
 
 warden_agents_unset() {
 	if [ $# -ne 2 ] || [ "${2:-}" != "cwd" ]; then
-		printf '%s\n' "usage: warden agents unset NAME cwd" >&2
+		printf '%s\n' "usage: warden agents NAME unset-cwd" >&2
 		return 2
 	fi
 	name=$1
@@ -587,14 +592,14 @@ warden_agents_unset() {
 
 warden_agents_show() {
 	if [ $# -lt 1 ] || [ $# -gt 2 ]; then
-		printf '%s\n' "usage: warden agents show NAME [--json]" >&2
+		printf '%s\n' "usage: warden agents NAME show [--json]" >&2
 		return 2
 	fi
 	name=$1
 	json=0
 	if [ $# -eq 2 ]; then
 		if [ "$2" != "--json" ]; then
-			printf '%s\n' "usage: warden agents show NAME [--json]" >&2
+			printf '%s\n' "usage: warden agents NAME show [--json]" >&2
 			return 2
 		fi
 		json=1
@@ -869,7 +874,7 @@ warden_pi_update() {
 
 warden_pi() {
 	if [ $# -lt 1 ]; then
-		printf '%s\n' "usage: warden pi <name> [args...]" >&2
+		printf '%s\n' "usage: warden pi NAME [ARGS...]" >&2
 		return 2
 	fi
 

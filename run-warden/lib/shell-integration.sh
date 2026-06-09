@@ -207,7 +207,7 @@ warden_shell_status() {
 			printf 'ok - %s integration installed in %s\n' "$shell_name" "$rc_file"
 		else
 			printf 'not ok - %s integration missing in %s\n' "$shell_name" "$rc_file"
-			printf 'manual: ./warden shell snippet %s\n' "$shell_name"
+			printf 'manual: ./warden shell init %s\n' "$shell_name"
 		fi
 	done
 }
@@ -315,7 +315,7 @@ warden_shell_install() {
 		fi
 	done
 	if [ "$installed" -eq 0 ]; then
-		printf '%s\n' "shell integration declined. Manual snippets: ./warden shell snippet bash|zsh|fish"
+		printf '%s\n' "shell integration declined. Manual snippets: ./warden shell init bash|zsh|fish"
 	fi
 }
 
@@ -326,12 +326,12 @@ warden_shell_remove() {
 	done
 }
 
-warden_shell_snippet() {
+warden_shell_init() {
 	shell_name=$1
 	case "$shell_name" in
 	bash | zsh | fish) ;;
 	*)
-		printf '%s\n' "usage: warden shell snippet bash|zsh|fish" >&2
+		printf '%s\n' "usage: warden shell init bash|zsh|fish" >&2
 		return 2
 		;;
 	esac

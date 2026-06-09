@@ -79,11 +79,97 @@ SH
   [ "$status" -eq 2 ]
 }
 
-@test "run-warden help lists agents commands" {
+@test "run-warden help lists final command forms" {
   run env HOME="$TEST_HOME" "$RUN_WARDEN_ROOT/bin/warden" help
   [ "$status" -eq 0 ]
+  [[ "$output" == *"help"* ]]
+  [[ "$output" == *"doctor"* ]]
+  [[ "$output" == *"shell init bash"* ]]
+  [[ "$output" == *"shell init zsh"* ]]
+  [[ "$output" == *"shell init fish"* ]]
   [[ "$output" == *"agents new [NAME]"* ]]
-  [[ "$output" == *"agents update NAME"* ]]
+  [[ "$output" == *"agents list [--json]"* ]]
+  [[ "$output" == *"agents NAME update-pi"* ]]
+  [[ "$output" == *"agents NAME cwd DIR"* ]]
+  [[ "$output" == *"agents NAME show [--json]"* ]]
+  [[ "$output" == *"pi NAME [ARGS...]"* ]]
+  [[ "$output" == *"@NAME [ARGS...]"* ]]
+  [[ "$output" != *"shell snippet"* ]]
+  [[ "$output" != *"agents update NAME"* ]]
+  [[ "$output" != *"agents set NAME cwd DIR"* ]]
+  [[ "$output" != *"agents unset NAME cwd"* ]]
+}
+
+@test "shell init prints manual shell snippets" {
+  run env HOME="$TEST_HOME" WARDEN_HOME=/tmp/warden "$RUN_WARDEN_ROOT/bin/warden" shell init bash
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"# warden begin"* ]]
+  [[ "$output" == *"/tmp/warden/run-warden/shell/bash.sh"* ]]
+
+  run env HOME="$TEST_HOME" WARDEN_HOME=/tmp/warden "$RUN_WARDEN_ROOT/bin/warden" shell init zsh
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"/tmp/warden/run-warden/shell/zsh.sh"* ]]
+
+  run env HOME="$TEST_HOME" WARDEN_HOME=/tmp/warden "$RUN_WARDEN_ROOT/bin/warden" shell init fish
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"plugin-warden.fish"* ]]
+  [[ "$output" == *"functions/warden.fish"* ]]
+}
+
+@test "removed command forms fail without stale compatibility usage" {
+  run env HOME="$TEST_HOME" "$RUN_WARDEN_ROOT/bin/warden" shell snippet bash
+  [ "$status" -eq 2 ]
+  [[ "$output" != *"usage: warden shell snippet"* ]]
+  [[ "$output" != *"deprecated"* ]]
+
+  run env HOME="$TEST_HOME" "$RUN_WARDEN_ROOT/bin/warden" agents update ada
+  [ "$status" -eq 2 ]
+  [[ "$output" != *"usage: warden agents update NAME"* ]]
+  [[ "$output" != *"deprecated"* ]]
+
+  run env HOME="$TEST_HOME" "$RUN_WARDEN_ROOT/bin/warden" agents set ada cwd /tmp
+  [ "$status" -eq 2 ]
+  [[ "$output" != *"usage: warden agents set NAME cwd DIR"* ]]
+  [[ "$output" != *"deprecated"* ]]
+
+  run env HOME="$TEST_HOME" "$RUN_WARDEN_ROOT/bin/warden" agents unset ada cwd
+  [ "$status" -eq 2 ]
+  [[ "$output" != *"usage: warden agents unset NAME cwd"* ]]
+  [[ "$output" != *"deprecated"* ]]
+}
+
+@test "shell status doctor and install decline advertise shell init" {
+  repo_root=$(cd "$RUN_WARDEN_ROOT/.." && pwd -P)
+
+  run env HOME="$TEST_HOME" WARDEN_HOME="$repo_root" PATH="$FAKE_BIN:$PATH" "$RUN_WARDEN_ROOT/bin/warden" shell status
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"manual: ./warden shell init bash"* ]]
+  [[ "$output" != *"shell snippet"* ]]
+
+  run env HOME="$TEST_HOME" WARDEN_HOME="$repo_root" PATH="$FAKE_BIN:$PATH" "$RUN_WARDEN_ROOT/bin/warden" doctor
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"./warden shell init bash|zsh|fish"* ]]
+  [[ "$output" != *"shell snippet"* ]]
+
+  run env HOME="$TEST_HOME" WARDEN_HOME="$repo_root" PATH="$FAKE_BIN:$PATH" WARDEN_CURRENT_SHELL=bash "$RUN_WARDEN_ROOT/bin/warden" shell install
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"shell integration declined. Manual snippets: ./warden shell init bash|zsh|fish"* ]]
+  [[ "$output" != *"shell snippet"* ]]
+}
+
+@test "shell install and remove dispatch remain supported" {
+  tmp_home="$BATS_TEST_TMPDIR/shell-home"
+  mkdir -p "$tmp_home"
+
+  run env HOME="$tmp_home" WARDEN_HOME=/tmp/warden WARDEN_CURRENT_SHELL=bash WARDEN_YES=1 "$RUN_WARDEN_ROOT/bin/warden" shell install
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"installed - bash -> $tmp_home/.bashrc"* ]]
+  grep -F "# warden begin" "$tmp_home/.bashrc"
+
+  run env HOME="$tmp_home" WARDEN_HOME=/tmp/warden "$RUN_WARDEN_ROOT/bin/warden" shell remove
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"removed - bash"* ]]
+  ! grep -F "# warden begin" "$tmp_home/.bashrc"
 }
 
 @test "agents new installs Pi into WARDEN_AGENTS local npm prefix" {
@@ -142,12 +228,12 @@ NODE
   grep -F "You are ada," "$agents/ada/AGENTS.md"
 }
 
-@test "agents update does not mutate existing AGENTS.md" {
+@test "agents NAME update-pi does not mutate existing AGENTS.md" {
   agents="$BATS_TEST_TMPDIR/agents"
   env HOME="$TEST_HOME" PATH="$FAKE_BIN:$PATH" WARDEN_AGENTS="$agents" NPM_LOG="$BATS_TEST_TMPDIR/install-npm.log" "$RUN_WARDEN_ROOT/bin/warden" agents new ada
   printf '%s\n' 'unique guidance sentinel' >"$agents/ada/AGENTS.md"
 
-  run env HOME="$TEST_HOME" PATH="$FAKE_BIN:$PATH" WARDEN_AGENTS="$agents" NPM_LOG="$BATS_TEST_TMPDIR/update-npm.log" "$RUN_WARDEN_ROOT/bin/warden" agents update ada
+  run env HOME="$TEST_HOME" PATH="$FAKE_BIN:$PATH" WARDEN_AGENTS="$agents" NPM_LOG="$BATS_TEST_TMPDIR/update-npm.log" "$RUN_WARDEN_ROOT/bin/warden" agents ada update-pi
   [ "$status" -eq 0 ]
   [ "$(cat "$agents/ada/AGENTS.md")" = "unique guidance sentinel" ]
 }
@@ -180,11 +266,11 @@ NODE
   [ -x "$TEST_HOME/.config/pi-agents/ada/npm/node_modules/.bin/pi" ]
 }
 
-@test "agents update reinstalls Warden-managed Pi runtime" {
+@test "agents NAME update-pi reinstalls Warden-managed Pi runtime" {
   agents="$BATS_TEST_TMPDIR/agents"
   env HOME="$TEST_HOME" PATH="$FAKE_BIN:$PATH" WARDEN_AGENTS="$agents" NPM_LOG="$BATS_TEST_TMPDIR/install-npm.log" "$RUN_WARDEN_ROOT/bin/warden" agents new ada
 
-  run env HOME="$TEST_HOME" PATH="$FAKE_BIN:$PATH" WARDEN_AGENTS="$agents" NPM_LOG="$BATS_TEST_TMPDIR/update-npm.log" "$RUN_WARDEN_ROOT/bin/warden" agents update ada
+  run env HOME="$TEST_HOME" PATH="$FAKE_BIN:$PATH" WARDEN_AGENTS="$agents" NPM_LOG="$BATS_TEST_TMPDIR/update-npm.log" "$RUN_WARDEN_ROOT/bin/warden" agents ada update-pi
   [ "$status" -eq 0 ]
   [[ "$output" == *"updated agent ada Pi"* ]]
   [ -x "$agents/ada/npm/node_modules/.bin/pi" ]
@@ -193,13 +279,13 @@ NODE
   grep -F "arg=@earendil-works/pi-coding-agent@latest" "$BATS_TEST_TMPDIR/update-npm.log"
 }
 
-@test "agents update requires an existing agent name" {
+@test "agents NAME update-pi requires an existing agent name" {
   agents="$BATS_TEST_TMPDIR/agents"
-  run env HOME="$TEST_HOME" PATH="$FAKE_BIN:$PATH" WARDEN_AGENTS="$agents" "$RUN_WARDEN_ROOT/bin/warden" agents update
+  run env HOME="$TEST_HOME" PATH="$FAKE_BIN:$PATH" WARDEN_AGENTS="$agents" "$RUN_WARDEN_ROOT/bin/warden" agents ada update-pi extra
   [ "$status" -eq 2 ]
-  [[ "$output" == *"usage: warden agents update NAME"* ]]
+  [[ "$output" == *"usage: warden agents NAME update-pi"* ]]
 
-  run env HOME="$TEST_HOME" PATH="$FAKE_BIN:$PATH" WARDEN_AGENTS="$agents" "$RUN_WARDEN_ROOT/bin/warden" agents update missing
+  run env HOME="$TEST_HOME" PATH="$FAKE_BIN:$PATH" WARDEN_AGENTS="$agents" "$RUN_WARDEN_ROOT/bin/warden" agents missing update-pi
   [ "$status" -eq 2 ]
   [[ "$output" == *"agent not found"* ]]
 }
@@ -225,17 +311,55 @@ NODE
 @test "agents new without name fails with usage in non-tty" {
   run env HOME="$TEST_HOME" PATH="$FAKE_BIN:$PATH" NPM_LOG="$BATS_TEST_TMPDIR/npm.log" "$RUN_WARDEN_ROOT/bin/warden" agents new
   [ "$status" -eq 2 ]
-  [[ "$output" == *"usage: warden agents new [name]"* ]]
+  [[ "$output" == *"usage: warden agents new [NAME]"* ]]
 }
 
-@test "run-warden help lists pi command" {
+@test "run-warden help keeps final pi and agents command order" {
   run env HOME="$TEST_HOME" "$RUN_WARDEN_ROOT/bin/warden" help
   [ "$status" -eq 0 ]
-  [[ "$output" == *"pi NAME [ARGS...]"* ]]
-  [[ "$output" == *"agents set NAME cwd DIR"* ]]
-  [[ "$output" == *"agents unset NAME cwd"* ]]
-  [[ "$output" == *"agents show NAME [--json]"* ]]
+  [[ "$output" == *"agents new [NAME]"* ]]
   [[ "$output" == *"agents list [--json]"* ]]
+  [[ "$output" == *"agents NAME update-pi"* ]]
+  [[ "$output" == *"agents NAME cwd DIR"* ]]
+  [[ "$output" == *"agents NAME show [--json]"* ]]
+  [[ "$output" == *"pi NAME [ARGS...]"* ]]
+  [[ "$output" == *"@NAME [ARGS...]"* ]]
+}
+
+@test "@NAME alias matches pi NAME argv and agent environment" {
+  agents="$BATS_TEST_TMPDIR/agents"
+  env HOME="$TEST_HOME" PATH="$FAKE_BIN:$PATH" WARDEN_AGENTS="$agents" NPM_LOG="$BATS_TEST_TMPDIR/npm.log" PI_LOG="$BATS_TEST_TMPDIR/install-pi.log" "$RUN_WARDEN_ROOT/bin/warden" agents new ada
+
+  run env HOME="$TEST_HOME" PATH="$FAKE_BIN:$PATH" WARDEN_AGENTS="$agents" PI_LOG="$BATS_TEST_TMPDIR/pi-command.log" "$RUN_WARDEN_ROOT/bin/warden" pi ada --flag "two words"
+  [ "$status" -eq 0 ]
+
+  run env HOME="$TEST_HOME" PATH="$FAKE_BIN:$PATH" WARDEN_AGENTS="$agents" PI_LOG="$BATS_TEST_TMPDIR/at-command.log" "$RUN_WARDEN_ROOT/bin/warden" @ada --flag "two words"
+  [ "$status" -eq 0 ]
+
+  grep -F "PI_CODING_AGENT_DIR=$agents/ada" "$BATS_TEST_TMPDIR/at-command.log"
+  grep -F "PILENS_DATA_DIR=$agents/ada/pi-lens" "$BATS_TEST_TMPDIR/at-command.log"
+  grep -F "CONTEXT_MODE_DIR=$agents/ada/context-mode" "$BATS_TEST_TMPDIR/at-command.log"
+  grep -F "arg=--flag" "$BATS_TEST_TMPDIR/at-command.log"
+  grep -F "arg=two words" "$BATS_TEST_TMPDIR/at-command.log"
+  diff -u "$BATS_TEST_TMPDIR/pi-command.log" "$BATS_TEST_TMPDIR/at-command.log"
+}
+
+@test "reserved agent names are rejected at create and launch entrypoints" {
+  agents="$BATS_TEST_TMPDIR/agents"
+  for reserved in new list; do
+    run env HOME="$TEST_HOME" PATH="$FAKE_BIN:$PATH" WARDEN_AGENTS="$agents" NPM_LOG="$BATS_TEST_TMPDIR/npm-$reserved.log" "$RUN_WARDEN_ROOT/bin/warden" agents new "$reserved"
+    [ "$status" -eq 2 ]
+    [[ "$output" == *"reserved agent name"* ]]
+    [ ! -e "$agents/$reserved" ]
+
+    run env HOME="$TEST_HOME" PATH="$FAKE_BIN:$PATH" WARDEN_AGENTS="$agents" "$RUN_WARDEN_ROOT/bin/warden" pi "$reserved" --help
+    [ "$status" -eq 2 ]
+    [[ "$output" == *"reserved agent name"* ]]
+
+    run env HOME="$TEST_HOME" PATH="$FAKE_BIN:$PATH" WARDEN_AGENTS="$agents" "$RUN_WARDEN_ROOT/bin/warden" "@$reserved" --help
+    [ "$status" -eq 2 ]
+    [[ "$output" == *"reserved agent name"* ]]
+  done
 }
 
 @test "pi runs local Pi with agent env and preserves argv" {
@@ -380,10 +504,10 @@ NODE
 @test "pi without name fails with usage" {
   run env HOME="$TEST_HOME" PATH="$FAKE_BIN:$PATH" "$RUN_WARDEN_ROOT/bin/warden" pi
   [ "$status" -eq 2 ]
-  [[ "$output" == *"usage: warden pi <name> [args...]"* ]]
+  [[ "$output" == *"usage: warden pi NAME [ARGS...]"* ]]
 }
 
-@test "agents set cwd writes flattened agent cwd and preserves unrelated settings" {
+@test "agents NAME cwd writes flattened agent cwd and preserves unrelated settings" {
   agents="$BATS_TEST_TMPDIR/agents"
   project="$BATS_TEST_TMPDIR/project"
   mkdir -p "$agents/sentinel" "$project"
@@ -391,7 +515,7 @@ NODE
 {"lastChangelogVersion":"1.2.3","packages":{"keep":true},"theme":"dark","defaultThinkingLevel":"high","warden":{"keep":true,"useNerdGlyphs":true}}
 JSON
 
-  run env HOME="$TEST_HOME" PATH="$FAKE_BIN:$PATH" WARDEN_AGENTS="$agents" "$RUN_WARDEN_ROOT/bin/warden" agents set sentinel cwd "$project"
+  run env HOME="$TEST_HOME" PATH="$FAKE_BIN:$PATH" WARDEN_AGENTS="$agents" "$RUN_WARDEN_ROOT/bin/warden" agents sentinel cwd "$project"
   [ "$status" -eq 0 ]
   [[ "$output" == *"set sentinel cwd: $project"* ]]
   node - "$agents/sentinel/settings.json" "$project" <<'NODE'
@@ -408,11 +532,11 @@ if (settings.warden.agent.cwd !== expected) process.exit(1);
 NODE
 }
 
-@test "agents set cwd creates flattened agent settings and stores original input" {
+@test "agents NAME cwd creates flattened agent settings and stores original input" {
   agents="$BATS_TEST_TMPDIR/agents"
   mkdir -p "$agents/sentinel" "$TEST_HOME/project"
 
-  run env HOME="$TEST_HOME" PATH="$FAKE_BIN:$PATH" WARDEN_AGENTS="$agents" "$RUN_WARDEN_ROOT/bin/warden" agents set sentinel cwd "~/project"
+  run env HOME="$TEST_HOME" PATH="$FAKE_BIN:$PATH" WARDEN_AGENTS="$agents" "$RUN_WARDEN_ROOT/bin/warden" agents sentinel cwd "~/project"
   [ "$status" -eq 0 ]
   node - "$agents/sentinel/settings.json" <<'NODE'
 const fs = require('fs');
@@ -421,24 +545,24 @@ if (settings.warden.agent.cwd !== '~/project') process.exit(1);
 NODE
 }
 
-@test "agents set cwd rejects missing agents, relative cwd, and missing directories" {
+@test "agents NAME cwd rejects missing agents, relative cwd, and missing directories" {
   agents="$BATS_TEST_TMPDIR/agents"
   mkdir -p "$agents/sentinel"
 
-  run env HOME="$TEST_HOME" PATH="$FAKE_BIN:$PATH" WARDEN_AGENTS="$agents" "$RUN_WARDEN_ROOT/bin/warden" agents set missing cwd "$BATS_TEST_TMPDIR"
+  run env HOME="$TEST_HOME" PATH="$FAKE_BIN:$PATH" WARDEN_AGENTS="$agents" "$RUN_WARDEN_ROOT/bin/warden" agents missing cwd "$BATS_TEST_TMPDIR"
   [ "$status" -eq 2 ]
   [[ "$output" == *"agent not found"* ]]
 
-  run env HOME="$TEST_HOME" PATH="$FAKE_BIN:$PATH" WARDEN_AGENTS="$agents" "$RUN_WARDEN_ROOT/bin/warden" agents set sentinel cwd relative/path
+  run env HOME="$TEST_HOME" PATH="$FAKE_BIN:$PATH" WARDEN_AGENTS="$agents" "$RUN_WARDEN_ROOT/bin/warden" agents sentinel cwd relative/path
   [ "$status" -eq 2 ]
   [[ "$output" == *"cwd must be an absolute path or start with ~"* ]]
 
-  run env HOME="$TEST_HOME" PATH="$FAKE_BIN:$PATH" WARDEN_AGENTS="$agents" "$RUN_WARDEN_ROOT/bin/warden" agents set sentinel cwd "$BATS_TEST_TMPDIR/missing"
+  run env HOME="$TEST_HOME" PATH="$FAKE_BIN:$PATH" WARDEN_AGENTS="$agents" "$RUN_WARDEN_ROOT/bin/warden" agents sentinel cwd "$BATS_TEST_TMPDIR/missing"
   [ "$status" -eq 2 ]
   [[ "$output" == *"cwd is not an existing directory"* ]]
 }
 
-@test "agents unset cwd removes flattened cwd and preserves unrelated settings" {
+@test "removed agents unset cwd surface does not mutate settings" {
   agents="$BATS_TEST_TMPDIR/agents"
   mkdir -p "$agents/sentinel"
   cat > "$agents/sentinel/settings.json" <<'JSON'
@@ -446,17 +570,12 @@ NODE
 JSON
 
   run env HOME="$TEST_HOME" PATH="$FAKE_BIN:$PATH" WARDEN_AGENTS="$agents" "$RUN_WARDEN_ROOT/bin/warden" agents unset sentinel cwd
-  [ "$status" -eq 0 ]
-  [[ "$output" == *"unset sentinel cwd"* ]]
+  [ "$status" -eq 2 ]
+  [[ "$output" != *"unset sentinel cwd"* ]]
   node - "$agents/sentinel/settings.json" <<'NODE'
 const fs = require('fs');
 const settings = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'));
-if (settings.lastChangelogVersion !== '1.2.3') process.exit(1);
-if (settings.packages.keep !== true) process.exit(1);
-if (settings.theme !== 'dark') process.exit(1);
-if (settings.defaultThinkingLevel !== 'high') process.exit(1);
-if (settings.warden.useNerdGlyphs !== true) process.exit(1);
-if ('cwd' in settings.warden.agent) process.exit(1);
+if (settings.warden.agent.cwd !== '/tmp/old') process.exit(1);
 if (settings.warden.agent.note !== 'keep') process.exit(1);
 NODE
 }
@@ -471,7 +590,7 @@ NODE
 {"warden":{"agent":{"cwd":"$project"}}}
 JSON
 
-  run env HOME="$TEST_HOME" PATH="$FAKE_BIN:$PATH" WARDEN_AGENTS="$agents" "$RUN_WARDEN_ROOT/bin/warden" agents show sentinel
+  run env HOME="$TEST_HOME" PATH="$FAKE_BIN:$PATH" WARDEN_AGENTS="$agents" "$RUN_WARDEN_ROOT/bin/warden" agents sentinel show
   [ "$status" -eq 0 ]
   [[ "$output" == *"name: sentinel"* ]]
   [[ "$output" == *"agent dir: $agents/sentinel"* ]]
@@ -489,13 +608,13 @@ JSON
   agents="$BATS_TEST_TMPDIR/agents"
   mkdir -p "$agents/sentinel"
 
-  run env HOME="$TEST_HOME" PATH="$FAKE_BIN:$PATH" WARDEN_AGENTS="$agents" "$RUN_WARDEN_ROOT/bin/warden" agents show sentinel
+  run env HOME="$TEST_HOME" PATH="$FAKE_BIN:$PATH" WARDEN_AGENTS="$agents" "$RUN_WARDEN_ROOT/bin/warden" agents sentinel show
   [ "$status" -eq 0 ]
   [[ "$output" == *"configured cwd: (unset)"* ]]
   [[ "$output" == *"{}"* ]]
 
   expected_cwd=$(pwd -P)
-  run env HOME="$TEST_HOME" PATH="$FAKE_BIN:$PATH" WARDEN_AGENTS="$agents" "$RUN_WARDEN_ROOT/bin/warden" agents show sentinel --json
+  run env HOME="$TEST_HOME" PATH="$FAKE_BIN:$PATH" WARDEN_AGENTS="$agents" "$RUN_WARDEN_ROOT/bin/warden" agents sentinel show --json
   [ "$status" -eq 0 ]
   printf '%s' "$output" | node -e 'const expected = process.argv[1]; const expectedAgent = process.argv[2]; let data=""; process.stdin.on("data", c => data += c); process.stdin.on("end", () => { const parsed = JSON.parse(data); if (parsed.name !== "sentinel") process.exit(1); if (!parsed.settingsPath.endsWith("/settings.json")) process.exit(1); if (parsed.effectiveCwd !== expected) process.exit(1); if (parsed.piLensDir !== `${expectedAgent}/pi-lens`) process.exit(1); if (parsed.contextModeDir !== `${expectedAgent}/context-mode`) process.exit(1); });' "$expected_cwd" "$agents/sentinel"
 }
@@ -535,7 +654,7 @@ JSON
   grep -F "PWD=$caller" "$BATS_TEST_TMPDIR/pi-unset.log"
 
   cd "$BATS_TEST_TMPDIR"
-  run env HOME="$TEST_HOME" PATH="$FAKE_BIN:$PATH" WARDEN_AGENTS="$agents" "$RUN_WARDEN_ROOT/bin/warden" agents set ada cwd "$project"
+  run env HOME="$TEST_HOME" PATH="$FAKE_BIN:$PATH" WARDEN_AGENTS="$agents" "$RUN_WARDEN_ROOT/bin/warden" agents ada cwd "$project"
   [ "$status" -eq 0 ]
 
   cd "$caller"
@@ -548,7 +667,7 @@ JSON
   agents="$BATS_TEST_TMPDIR/agents"
   mkdir -p "$TEST_HOME/project"
   env HOME="$TEST_HOME" PATH="$FAKE_BIN:$PATH" WARDEN_AGENTS="$agents" NPM_LOG="$BATS_TEST_TMPDIR/npm.log" PI_LOG="$BATS_TEST_TMPDIR/install-pi.log" "$RUN_WARDEN_ROOT/bin/warden" agents new ada
-  env HOME="$TEST_HOME" PATH="$FAKE_BIN:$PATH" WARDEN_AGENTS="$agents" "$RUN_WARDEN_ROOT/bin/warden" agents set ada cwd "~/project"
+  env HOME="$TEST_HOME" PATH="$FAKE_BIN:$PATH" WARDEN_AGENTS="$agents" "$RUN_WARDEN_ROOT/bin/warden" agents ada cwd "~/project"
 
   run env HOME="$TEST_HOME" PATH="$FAKE_BIN:$PATH" WARDEN_AGENTS="$agents" PI_LOG="$BATS_TEST_TMPDIR/pi.log" "$RUN_WARDEN_ROOT/bin/warden" pi ada
   [ "$status" -eq 0 ]
@@ -592,15 +711,21 @@ NODE
   [[ "$output" == *"warn - Pi agent broken missing local executable: $agents/broken/npm/node_modules/.bin/pi"* ]]
 }
 
-@test "README documents Pi agent commands" {
+@test "README files document final Pi agent commands" {
   repo_root=$(cd "$RUN_WARDEN_ROOT/.." && pwd -P)
-  grep -F "warden agents new [name]" "$repo_root/README.md"
-  grep -F "warden agents update <name>" "$repo_root/README.md"
-  grep -F "warden agents set <name> cwd <dir>" "$repo_root/README.md"
-  grep -F "warden agents unset <name> cwd" "$repo_root/README.md"
-  grep -F "warden agents show <name> [--json]" "$repo_root/README.md"
-  grep -F "warden agents list [--json]" "$repo_root/README.md"
-  grep -F "warden pi <name>" "$repo_root/README.md"
+  for doc in "$repo_root/README.md" "$RUN_WARDEN_ROOT/README.md"; do
+    grep -F "warden agents new [NAME]" "$doc"
+    grep -F "warden agents list [--json]" "$doc"
+    grep -F "warden agents NAME update-pi" "$doc"
+    grep -F "warden agents NAME cwd DIR" "$doc"
+    grep -F "warden agents NAME show [--json]" "$doc"
+    grep -F "warden pi NAME" "$doc"
+    grep -F "warden @NAME" "$doc"
+    ! grep -F "warden agents update <name>" "$doc"
+    ! grep -F "warden agents set <name> cwd <dir>" "$doc"
+    ! grep -F "warden agents unset <name> cwd" "$doc"
+    ! grep -F "warden shell snippet" "$doc"
+  done
   grep -F "renames the current tmux window" "$repo_root/README.md"
   grep -F "WARDEN_AGENTS" "$repo_root/README.md"
   grep -F "CONTEXT_MODE_DIR" "$repo_root/README.md"
