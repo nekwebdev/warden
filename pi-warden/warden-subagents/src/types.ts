@@ -30,6 +30,7 @@ export type ToolPolicy =
 
 export type AgentIsolation = "standalone" | "parent-twin";
 export type AgentPromptMode = "replace" | "append";
+export type AgentMemoryScope = "project" | "local" | "user";
 export type AgentThinkingLevel =
 	| "off"
 	| "minimal"
@@ -50,7 +51,7 @@ export interface AgentTypeConfig {
 	extensions: string[];
 	skills: string[];
 	disallowedTools: ToolSelector[];
-	memory: boolean;
+	memory?: AgentMemoryScope;
 	isolation: AgentIsolation;
 	inheritContext: boolean;
 	promptMode: AgentPromptMode;

@@ -4,7 +4,7 @@ Package-local guidance for `pi-warden/warden-subagents/`.
 
 ## Scope
 
-`@nekwebdev/warden-subagents` owns Warden's Pi subagent-type registry package plus foreground `Agent` tool and background launch/result lookup package work.
+`@nekwebdev/warden-subagents` owns Warden's Pi subagent-type registry package plus foreground `Agent` tool, background launch/result lookup package work, and scoped custom-agent memory prompt extras.
 
 Current package owns:
 
@@ -12,6 +12,7 @@ Current package owns:
 - foreground `Agent` tool registration;
 - background `Agent` launch/result lookup around the foreground runner;
 - read-only Warden Panel Subagents pane plus `/agents` and `/warden:agents` aliases;
+- scoped custom-agent memory prompt extras for explicit `memory: project|local|user` frontmatter;
 - in-process child `createAgentSession` foreground runner;
 - functional registry API under `src/`;
 - embedded default agent types;
@@ -25,7 +26,7 @@ Hard fences:
 - read-only Warden Panel pane work is limited to cached active background-agent snapshots and agent-type registry display;
 - no background steering, resume, persistent retention, scheduling, RPC, worktree, conversation overlay, or panel admin controls;
 - no scheduling;
-- no memory behavior;
+- no memory behavior beyond explicit `memory: project|local|user` prompt extras, safe `MEMORY.md` index reads, read-only fallback, and selected-directory creation for write-capable explicit subagent runs;
 - no RPC behavior;
 - no worktree isolation;
 - no Pi command, scheduler, or background registration outside package-local `Agent`/`get_subagent_result` tools, native renderers, `/agents`, and `/warden:agents`;
@@ -43,6 +44,12 @@ Hard fences:
 - Apply tool policy before first child prompt: create child session, inspect `getAllTools().sourceInfo` for extension-wide selectors, set active tools, then prompt.
 - Keep model scope enforcement pure and off by default. Do not read or write real Pi settings for model scope in this slice.
 - Parent context inheritance must include recent visible user/assistant text only, exclude tool payloads/results, cap at 6000 characters, and include a truncation marker when capped.
+- Custom-agent memory is active only for explicit string scopes `project`, `local`, or `user`; `memory: true` and invalid values warn and remain inactive.
+- Memory directories are exactly `<project>/.pi/agent-memory/<agent>/`, `<project>/.pi/agent-memory-local/<agent>/`, and `<getAgentDir()>/agent-memory/<agent>/`; `<project>` is nearest ancestor containing `.pi/agents`, falling back to invocation cwd.
+- `memory: local` must not mutate `.gitignore` or any VCS ignore file; users own repository ignore policy.
+- Memory may add only `read` when absent and not denied. It must never add `write` or `edit`.
+- Read/write memory instructions require effective `write` or `edit` after `disallowed_tools`; otherwise use read-only instructions and do not create missing memory directories.
+- Never create starter `MEMORY.md` content; only inject a bounded 200-line safe `MEMORY.md` index when present.
 
 ## Registry implementation rules
 

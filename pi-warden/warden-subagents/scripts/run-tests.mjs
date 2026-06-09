@@ -5,6 +5,7 @@ const tests = [
 	"tests/package-scaffold.test.mjs",
 	"tests/agent-types.test.mjs",
 	"tests/custom-agents.test.mjs",
+	"tests/memory.test.mjs",
 	"tests/agent-runner.test.mjs",
 	"tests/agent-manager.test.mjs",
 	"tests/usage.test.mjs",

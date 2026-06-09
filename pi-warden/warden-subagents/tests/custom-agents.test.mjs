@@ -176,7 +176,8 @@ describe("custom agent frontmatter normalization", () => {
 			writeAgent(
 				projectDir,
 				"reviewer.md",
-				`---\nname: Review Display\ndescription: Review code\ntools:\n  - read\n  - bash\n  - ext:review/check\n  - ext:lint\n  - read\n  - 42\nextensions: ui, status, ui\nskills:\n  - warden-start\n  - warden-close\n  - 13\ndisallowed_tools: edit, ext:danger/delete, edit\nmemory: true\nisolation: parent-twin\nisolated: true\nmodel: claude-4\nthinking: high\nmax_turns: 3\nprompt_mode: append\ninherit_context: true\nrun_in_background: true\n---\nReview prompt.`,
+				`---\nname: Review Display\ndescription: Review code\ntools:\n  - read\n  - bash\n  - ext:review/check\n  - ext:lint\n  - read\n  - 42\nextensions: ui, status, ui\nskills:\n  - warden-start\n  - warden-close\n  - 13\ndisallowed_tools: edit, ext:danger/delete, edit\nmemory: project
+isolation: parent-twin\nisolated: true\nmodel: claude-4\nthinking: high\nmax_turns: 3\nprompt_mode: append\ninherit_context: true\nrun_in_background: true\n---\nReview prompt.`,
 			);
 
 			const registry = await loadAgentTypes({
@@ -201,7 +202,7 @@ describe("custom agent frontmatter normalization", () => {
 				{ kind: "builtin", name: "edit" },
 				{ kind: "extension-tool", extension: "danger", tool: "delete" },
 			]);
-			assert.equal(resolved.agent.memory, true);
+			assert.equal(resolved.agent.memory, "project");
 			assert.equal(resolved.agent.isolation, "parent-twin");
 			assert.equal(resolved.agent.model, "claude-4");
 			assert.equal(resolved.agent.thinking, "high");
@@ -211,6 +212,42 @@ describe("custom agent frontmatter normalization", () => {
 			assert.equal(resolved.agent.runInBackground, true);
 			assert.ok(codes(registry).includes("invalid-list-entry"));
 			assert.ok(codes(registry).includes("isolation-overrides-isolated"));
+		} finally {
+			tmp.cleanup();
+		}
+	});
+
+	it("warns without enabling memory for legacy boolean and invalid values", async () => {
+		const { loadAgentTypes, resolveAgentType } = await registryModule();
+		const tmp = makeTempProject();
+		try {
+			const projectDir = join(tmp.root, "agents");
+			writeAgent(
+				projectDir,
+				"legacy.md",
+				`---\ndescription: legacy memory\nmemory: true\n---\nLegacy prompt.`,
+			);
+			writeAgent(
+				projectDir,
+				"invalid.md",
+				`---\ndescription: invalid memory\nmemory: shared\n---\nInvalid prompt.`,
+			);
+
+			const registry = await loadAgentTypes({
+				cwd: tmp.root,
+				globalAgentsDir: join(tmp.root, "missing"),
+				projectAgentsDir: projectDir,
+			});
+			assert.equal(
+				resolveAgentType(registry, "legacy").agent.memory,
+				undefined,
+			);
+			assert.equal(
+				resolveAgentType(registry, "invalid").agent.memory,
+				undefined,
+			);
+			assert.ok(codes(registry).includes("legacy-memory-boolean"));
+			assert.ok(codes(registry).includes("invalid-memory-scope"));
 		} finally {
 			tmp.cleanup();
 		}
@@ -277,6 +314,7 @@ describe("custom agent frontmatter normalization", () => {
 			const resolved = resolveAgentType(registry, "loose");
 			assert.equal(resolved.status, "found");
 			assert.equal(resolved.agent.description, "");
+			assert.equal(resolved.agent.memory, undefined);
 			assert.equal(resolved.agent.enabled, true);
 			assert.equal(resolved.agent.isolation, "standalone");
 			assert.equal(resolved.agent.inheritContext, false);

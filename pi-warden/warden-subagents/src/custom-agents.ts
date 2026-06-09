@@ -3,6 +3,7 @@ import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { basename, dirname, join, resolve } from "node:path";
 import type {
 	AgentIsolation,
+	AgentMemoryScope,
 	AgentPromptMode,
 	AgentSource,
 	AgentThinkingLevel,
@@ -33,6 +34,7 @@ const THINKING_LEVELS = new Set<AgentThinkingLevel>([
 ]);
 const PROMPT_MODES = new Set<AgentPromptMode>(["replace", "append"]);
 const ISOLATION_MODES = new Set<AgentIsolation>(["standalone", "parent-twin"]);
+const MEMORY_SCOPES = new Set<AgentMemoryScope>(["project", "local", "user"]);
 
 interface LoadedCustomAgents {
 	agents: AgentTypeConfig[];
@@ -354,6 +356,44 @@ function parseModel(
 	return undefined;
 }
 
+function parseMemoryScope(
+	frontmatter: Record<string, unknown>,
+	diagnostics: AgentTypeDiagnostic[],
+	filePath: string,
+	agentName: string,
+): AgentMemoryScope | undefined {
+	const value = frontmatter.memory;
+	if (value === undefined || value === false) return undefined;
+	if (
+		typeof value === "string" &&
+		MEMORY_SCOPES.has(value as AgentMemoryScope)
+	) {
+		return value as AgentMemoryScope;
+	}
+	if (value === true) {
+		diagnostics.push(
+			diagnostic(
+				"warning",
+				"legacy-memory-boolean",
+				"memory: true is legacy metadata and does not enable persistent memory; use memory: project, memory: local, or memory: user.",
+				filePath,
+				agentName,
+			),
+		);
+		return undefined;
+	}
+	diagnostics.push(
+		diagnostic(
+			"warning",
+			"invalid-memory-scope",
+			"memory must be one of project, local, or user; memory disabled.",
+			filePath,
+			agentName,
+		),
+	);
+	return undefined;
+}
+
 function parseIsolation(
 	frontmatter: Record<string, unknown>,
 	diagnostics: AgentTypeDiagnostic[],
@@ -471,14 +511,7 @@ function toAgentConfig(
 			filePath,
 			agentName,
 		),
-		memory: parseBoolean(
-			frontmatter,
-			"memory",
-			false,
-			diagnostics,
-			filePath,
-			agentName,
-		),
+		memory: parseMemoryScope(frontmatter, diagnostics, filePath, agentName),
 		isolation: parseIsolation(frontmatter, diagnostics, filePath, agentName),
 		inheritContext: parseBoolean(
 			frontmatter,

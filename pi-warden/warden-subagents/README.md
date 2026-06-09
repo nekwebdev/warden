@@ -10,14 +10,14 @@ Current package scope:
 - foreground `Agent` tool that runs one child Pi agent session in-process and returns final text inline;
 - background `Agent` mode that returns an agent ID immediately and lets parents retrieve queued/running/completed/error/aborted state with `get_subagent_result`;
 - read-only Warden Panel Subagents pane opened by `/agents` and `/warden:agents`;
-- pure helper seams for invocation precedence, prompt/context construction, model resolution, off-by-default model scope enforcement, tool policy, and max-turn planning.
+- pure helper seams for invocation precedence, prompt/context construction, scoped memory prompt extras, model resolution, off-by-default model scope enforcement, tool policy, and max-turn planning.
 
 Still intentionally out of scope:
 
 - no background steering, resume, persistent retention, scheduling, RPC, worktree isolation, conversation overlay, or panel admin controls;
 - native Pi widget and one-per-unconsumed-terminal completion notifications are in scope only for package-local background `Agent` activity;
 - no scheduling;
-- no memory behavior;
+- memory behavior is limited to explicit `memory: project|local|user` prompt extras, safe `MEMORY.md` index reads, read-only fallback, and selected-directory creation for write-capable explicit subagent runs;
 - no RPC behavior;
 - no worktree isolation;
 - no runner workflow or `warden agents ...` lifecycle behavior.
@@ -52,6 +52,16 @@ Key parameters:
 Foreground return content is final visible assistant text. `details.status` is one of `completed`, `fallback`, `disabled`, `unsupported`, `steered`, `aborted`, or `error`. Background launch returns `queued` or `running`, and lookup returns `queued`, `running`, `completed`, `error`, or `aborted`; unknown background types fall back to `general-purpose` with `details.note` but keep lifecycle status vocabulary.
 
 Tool policy is applied before the child receives its task prompt. The runner creates the child session, expands extension-wide selectors from `getAllTools().sourceInfo`, calls `setActiveToolsByName` when available, then sends the prompt.
+
+Custom-agent memory prompt extras are active only for explicit string scopes:
+
+- `memory: project` uses `<project>/.pi/agent-memory/<agent>/`.
+- `memory: local` uses `<project>/.pi/agent-memory-local/<agent>/`.
+- `memory: user` uses `<getAgentDir()>/agent-memory/<agent>/`.
+
+`<project>` is the nearest ancestor containing `.pi/agents`; when none exists, invocation `cwd` is used. `memory: local` never mutates `.gitignore` or other VCS ignore files; users own repository ignore policy.
+
+Agents with effective `write` or `edit` after `disallowed_tools` receive read/write memory instructions and the runner creates only the selected memory directory during that explicit subagent run. The runner never creates starter `MEMORY.md` content. Agents without effective `write` or `edit` receive read-only memory instructions, may get `read` added when it was absent and not denied, and do not create missing memory directories. Denied `read` is not re-added; if a safe `MEMORY.md` index already exists, the runner may inject its first 200 lines and warns that no further memory reads are available through tools.
 
 ## Background result lookup
 
@@ -164,7 +174,7 @@ Supported fields:
 - `extensions` — comma string or YAML array of extension ids.
 - `skills` — comma string or YAML array of skill ids.
 - `disallowed_tools` — comma string or YAML array of tool selectors.
-- `memory` — boolean metadata only in this slice.
+- `memory` — optional explicit scope `project`, `local`, or `user`. Legacy `memory: true` and invalid values warn and remain inactive.
 - `enabled` — boolean; `false` masks lower-precedence definitions.
 - `isolation` — `standalone` or `parent-twin`.
 - `isolated` — boolean alias; `isolated: true` maps to `standalone` only when `isolation` is absent.
@@ -207,7 +217,7 @@ Future slices may add subagent behavior inside this package only when packet sco
 - no root bootstrap changes;
 - no shell integration;
 - no Nix or dev-environment product behavior;
-- no background steering, resume, persistent retention, RPC behavior, scheduling, memory, conversation overlay, worktree isolation, or panel admin controls until separate accepted slices define them.
+- no background steering, resume, persistent retention, RPC behavior, scheduling, conversation overlay, worktree isolation, or panel admin controls until separate accepted slices define them.
 
 ## Upstream attribution
 

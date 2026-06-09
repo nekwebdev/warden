@@ -1,4 +1,13 @@
 import assert from "node:assert/strict";
+import {
+	existsSync,
+	mkdirSync,
+	rmSync,
+	symlinkSync,
+	writeFileSync,
+} from "node:fs";
+import { tmpdir } from "node:os";
+import { join, resolve } from "node:path";
 import { describe, it } from "node:test";
 import {
 	buildAgentSystemPrompt,
@@ -359,6 +368,203 @@ describe("foreground Agent execution", () => {
 		assert.match(result.content[0].text, /done/);
 	});
 
+	it("injects project memory between agent prompt and parent bridge for write-capable agents", async () => {
+		const tmp = makeTempProject();
+		try {
+			const projectRoot = join(tmp.root, "repo");
+			const cwd = join(projectRoot, "work");
+			mkdirSync(join(projectRoot, ".pi", "agents"), { recursive: true });
+			mkdirSync(cwd, { recursive: true });
+			const memoryAgent = {
+				...generalAgent,
+				type: "MemoryWriter",
+				prompt: "Memory writer prompt.",
+				memory: "project",
+			};
+			let receivedSystemPrompt = "";
+			const calls = [];
+			const result = await runForegroundAgent({
+				params: {
+					subagent_type: "MemoryWriter",
+					prompt: "Use memory",
+					description: "memory write",
+				},
+				ctx: { ...makeCtx(), cwd },
+				registry: makeRegistry([memoryAgent]),
+				createChildSession: async (input) => {
+					receivedSystemPrompt = input.systemPrompt;
+					return fakeChildSession(
+						"memory done",
+						calls,
+						undefined,
+						writableTools(),
+					);
+				},
+			});
+
+			const memoryDir = join(
+				projectRoot,
+				".pi",
+				"agent-memory",
+				"MemoryWriter",
+			);
+			assert.equal(result.details.status, "completed");
+			assert.equal(existsSync(memoryDir), true);
+			assert.equal(existsSync(join(memoryDir, "MEMORY.md")), false);
+			assert.match(
+				receivedSystemPrompt,
+				/^Memory writer prompt\.\n\n## Agent Memory/,
+			);
+			assert.match(receivedSystemPrompt, new RegExp(escapeRegExp(memoryDir)));
+			assert.ok(
+				receivedSystemPrompt.indexOf("## Agent Memory") <
+					receivedSystemPrompt.indexOf("## Parent Prompt Bridge"),
+			);
+			assert.deepEqual(calls[0], [
+				"setActiveToolsByName",
+				["read", "bash", "edit", "write"],
+			]);
+		} finally {
+			tmp.cleanup();
+		}
+	});
+
+	it("uses read-only memory fallback without creating missing memory dirs", async () => {
+		const tmp = makeTempProject();
+		try {
+			const cwd = join(tmp.root, "repo");
+			mkdirSync(join(cwd, ".pi", "agents"), { recursive: true });
+			const readOnlyAgent = {
+				...exploreAgent,
+				type: "MemoryReader",
+				memory: "local",
+				tools: { kind: "allow", selectors: [] },
+				disallowedTools: [],
+			};
+			let receivedSystemPrompt = "";
+			const calls = [];
+			await runForegroundAgent({
+				params: {
+					subagent_type: "MemoryReader",
+					prompt: "Read memory",
+					description: "memory read",
+				},
+				ctx: { ...makeCtx(), cwd },
+				registry: makeRegistry([readOnlyAgent]),
+				createChildSession: async (input) => {
+					receivedSystemPrompt = input.systemPrompt;
+					return fakeChildSession(
+						"memory read",
+						calls,
+						undefined,
+						writableTools(),
+					);
+				},
+			});
+
+			const memoryDir = join(cwd, ".pi", "agent-memory-local", "MemoryReader");
+			assert.equal(existsSync(memoryDir), false);
+			assert.match(receivedSystemPrompt, /read-only/);
+			assert.match(receivedSystemPrompt, new RegExp(escapeRegExp(memoryDir)));
+			assert.deepEqual(calls[0], ["setActiveToolsByName", ["read"]]);
+		} finally {
+			tmp.cleanup();
+		}
+	});
+
+	it("injects existing MEMORY.md when read is denied without re-adding read", async () => {
+		const tmp = makeTempProject();
+		try {
+			const agentDir = join(tmp.root, "pi-agent-dir");
+			const memoryDir = join(agentDir, "agent-memory", "MemoryNoRead");
+			mkdirSync(memoryDir, { recursive: true });
+			writeFileSync(
+				join(memoryDir, "MEMORY.md"),
+				"# Durable note\nUse safe path rules.",
+			);
+			const noReadAgent = {
+				...generalAgent,
+				type: "MemoryNoRead",
+				memory: "user",
+				disallowedTools: [
+					{ kind: "builtin", name: "read" },
+					{ kind: "builtin", name: "edit" },
+					{ kind: "builtin", name: "write" },
+				],
+			};
+			let receivedSystemPrompt = "";
+			const calls = [];
+			await runForegroundAgent({
+				params: {
+					subagent_type: "MemoryNoRead",
+					prompt: "Use index",
+					description: "memory denied read",
+				},
+				ctx: { ...makeCtx(), cwd: tmp.root, agentDir },
+				registry: makeRegistry([noReadAgent]),
+				createChildSession: async (input) => {
+					receivedSystemPrompt = input.systemPrompt;
+					return fakeChildSession(
+						"memory no read",
+						calls,
+						undefined,
+						writableTools(),
+					);
+				},
+			});
+
+			assert.match(receivedSystemPrompt, /# Durable note/);
+			assert.match(receivedSystemPrompt, /read tool is not available/);
+			assert.deepEqual(calls[0], ["setActiveToolsByName", ["bash"]]);
+		} finally {
+			tmp.cleanup();
+		}
+	});
+
+	it("rejects symlinked memory dirs before write-capable memory instructions", async () => {
+		const tmp = makeTempProject();
+		try {
+			const projectRoot = join(tmp.root, "repo");
+			const cwd = join(projectRoot, "work");
+			const outside = join(tmp.root, "outside-memory");
+			const memoryParent = join(projectRoot, ".pi", "agent-memory");
+			mkdirSync(join(projectRoot, ".pi", "agents"), { recursive: true });
+			mkdirSync(cwd, { recursive: true });
+			mkdirSync(outside, { recursive: true });
+			mkdirSync(memoryParent, { recursive: true });
+			symlinkSync(outside, join(memoryParent, "MemorySymlink"));
+			const memoryAgent = {
+				...generalAgent,
+				type: "MemorySymlink",
+				memory: "project",
+			};
+			let receivedSystemPrompt = "";
+			await runForegroundAgent({
+				params: {
+					subagent_type: "MemorySymlink",
+					prompt: "Use memory",
+					description: "symlink memory",
+				},
+				ctx: { ...makeCtx(), cwd },
+				registry: makeRegistry([memoryAgent]),
+				createChildSession: async (input) => {
+					receivedSystemPrompt = input.systemPrompt;
+					return fakeChildSession(
+						"symlink warning",
+						[],
+						undefined,
+						writableTools(),
+					);
+				},
+			});
+
+			assert.match(receivedSystemPrompt, /symlink/);
+			assert.doesNotMatch(receivedSystemPrompt, /read and update memory/);
+		} finally {
+			tmp.cleanup();
+		}
+	});
+
 	it("enforces tool policy before first child prompt", async () => {
 		const calls = [];
 		const session = fakeChildSession("child final", calls);
@@ -381,6 +587,33 @@ describe("foreground Agent execution", () => {
 	});
 });
 
+function makeTempProject() {
+	const root = resolve(
+		tmpdir(),
+		`warden-subagents-runner-${process.pid}-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+	);
+	mkdirSync(root, { recursive: true });
+	return {
+		root,
+		cleanup() {
+			rmSync(root, { recursive: true, force: true });
+		},
+	};
+}
+
+function writableTools() {
+	return [
+		{ name: "read", sourceInfo: { source: "builtin" } },
+		{ name: "bash", sourceInfo: { source: "builtin" } },
+		{ name: "edit", sourceInfo: { source: "builtin" } },
+		{ name: "write", sourceInfo: { source: "builtin" } },
+	];
+}
+
+function escapeRegExp(value) {
+	return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
 function deferred() {
 	let resolve;
 	let reject;
@@ -391,14 +624,21 @@ function deferred() {
 	return { promise, resolve, reject };
 }
 
-function fakeChildSession(finalText, calls = [], promptGate = undefined) {
+function fakeChildSession(
+	finalText,
+	calls = [],
+	promptGate = undefined,
+	tools = undefined,
+) {
 	return {
 		getAllTools() {
-			return [
-				{ name: "read", sourceInfo: { source: "builtin" } },
-				{ name: "bash", sourceInfo: { source: "builtin" } },
-				{ name: "ext_status", sourceInfo: { source: "warden-tools" } },
-			];
+			return (
+				tools ?? [
+					{ name: "read", sourceInfo: { source: "builtin" } },
+					{ name: "bash", sourceInfo: { source: "builtin" } },
+					{ name: "ext_status", sourceInfo: { source: "warden-tools" } },
+				]
+			);
 		},
 		setActiveToolsByName(names) {
 			calls.push(["setActiveToolsByName", names]);

@@ -13,6 +13,13 @@ import {
 	type ForegroundAgentParams,
 } from "./invocation-config.ts";
 import { resolveModelRequest } from "./model-resolver.ts";
+import {
+	buildAgentMemoryPromptBlock,
+	buildAgentMemoryWarningBlock,
+	ensureWritableMemoryDirectory,
+	readMemoryIndex,
+	resolveAgentMemoryDirectory,
+} from "./memory.ts";
 import { buildAgentSystemPrompt } from "./prompts.ts";
 import { renderAgentCall, renderAgentResult } from "./ui/agent-renderer.ts";
 import { extractPassiveUsage, type PassiveUsageSnapshot } from "./usage.ts";
@@ -104,6 +111,21 @@ export interface CreateAgentToolDefinitionOptions {
 	createChildSession?: CreateChildSession;
 	manager?: AgentManager;
 }
+
+interface AgentMemoryPromptPlan {
+	block: string;
+	shouldEnsureRead: boolean;
+}
+
+const STANDARD_BUILTIN_TOOLS: ToolLike[] = [
+	{ name: "read", sourceInfo: { source: "builtin" } },
+	{ name: "bash", sourceInfo: { source: "builtin" } },
+	{ name: "edit", sourceInfo: { source: "builtin" } },
+	{ name: "write", sourceInfo: { source: "builtin" } },
+	{ name: "grep", sourceInfo: { source: "builtin" } },
+	{ name: "find", sourceInfo: { source: "builtin" } },
+	{ name: "ls", sourceInfo: { source: "builtin" } },
+];
 
 const AGENT_PARAMETERS_SCHEMA = {
 	type: "object",
@@ -290,10 +312,16 @@ export async function runForegroundAgent(
 		modelResolution.status === "resolved"
 			? enforceAllowedModelScope({ model: modelResolution.model })
 			: undefined;
+	const memoryPromptPlan = buildMemoryPromptPlan({
+		agent,
+		cwd: cwdOf(options.ctx),
+		agentDir: agentDirOf(options.ctx),
+	});
 	const systemPrompt = buildAgentSystemPrompt({
 		agentPrompt: agent.prompt,
 		promptMode: agent.promptMode,
 		parentSystemPrompt: getParentSystemPrompt(options.ctx),
+		promptExtras: memoryPromptPlan ? [memoryPromptPlan.block] : undefined,
 	});
 	const taskPrompt = buildTaskPrompt({
 		prompt: invocation.prompt,
@@ -328,7 +356,9 @@ export async function runForegroundAgent(
 		else
 			options.signal?.addEventListener("abort", abortListener, { once: true });
 
-		activeTools = await enforceToolPolicy(child, agent);
+		activeTools = await enforceToolPolicy(child, agent, {
+			ensureRead: memoryPromptPlan?.shouldEnsureRead ?? false,
+		});
 		options.onActivity?.({
 			currentActivity: "child session ready",
 			maxTurns: invocation.maxTurns,
@@ -494,12 +524,16 @@ function activityFromChildEvent(
 async function enforceToolPolicy(
 	child: ChildSessionLike,
 	agent: AgentTypeConfig,
+	options: { ensureRead?: boolean } = {},
 ): Promise<string[]> {
 	const allTools = child.getAllTools?.() ?? [];
-	const names = applyDisallowedTools(
-		resolveAllowedToolNames(agent.tools, allTools),
-		agent.disallowedTools,
-		allTools,
+	const names = maybeAddReadTool(
+		applyDisallowedTools(
+			resolveAllowedToolNames(agent.tools, allTools),
+			agent.disallowedTools,
+			allTools,
+		),
+		{ allTools, ensureRead: options.ensureRead === true },
 	);
 	if (child.setActiveToolsByName) {
 		await child.setActiveToolsByName(names);
@@ -507,6 +541,79 @@ async function enforceToolPolicy(
 		await child.setActiveTools(names);
 	}
 	return names;
+}
+
+function buildMemoryPromptPlan(input: {
+	agent: AgentTypeConfig;
+	cwd: string;
+	agentDir?: string;
+}): AgentMemoryPromptPlan | undefined {
+	if (!input.agent.memory) return undefined;
+	const directory = resolveAgentMemoryDirectory({
+		cwd: input.cwd,
+		agentDir: input.agentDir,
+		agentType: input.agent.type,
+		scope: input.agent.memory,
+	});
+	if (directory.status === "disabled") {
+		return {
+			block: buildAgentMemoryWarningBlock(directory.warning),
+			shouldEnsureRead: false,
+		};
+	}
+
+	const effectiveBuiltinNames = applyDisallowedTools(
+		resolveAllowedToolNames(input.agent.tools, STANDARD_BUILTIN_TOOLS),
+		input.agent.disallowedTools,
+		STANDARD_BUILTIN_TOOLS,
+	);
+	const readDenied = isBuiltinToolDenied("read", input.agent.disallowedTools);
+	const access = hasMemoryWriteCapability(effectiveBuiltinNames)
+		? "read-write"
+		: "read-only";
+	if (access === "read-write") {
+		const writeWarning = ensureWritableMemoryDirectory(directory.directory);
+		if (writeWarning) {
+			return {
+				block: buildAgentMemoryWarningBlock(writeWarning),
+				shouldEnsureRead: false,
+			};
+		}
+	}
+
+	return {
+		block: buildAgentMemoryPromptBlock({
+			directory: directory.directory,
+			access,
+			readToolAvailable: !readDenied,
+			index: readMemoryIndex(directory.directory),
+		}),
+		shouldEnsureRead: !readDenied,
+	};
+}
+
+function hasMemoryWriteCapability(names: string[]): boolean {
+	return names.includes("write") || names.includes("edit");
+}
+
+function maybeAddReadTool(
+	names: string[],
+	options: { allTools: ToolLike[]; ensureRead: boolean },
+): string[] {
+	if (!options.ensureRead || names.includes("read")) return names;
+	const hasReadTool = options.allTools.some(
+		(tool) => tool.name === "read" && tool.sourceInfo?.source === "builtin",
+	);
+	return hasReadTool ? unique([...names, "read"]) : names;
+}
+
+function isBuiltinToolDenied(
+	name: string,
+	disallowed: ToolSelector[],
+): boolean {
+	return disallowed.some(
+		(selector) => selector.kind === "builtin" && selector.name === name,
+	);
 }
 
 function resolveAllowedToolNames(
@@ -611,6 +718,10 @@ function parentEntriesOf(
 
 function modelRegistryOf(ctx: Record<string, unknown>) {
 	return ctx.modelRegistry as Parameters<typeof resolveModelRequest>[1];
+}
+
+function agentDirOf(ctx: Record<string, unknown>): string | undefined {
+	return typeof ctx.agentDir === "string" ? ctx.agentDir : undefined;
 }
 
 function extractMessageText(content: unknown): string | undefined {

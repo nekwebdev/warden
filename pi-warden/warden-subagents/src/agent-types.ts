@@ -59,6 +59,7 @@ export function resolveAgentType(
 export { DEFAULT_AGENT_TYPES } from "./default-agents.ts";
 export type {
 	AgentIsolation,
+	AgentMemoryScope,
 	AgentPromptMode,
 	AgentSource,
 	AgentThinkingLevel,

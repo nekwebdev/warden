@@ -22,6 +22,13 @@ export {
 	resolveForegroundInvocation,
 } from "./src/invocation-config.ts";
 export {
+	buildAgentMemoryPromptBlock,
+	buildAgentMemoryWarningBlock,
+	ensureWritableMemoryDirectory,
+	readMemoryIndex,
+	resolveAgentMemoryDirectory,
+} from "./src/memory.ts";
+export {
 	buildNotificationPreview,
 	extractPassiveUsage,
 	formatCompactNumber,
@@ -78,6 +85,7 @@ export type {
 } from "./src/agent-runner.ts";
 export type {
 	AgentIsolation,
+	AgentMemoryScope,
 	AgentPromptMode,
 	AgentSource,
 	AgentThinkingLevel,
@@ -124,6 +132,13 @@ export type {
 	ModelRegistryLike,
 	ModelResolution,
 } from "./src/model-resolver.ts";
+export type {
+	AgentMemoryAccess,
+	AgentMemoryDirectoryResolution,
+	BuildAgentMemoryPromptBlockOptions,
+	MemoryIndexReadResult,
+	ResolveAgentMemoryDirectoryOptions,
+} from "./src/memory.ts";
 export type { BuildAgentSystemPromptOptions } from "./src/prompts.ts";
 export {
 	default,
