@@ -10,17 +10,18 @@ Current package scope:
 - foreground `Agent` tool that runs one child Pi agent session in-process and returns final text inline;
 - caller-requested worktree isolation for `Agent({ isolation: "worktree" })` runs;
 - background `Agent` mode that returns an agent ID immediately and lets parents retrieve queued/running/completed/error/aborted state with `get_subagent_result`;
+- event-bus RPC for other Pi extensions through `subagents:rpc:ping`, `subagents:rpc:spawn`, and `subagents:rpc:stop`;
+- focused RPC-adjacent lifecycle events for created/started/completed/failed/scheduled/scheduler-ready/ready states;
 - session-scoped one-shot `Agent({ schedule })` jobs stored under Pi session storage and surfaced in `/agents`;
 - read-only Warden Panel Subagents pane opened by `/agents` and `/warden:agents`;
 - pure helper seams for invocation precedence, prompt/context construction, scoped memory prompt extras, model resolution, off-by-default model scope enforcement, tool policy, and max-turn planning.
 
 Still intentionally out of scope:
 
-- no background steering, resume, persistent retention, cron/interval recurrence, RPC, conversation overlay, or panel admin controls;
+- no background steering, resume, persistent retention, cron/interval recurrence, conversation overlay, or panel admin controls;
 - native Pi widget and one-per-unconsumed-terminal completion notifications are in scope only for package-local background `Agent` activity;
 - no scheduling beyond session-scoped one-shot `Agent({ schedule })` jobs;
 - memory behavior is limited to explicit `memory: project|local|user` prompt extras, safe `MEMORY.md` index reads, read-only fallback, and selected-directory creation for write-capable explicit subagent runs;
-- no RPC behavior;
 - no custom-agent frontmatter `isolation: worktree` semantics or transcript JSONL streaming yet;
 - no runner workflow or `warden agents ...` lifecycle behavior.
 
@@ -104,6 +105,29 @@ Use `wait: true` when the parent needs the final result and should wait for `com
 ```
 
 The default background concurrency is 4 per extension session. Foreground calls bypass this queue. Session shutdown aborts active background work and clears in-memory records.
+
+## Event-bus RPC and lifecycle events
+
+Other Pi extensions can interoperate through package-local `pi.events` channels. The protocol version is `2`; every RPC reply emits on `${channel}:reply:${requestId}` with either `{ success: true, data?: T }` or `{ success: false, error: string }`.
+
+RPC channels:
+
+- `subagents:rpc:ping` accepts `{ requestId }` and replies with `{ version: 2 }`.
+- `subagents:rpc:spawn` accepts `{ requestId, type, prompt, options? }`. It loads the registry from current `ctx.cwd`, resolves optional model strings through current `ctx.modelRegistry`, starts through the extension-instance `AgentManager`, and returns `{ id, status, type, description }`. Before `session_start`, spawn replies `{ success: false, error: "No active session" }`.
+- `subagents:rpc:stop` accepts `{ requestId, agentId }`. It aborts running or queued agents and returns `{ id, status }`; missing or terminal agents return `{ success: false, error }`.
+
+`subagents:ready` emits `{}` after RPC handlers register. It means handlers are installed, not that session context exists; ping works immediately.
+
+Lifecycle event payloads are minimal serializable records:
+
+- `subagents:created`: `{ id, type, description, isBackground: true }`.
+- `subagents:started`: `{ id, type, description }`.
+- `subagents:completed`: `{ id, type, description, status, result?, durationMs?, toolUses?, tokens? }`.
+- `subagents:failed`: `{ id, type, description, status, result?, error?, durationMs?, toolUses?, tokens? }`; emitted for `error` and `aborted` terminal states.
+- `subagents:scheduled`: `{ job, change }`, reusing Warden scheduler job/change data.
+- `subagents:scheduler_ready`: `{ sessionId, jobCount }`.
+
+The unsupported upstream event names are documented but not emitted in this slice because no package-local seam exists yet: `subagents:steered`, `subagents:compacted`, `subagents:settings_loaded`, and `subagents:settings_changed`.
 
 ## One-shot scheduling
 
@@ -263,10 +287,10 @@ Future slices may add subagent behavior inside this package only when packet sco
 - no root bootstrap changes;
 - no shell integration;
 - no Nix or dev-environment product behavior;
-- no background steering, resume, persistent retention, RPC behavior, cron/interval scheduling, conversation overlay, custom-agent worktree frontmatter, transcript JSONL streaming, broad orphan worktree pruning, or panel admin controls until separate accepted slices define them.
+- no background steering, resume, persistent retention, cron/interval scheduling, conversation overlay, custom-agent worktree frontmatter, transcript JSONL streaming, broad orphan worktree pruning, or panel admin controls until separate accepted slices define them.
 
 ## Upstream attribution
 
-Future implementation may adapt ideas from `tintinweb/pi-subagents`, MIT license, referenced commit `2933ca1d8d30e4e229b6c683f20190423fdd1ed3`.
+RPC and event contract ideas are adapted from `tintinweb/pi-subagents`, MIT license, referenced commit `2933ca1d8d30e4e229b6c683f20190423fdd1ed3`.
 
-no upstream source is vendored in this package.
+No upstream source is vendored in this package; MIT attribution is preserved here and in package metadata.

@@ -10,6 +10,7 @@ Current package owns:
 
 - package identity and manifest;
 - foreground `Agent` tool registration;
+- package-local Pi event-bus RPC for ping/spawn/stop and focused lifecycle events;
 - caller-requested `Agent({ isolation: "worktree" })` temporary git worktree isolation;
 - background `Agent` launch/result lookup around the foreground runner;
 - read-only Warden Panel Subagents pane plus `/agents` and `/warden:agents` aliases;
@@ -26,10 +27,10 @@ Hard fences:
 - background launch/result lookup is allowed only through the package-local `AgentManager`, `Agent({ run_in_background: true })`, and `get_subagent_result` tool path;
 - native Pi widget and one-per-unconsumed-terminal completion notifications are allowed only through package-local UI/notification helpers;
 - read-only Warden Panel pane work is limited to cached active background-agent snapshots and agent-type registry display;
-- no background steering, resume, persistent retention, cron/interval recurrence, RPC, conversation overlay, or panel admin controls;
+- no background steering, resume, persistent retention, cron/interval recurrence, conversation overlay, or panel admin controls;
 - no scheduling beyond session-scoped one-shot `Agent({ schedule })` jobs;
 - no memory behavior beyond explicit `memory: project|local|user` prompt extras, safe `MEMORY.md` index reads, read-only fallback, and selected-directory creation for write-capable explicit subagent runs;
-- no RPC behavior;
+- event-bus RPC stays package-local through `pi.events`; no global/symbol manager bridges, network services, cross-process state, or runner lifecycle commands;
 - no custom-agent frontmatter `isolation: worktree`, transcript JSONL streaming, or broad orphan worktree pruning;
 - no Pi command, scheduler, or background registration outside package-local `Agent`/`get_subagent_result` tools, one-shot schedule runtime, native renderers, `/agents`, and `/warden:agents`;
 - no root bootstrap, runner workflow, `warden agents ...`, shell integration, Nix, or dev-environment behavior.

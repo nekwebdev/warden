@@ -66,6 +66,8 @@ async function schedulerFixture(options = {}) {
 			handle.cleared = true;
 		},
 		loadRegistry: options.loadRegistry ?? (() => registry()),
+		sessionId: options.sessionId,
+		onEvent: options.onEvent,
 		runAgent:
 			options.runAgent ??
 			(async ({ params }) => ({
@@ -178,6 +180,45 @@ describe("ScheduledAgentManager", () => {
 			assert.equal(job.runCount, 1);
 			assert.equal(seenParams[0].inherit_context, false);
 			assert.equal(seenParams[0].schedule, undefined);
+		} finally {
+			await fixture.cleanup();
+		}
+	});
+
+	it("emits scheduled job changes and scheduler readiness through a tiny callback seam", async () => {
+		const events = [];
+		const fixture = await schedulerFixture({
+			sessionId: "session-1",
+			onEvent: (event) => events.push(event),
+		});
+		try {
+			await fixture.scheduler.rearm();
+			assert.deepEqual(events.at(-1), {
+				channel: "subagents:scheduler_ready",
+				payload: { sessionId: "session-1", jobCount: 0 },
+			});
+
+			await fixture.scheduler.schedule(
+				{
+					subagent_type: "Explore",
+					description: "later",
+					prompt: "Inspect later.",
+					schedule: "+10s",
+				},
+				{ cwd: "/tmp/project" },
+			);
+
+			const scheduled = events.find(
+				(event) => event.channel === "subagents:scheduled",
+			);
+			assert.equal(scheduled.payload.change, "created");
+			assert.equal(scheduled.payload.job.id, "schedule-1");
+			assert.equal(scheduled.payload.job.status, "pending");
+			assert.equal(scheduled.payload.job.params.prompt, "Inspect later.");
+			assert.deepEqual(events.at(-1), {
+				channel: "subagents:scheduler_ready",
+				payload: { sessionId: "session-1", jobCount: 1 },
+			});
 		} finally {
 			await fixture.cleanup();
 		}

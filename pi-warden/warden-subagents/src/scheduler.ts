@@ -7,6 +7,11 @@ import {
 	loadAgentTypes as loadAgentTypesDefault,
 	resolveAgentType,
 } from "./agent-types.ts";
+import {
+	scheduledPayload,
+	schedulerReadyPayload,
+	type SubagentSchedulerEvent,
+} from "./events.ts";
 import type { ForegroundAgentParams } from "./invocation-config.ts";
 import {
 	parseOneShotSchedule,
@@ -31,6 +36,8 @@ export interface ScheduledAgentManagerOptions {
 	) => TimerHandle;
 	clearTimeoutFn?: (handle: TimerHandle) => void;
 	loadRegistry?: (input: { cwd: string }) => AgentTypeRegistry;
+	sessionId?: string;
+	onEvent?: (event: SubagentSchedulerEvent) => void;
 	runAgent: BackgroundRunAgent;
 }
 
@@ -51,6 +58,10 @@ export class ScheduledAgentManager {
 	) => TimerHandle;
 	private readonly clearTimer: (handle: TimerHandle) => void;
 	private readonly loadRegistry: (input: { cwd: string }) => AgentTypeRegistry;
+	private readonly sessionId?: string;
+	private readonly eventCallbacks = new Set<
+		(event: SubagentSchedulerEvent) => void
+	>();
 	private readonly runAgent: BackgroundRunAgent;
 	private timer?: TimerHandle;
 	private firing = new Set<string>();
@@ -67,6 +78,8 @@ export class ScheduledAgentManager {
 			((handle) =>
 				clearTimeout(handle as unknown as ReturnType<typeof setTimeout>));
 		this.loadRegistry = options.loadRegistry ?? loadAgentTypesDefault;
+		this.sessionId = options.sessionId;
+		if (options.onEvent) this.eventCallbacks.add(options.onEvent);
 		this.runAgent = options.runAgent;
 	}
 
@@ -90,6 +103,7 @@ export class ScheduledAgentManager {
 			nextRunAt: parsed.runAt,
 			createdAt: nowIso,
 		});
+		this.notifyScheduled(job, "created");
 		await this.rearm();
 		return scheduledTextResult({
 			status: "scheduled",
@@ -109,6 +123,7 @@ export class ScheduledAgentManager {
 		const pending = (await this.store.list()).filter(
 			(job) => job.status === "pending",
 		);
+		this.notifySchedulerReady(pending.length);
 		if (pending.length === 0) return;
 		const now = this.now();
 		const due = pending.filter((job) => Date.parse(job.nextRunAt) <= now);
@@ -140,11 +155,15 @@ export class ScheduledAgentManager {
 		if (this.firing.has(job.id) || TERMINAL.has(job.status)) return;
 		this.firing.add(job.id);
 		try {
-			await this.store.update(job.id, {
-				status: "queued",
-				lastStatus: "queued",
-				updatedAt: new Date(this.now()).toISOString(),
-			});
+			await this.updateJob(
+				job.id,
+				{
+					status: "queued",
+					lastStatus: "queued",
+					updatedAt: new Date(this.now()).toISOString(),
+				},
+				"queued",
+			);
 			let registry: AgentTypeRegistry;
 			try {
 				registry = this.loadRegistry({ cwd: job.cwd });
@@ -177,61 +196,77 @@ export class ScheduledAgentManager {
 				ctx: { cwd: job.cwd },
 				registry,
 				runAgent: async (input) => {
-					await this.store.update(job.id, {
-						status: "running",
-						lastStatus: "running",
-						runCount: job.runCount + 1,
-						agentId: input.agentId,
-						agentType: resolution.agent.type,
-						requestedAgentType,
-						description: job.description,
-						updatedAt: new Date(this.now()).toISOString(),
-					});
+					await this.updateJob(
+						job.id,
+						{
+							status: "running",
+							lastStatus: "running",
+							runCount: job.runCount + 1,
+							agentId: input.agentId,
+							agentType: resolution.agent.type,
+							requestedAgentType,
+							description: job.description,
+							updatedAt: new Date(this.now()).toISOString(),
+						},
+						"running",
+					);
 					try {
 						const result = await this.runAgent({
 							...input,
 							params: sanitizeScheduledParams(input.params),
 						});
 						const finalStatus = terminalScheduleStatus(result.details.status);
-						await this.store.update(job.id, {
-							status: finalStatus,
-							lastStatus: finalStatus,
-							runCount: job.runCount + 1,
-							agentId: input.agentId,
-							agentType: result.details.agentType ?? resolution.agent.type,
-							requestedAgentType,
-							description: job.description,
-							lastMessage: result.content[0]?.text,
-							updatedAt: new Date(this.now()).toISOString(),
-						});
+						await this.updateJob(
+							job.id,
+							{
+								status: finalStatus,
+								lastStatus: finalStatus,
+								runCount: job.runCount + 1,
+								agentId: input.agentId,
+								agentType: result.details.agentType ?? resolution.agent.type,
+								requestedAgentType,
+								description: job.description,
+								lastMessage: result.content[0]?.text,
+								updatedAt: new Date(this.now()).toISOString(),
+							},
+							finalStatus,
+						);
 						return result;
 					} catch (error) {
-						await this.store.update(job.id, {
-							status: "error",
-							lastStatus: "error",
-							runCount: job.runCount + 1,
-							agentId: input.agentId,
-							agentType: resolution.agent.type,
-							requestedAgentType,
-							description: job.description,
-							lastMessage:
-								error instanceof Error ? error.message : String(error),
-							updatedAt: new Date(this.now()).toISOString(),
-						});
+						await this.updateJob(
+							job.id,
+							{
+								status: "error",
+								lastStatus: "error",
+								runCount: job.runCount + 1,
+								agentId: input.agentId,
+								agentType: resolution.agent.type,
+								requestedAgentType,
+								description: job.description,
+								lastMessage:
+									error instanceof Error ? error.message : String(error),
+								updatedAt: new Date(this.now()).toISOString(),
+							},
+							"error",
+						);
 						throw error;
 					}
 				},
 			});
 			if (launch.details.status === "queued") {
-				await this.store.update(job.id, {
-					status: "queued",
-					lastStatus: "queued",
-					agentId: launch.details.agentId,
-					agentType: resolution.agent.type,
-					requestedAgentType,
-					description: job.description,
-					updatedAt: new Date(this.now()).toISOString(),
-				});
+				await this.updateJob(
+					job.id,
+					{
+						status: "queued",
+						lastStatus: "queued",
+						agentId: launch.details.agentId,
+						agentType: resolution.agent.type,
+						requestedAgentType,
+						description: job.description,
+						updatedAt: new Date(this.now()).toISOString(),
+					},
+					"queued",
+				);
 			}
 		} finally {
 			this.firing.delete(job.id);
@@ -240,12 +275,45 @@ export class ScheduledAgentManager {
 	}
 
 	private async persistError(job: ScheduleJob, message: string): Promise<void> {
-		await this.store.update(job.id, {
-			status: "error",
-			lastStatus: "error",
-			lastMessage: message,
-			updatedAt: new Date(this.now()).toISOString(),
+		await this.updateJob(
+			job.id,
+			{
+				status: "error",
+				lastStatus: "error",
+				lastMessage: message,
+				updatedAt: new Date(this.now()).toISOString(),
+			},
+			"error",
+		);
+	}
+
+	private async updateJob(
+		id: string,
+		update: Parameters<ScheduleStore["update"]>[1],
+		change: string,
+	): Promise<ScheduleJob | undefined> {
+		const job = await this.store.update(id, update);
+		if (job) this.notifyScheduled(job, change);
+		return job;
+	}
+
+	private notifyScheduled(job: ScheduleJob, change: string): void {
+		this.notify({
+			channel: "subagents:scheduled",
+			payload: scheduledPayload(job, change),
 		});
+	}
+
+	private notifySchedulerReady(jobCount: number): void {
+		if (!this.sessionId) return;
+		this.notify({
+			channel: "subagents:scheduler_ready",
+			payload: schedulerReadyPayload({ sessionId: this.sessionId, jobCount }),
+		});
+	}
+
+	private notify(event: SubagentSchedulerEvent): void {
+		for (const callback of this.eventCallbacks) callback(event);
 	}
 }
 

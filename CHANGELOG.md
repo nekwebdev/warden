@@ -6,6 +6,7 @@ All notable Warden changes are recorded here.
 
 ### Added
 
+- Added `@nekwebdev/warden-subagents` package-local Pi event-bus RPC for `subagents:rpc:ping`, `subagents:rpc:spawn`, and `subagents:rpc:stop`, plus focused lifecycle events for cross-extension interop.
 - Added `@nekwebdev/warden-subagents` session-scoped one-shot `Agent({ schedule })` jobs with Warden-named Pi session storage, `/agents` visibility, and headless-safe immediate return behavior.
 - Added `@nekwebdev/warden-subagents` caller-requested `Agent({ isolation: "worktree" })` temporary git worktree isolation with strict clean-check validation, worktree cwd mapping, auto-commit branch persistence, and merge guidance.
 - Added `@nekwebdev/warden-subagents` custom-agent memory prompt extras for explicit `memory: project|local|user` scopes with safe index reads, read-only fallback, and selected-directory creation for write-capable subagent runs.

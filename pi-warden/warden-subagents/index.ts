@@ -3,6 +3,17 @@ export {
 	createGetSubagentResultToolDefinition,
 } from "./src/agent-manager.ts";
 export {
+	PROTOCOL_VERSION,
+	registerSubagentsRpc,
+} from "./src/cross-extension-rpc.ts";
+export {
+	createdPayload,
+	scheduledPayload,
+	schedulerReadyPayload,
+	startedPayload,
+	terminalPayload,
+} from "./src/events.ts";
+export {
 	createAgentToolDefinition,
 	runForegroundAgent,
 	wardenSubagentsRegister,
@@ -89,6 +100,18 @@ export type {
 	StartBackgroundAgentOptions,
 	TerminalResultEvent,
 } from "./src/agent-manager.ts";
+export type {
+	EventBusLike,
+	RegisterSubagentsRpcOptions,
+	RpcEnvelope,
+} from "./src/cross-extension-rpc.ts";
+export type {
+	SubagentEvent,
+	SubagentLifecycleChannel,
+	SubagentLifecycleEvent,
+	SubagentSchedulerChannel,
+	SubagentSchedulerEvent,
+} from "./src/events.ts";
 export type {
 	AgentRunStatus,
 	AgentToolDetails,

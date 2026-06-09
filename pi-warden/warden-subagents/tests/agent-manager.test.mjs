@@ -384,4 +384,167 @@ describe("AgentManager background lifecycle", () => {
 		assert.equal(afterShutdown.details.status, "error");
 		gate.resolve();
 	});
+
+	it("stops queued and running agents but rejects missing or terminal agents", async () => {
+		const runningGate = deferred();
+		const manager = new AgentManager({
+			maxConcurrency: 1,
+			idFactory: (() => {
+				let next = 0;
+				return () => `agent-stop-${++next}`;
+			})(),
+		});
+		let runningSignal;
+		const first = manager.start({
+			params: { subagent_type: "Explore", prompt: "one", description: "one" },
+			ctx: { cwd: "/tmp/project" },
+			registry: makeRegistry(),
+			runAgent: async ({ signal }) => {
+				runningSignal = signal;
+				await runningGate.promise;
+				return {
+					content: [{ type: "text", text: "done" }],
+					details: { status: signal.aborted ? "aborted" : "completed" },
+				};
+			},
+		});
+		const second = manager.start({
+			params: { subagent_type: "Explore", prompt: "two", description: "two" },
+			ctx: { cwd: "/tmp/project" },
+			registry: makeRegistry(),
+			runAgent: async () => {
+				throw new Error("queued agent should not run");
+			},
+		});
+
+		const stoppedQueued = manager.stop(second.details.agentId);
+		assert.equal(stoppedQueued.details.status, "aborted");
+		assert.match(stoppedQueued.content[0].text, /stopped before it started/i);
+		assert.equal(manager.getActivitySnapshot().queuedCount, 0);
+
+		const stoppedRunning = manager.stop(first.details.agentId);
+		assert.equal(stoppedRunning.details.status, "aborted");
+		assert.equal(runningSignal.aborted, true);
+		runningGate.resolve();
+		await tick();
+		assert.equal(
+			manager.getResult({ agent_id: first.details.agentId }).details.status,
+			"aborted",
+		);
+
+		const terminalStop = manager.stop(first.details.agentId);
+		assert.equal(terminalStop.details.status, "error");
+		assert.equal(terminalStop.details.error, "Agent is not running.");
+		assert.equal(
+			manager.getResult({ agent_id: first.details.agentId }).details.status,
+			"aborted",
+		);
+		assert.equal(
+			manager.stop("missing").details.error,
+			'Unknown or expired background agent id "missing".',
+		);
+	});
+
+	it("emits RPC-adjacent lifecycle events with serializable payloads", async () => {
+		let now = 1_000;
+		const events = [];
+		const manager = new AgentManager({
+			idFactory: () => "agent-events",
+			now: () => now,
+		});
+		manager.onLifecycleEvent((event) => events.push(event));
+		const launch = manager.start({
+			params: {
+				subagent_type: "Explore",
+				prompt: "work",
+				description: "eventful",
+			},
+			ctx: { cwd: "/tmp/project" },
+			registry: makeRegistry(),
+			runAgent: async ({ onActivity }) => {
+				now = 1_250;
+				onActivity?.({ toolUseCount: 3, usage: { tokens: 55 } });
+				return {
+					content: [{ type: "text", text: "event final" }],
+					details: {
+						status: "completed",
+						agentType: "Explore",
+						toolUseCount: 4,
+						usage: { tokens: 89 },
+					},
+				};
+			},
+		});
+
+		assert.equal(launch.details.status, "running");
+		await tick();
+		assert.deepEqual(
+			events.map((event) => event.channel),
+			["subagents:created", "subagents:started", "subagents:completed"],
+		);
+		assert.deepEqual(events[0].payload, {
+			id: "agent-events",
+			type: "Explore",
+			description: "eventful",
+			isBackground: true,
+		});
+		assert.deepEqual(events[1].payload, {
+			id: "agent-events",
+			type: "Explore",
+			description: "eventful",
+		});
+		assert.deepEqual(events[2].payload, {
+			id: "agent-events",
+			type: "Explore",
+			description: "eventful",
+			status: "completed",
+			result: "event final",
+			durationMs: 250,
+			toolUses: 4,
+			tokens: 89,
+		});
+	});
+
+	it("emits failed lifecycle events for error and aborted terminal states", async () => {
+		const events = [];
+		const manager = new AgentManager({
+			maxConcurrency: 1,
+			idFactory: (() => {
+				let next = 0;
+				return () => `agent-failed-${++next}`;
+			})(),
+		});
+		manager.onLifecycleEvent((event) => events.push(event));
+		manager.start({
+			params: { subagent_type: "Explore", prompt: "one", description: "boom" },
+			ctx: { cwd: "/tmp/project" },
+			registry: makeRegistry(),
+			runAgent: async () => {
+				throw new Error("boom");
+			},
+		});
+		const queued = manager.start({
+			params: {
+				subagent_type: "Explore",
+				prompt: "two",
+				description: "abort me",
+			},
+			ctx: { cwd: "/tmp/project" },
+			registry: makeRegistry(),
+			runAgent: async () => ({
+				content: [{ type: "text", text: "should not run" }],
+				details: { status: "completed" },
+			}),
+		});
+		manager.stop(queued.details.agentId);
+		await tick();
+
+		const failedEvents = events.filter(
+			(event) => event.channel === "subagents:failed",
+		);
+		assert.equal(failedEvents.length, 2);
+		assert.equal(failedEvents[0].payload.status, "aborted");
+		assert.equal(failedEvents[1].payload.status, "error");
+		assert.equal(failedEvents[1].payload.error, "boom");
+	});
 });

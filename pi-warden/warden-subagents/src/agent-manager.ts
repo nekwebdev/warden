@@ -1,4 +1,10 @@
 import { resolveAgentType } from "./agent-types.ts";
+import {
+	createdPayload,
+	startedPayload,
+	terminalPayload,
+	type SubagentLifecycleEvent,
+} from "./events.ts";
 import type { ForegroundAgentParams } from "./invocation-config.ts";
 import {
 	extractPassiveUsage,
@@ -123,6 +129,9 @@ export class AgentManager {
 	private readonly terminalCallbacks = new Set<
 		(event: TerminalResultEvent) => void
 	>();
+	private readonly lifecycleCallbacks = new Set<
+		(event: SubagentLifecycleEvent) => void
+	>();
 	private nextId = 1;
 
 	constructor(options: AgentManagerOptions = {}) {
@@ -141,6 +150,13 @@ export class AgentManager {
 	onTerminalResult(callback: (event: TerminalResultEvent) => void): () => void {
 		this.terminalCallbacks.add(callback);
 		return () => this.terminalCallbacks.delete(callback);
+	}
+
+	onLifecycleEvent(
+		callback: (event: SubagentLifecycleEvent) => void,
+	): () => void {
+		this.lifecycleCallbacks.add(callback);
+		return () => this.lifecycleCallbacks.delete(callback);
 	}
 
 	getActivitySnapshot(): AgentActivitySnapshot {
@@ -214,6 +230,14 @@ export class AgentManager {
 		this.records.set(record.id, record);
 		this.queue.push(record.id);
 		this.attachParentAbort(record);
+		this.notifyLifecycle({
+			channel: "subagents:created",
+			payload: createdPayload({
+				id: record.id,
+				type: record.agentType,
+				description: record.description,
+			}),
+		});
 		this.notifyActivity();
 		this.schedule();
 		return this.launchResult(record);
@@ -227,6 +251,25 @@ export class AgentManager {
 			record.notificationConsumed = true;
 		}
 		return result;
+	}
+
+	stop(agentId: string): AgentToolResultLike {
+		const record = this.records.get(agentId);
+		if (!record) return unknownIdResult(agentId);
+		if (record.status === "queued") {
+			this.removeFromQueue(record.id);
+			this.markAborted(record, "Background agent stopped before it started.");
+			return record.result ?? this.nonTerminalResult(record);
+		}
+		if (record.status === "running") {
+			record.controller.abort();
+			this.markAborted(record, "Background agent stopped.");
+			return record.result ?? this.nonTerminalResult(record);
+		}
+		return textResult("error", "Agent is not running.", {
+			agentId,
+			error: "Agent is not running.",
+		});
 	}
 
 	async waitForResult(
@@ -310,6 +353,14 @@ export class AgentManager {
 		record.startedAt = this.now();
 		record.updatedAt = record.startedAt;
 		this.runningIds.add(record.id);
+		this.notifyLifecycle({
+			channel: "subagents:started",
+			payload: startedPayload({
+				id: record.id,
+				type: record.agentType,
+				description: record.description,
+			}),
+		});
 		this.notifyActivity();
 		void (async () => {
 			if (record.params.isolation === "worktree") await Promise.resolve();
@@ -329,6 +380,7 @@ export class AgentManager {
 				record.updatedAt = record.completedAt;
 				this.applyPassiveUsage(record, extractPassiveUsage(result.details));
 				record.result = withLifecycleDetails(result, record, lifecycleStatus);
+				this.notifyTerminalLifecycle(record);
 				this.resolveWaiters(record);
 				this.notifyTerminalIfNeeded(record);
 			} catch (error) {
@@ -345,6 +397,7 @@ export class AgentManager {
 					`Background agent ${record.id} failed: ${message}`,
 					this.baseDetails(record, { error: message }),
 				);
+				this.notifyTerminalLifecycle(record, message);
 				this.resolveWaiters(record);
 				this.notifyTerminalIfNeeded(record);
 			} finally {
@@ -381,6 +434,33 @@ export class AgentManager {
 		if (this.activityCallbacks.size === 0) return;
 		const snapshot = this.getActivitySnapshot();
 		for (const callback of this.activityCallbacks) callback(snapshot);
+	}
+
+	private notifyLifecycle(event: SubagentLifecycleEvent): void {
+		for (const callback of this.lifecycleCallbacks) callback(event);
+	}
+
+	private notifyTerminalLifecycle(
+		record: BackgroundRecord,
+		error?: string,
+	): void {
+		const channel =
+			record.status === "completed"
+				? "subagents:completed"
+				: "subagents:failed";
+		this.notifyLifecycle({
+			channel,
+			payload: terminalPayload({
+				id: record.id,
+				type: record.agentType,
+				description: record.description,
+				status: record.status,
+				result: record.result,
+				startedAt: record.startedAt,
+				completedAt: record.completedAt,
+				error,
+			}),
+		});
 	}
 
 	private notifyTerminalIfNeeded(record: BackgroundRecord): void {
@@ -423,7 +503,7 @@ export class AgentManager {
 	}
 
 	private markAborted(record: BackgroundRecord, text: string): void {
-		if (isTerminal(record.status) && record.status !== "aborted") return;
+		if (isTerminal(record.status)) return;
 		record.status = "aborted";
 		record.completedAt = this.now();
 		record.updatedAt = record.completedAt;
@@ -433,6 +513,7 @@ export class AgentManager {
 			`${text} Agent ID: ${record.id}.`,
 			this.baseDetails(record),
 		);
+		this.notifyTerminalLifecycle(record);
 		this.resolveWaiters(record);
 		this.notifyTerminalIfNeeded(record);
 		this.notifyActivity();

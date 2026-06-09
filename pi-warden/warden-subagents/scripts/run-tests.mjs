@@ -8,6 +8,7 @@ const tests = [
 	"tests/memory.test.mjs",
 	"tests/agent-runner.test.mjs",
 	"tests/agent-manager.test.mjs",
+	"tests/cross-extension-rpc.test.mjs",
 	"tests/schedule.test.mjs",
 	"tests/schedule-store.test.mjs",
 	"tests/scheduler.test.mjs",
