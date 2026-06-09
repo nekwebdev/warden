@@ -111,19 +111,16 @@ Treat each `warden_commit_snapshot` section as an input to review, not as a comp
 2. Review snapshot warnings, changed files, boundaries, suggested buckets, recent commit subjects, and `snapshotHash` using `<snapshot-review-protocol>`.
 3. Inspect exact diffs for every path you may include before final grouping or message quality decisions.
 4. Build atomic commit plan with exact repo-relative paths.
-5. Send full visible plan as normal assistant text before asking for confirmation. The visible plan must include `# Warden Commit Plan`, `Snapshot`, `Commits`, `Warnings / excluded files`, and `Diff inspection`. Do not call `ask_user_question`, questionnaire extension, structured choice UI, or `warden_commit_apply` before this plan is visible.
-6. Before any confirmation UI/tool call, pause and verify the previous assistant message already displayed the full plan. If not, print the plan first.
+5. Send full visible plan as normal assistant text before asking for confirmation. The visible plan must include `# Warden Commit Plan`, `Snapshot`, `Commits`, `Warnings / excluded files`, and `Diff inspection`. Do not ask for confirmation or call `warden_commit_apply` before this plan is visible.
+6. Before any confirmation request, pause and verify the previous assistant message already displayed the full plan. If not, print the plan first.
 7. Ask for final choice exactly once after the visible plan:
-   - Use `ask_user_question`, questionnaire extension, or equivalent structured choice UI when available:
-     - header: `Commit?`
-     - question: `Apply this exact commit plan?`
-     - options:
-       - `Commit` — apply exact plan;
-       - `Abort` — stop.
-8. Treat only a selected option or free-form reply that is exactly `Commit` as confirmation. Custom answers, paraphrases, lowercase variants, echoed plan text, and any answer captured before the visible plan are not confirmation.
-9. If a questionnaire or structured confirmation fires before the visible plan, discard that answer, do not call apply from it, print the full plan, then ask once after the plan.
-10. Only after exact `Commit`, call `warden_commit_apply` with reviewed `snapshotHash`, `confirmedUserIntent: "Commit"`, and exact planned commits/paths.
-11. After apply, report commit hash(es), final `git status --short`, and remaining uncommitted files.
+   - Question: `Apply this exact commit plan?`
+   - Choices:
+     - `Commit` — apply exact plan;
+     - `Abort` — stop.
+10. If any confirmation answer arrives before the visible plan, discard that answer, do not call apply from it, print the full plan, then ask once after the plan.
+11. Only after exact `Commit`, call `warden_commit_apply` with reviewed `snapshotHash`, `confirmedUserIntent: "Commit"`, and exact planned commits/paths.
+12. After apply, report commit hash(es), final `git status --short`, and remaining uncommitted files.
 
 </workflow>
 

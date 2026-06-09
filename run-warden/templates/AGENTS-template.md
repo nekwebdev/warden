@@ -207,6 +207,20 @@ If this file conflicts with repo guidance, repo guidance wins for codebase facts
 
 %testing%
 
+## Asking users
+
+When user input is needed, use `ask_user_question` when available.
+
+- Ask only when needed to unblock safety, scope, requirements, or user preference.
+- Group related questions into one checkpoint.
+- Provide 2-4 clear options when choices are useful.
+- Put recommended option first.
+- Keep labels short and descriptions concrete.
+- Use multi-select only when multiple answers can apply.
+- Use previews only when side-by-side artifacts help the user decide.
+- Do not duplicate built-in escape hatches such as `Type something.` or `Chat about this`.
+- Stricter exact-confirmation workflows override generic question-tool guidance.
+
 ## Handoff
 
 When stopping mid-work or crossing out of %agent_name% scope, leave:

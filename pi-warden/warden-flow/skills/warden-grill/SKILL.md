@@ -16,7 +16,7 @@ license: MIT
 - Do not resolve `$1` against this skill directory unless user supplied that exact absolute path.
 - If no valid packet path is provided, stop and ask user to call `/skill:warden-grill <path-to-packet.md> [manual feedback]`.
 - If input is rough intent only, do not shape it into a packet; recommend `/skill:warden-start`.
-- If no manual feedback text is supplied, start by asking with `ask_user_question` whether start grilling or collect manual feedback first.
+- If no manual feedback text is supplied, start by asking whether to start grilling or collect manual feedback first.
 - Use exactly these first-question options: `Start grilling` and `Manual feedback on the packet`.
 - This startup choice does not count toward the five final fine-tuning questions.
 - If the user chooses `Manual feedback on the packet`, ask for that feedback and wait before reviewing.
@@ -65,8 +65,6 @@ Use external research only when packet or manual feedback depends on current ups
 
 <questioning-policy>
 
-Use `ask_user_question`, questionnaire extension, or equivalent structured choice UI when available.
-
 Be relentless but useful:
 
 - Challenge terminology that conflicts with `map.md`, relevant `README.md`, or `AGENTS.md`.
@@ -95,8 +93,8 @@ If a question can be answered by exploring the codebase, explore the codebase in
 1. Resolve and read `$1`.
 2. Determine feedback mode:
    - If remaining argument text exists, treat it as manual feedback evidence.
-   - If no feedback exists, ask with `ask_user_question` whether to `Grill packet alone` or `Provide manual feedback`, then wait.
-   - If the user chooses `Provide manual feedback`, ask for that feedback and wait before continuing.
+   - If no feedback exists, ask whether to `Start grilling` or provide `Manual feedback on the packet`, then wait.
+   - If the user chooses `Manual feedback on the packet`, ask for that feedback and wait before continuing.
 3. Read relevant repository guidance, package guidance, README files, maps, tests, and code when needed to verify packet claims or manual feedback.
 4. If a question can be answered by exploring the codebase, explore first instead of asking.
 5. If manual feedback is present, interrogate it against the packet and implementation evidence, then update `$1` toward the next smallest TDD-ready correction slice.

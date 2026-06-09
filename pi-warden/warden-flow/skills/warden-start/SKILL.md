@@ -46,7 +46,7 @@ Slice rules:
 - End with a next safe step suitable for a coding agent.
 - Split or reject broad requests that span unrelated boundaries, owners, packages, or runtimes.
 - Ask clarification only when implementation safety is truly blocked. Otherwise state assumptions and proceed until the late fine-tuning checkpoint.
-- Fine-tuning questions are not blockers or safety clarifications: once you believe the packet is ready, ask the user at least two structured questions to tune the slice before finalizing.
+- Fine-tuning questions are not blockers or safety clarifications: once you believe the packet is ready, ask the user at least two fine-tuning questions to tune the slice before finalizing.
 
 Anti-bloat rules:
 
@@ -101,17 +101,15 @@ External research rules:
 
 <questioning-policy>
 
-Use `ask_user_question`, questionnaire extension, or equivalent structured choice UI when available.
-
 Early clarification:
 
 - Ask early only if implementation safety, canonical path, or boundary choice is truly blocked.
 
 Ready-packet fine-tuning:
 
-- After the draft packet passes review checks and before final output, ask at least two structured questions in one checkpoint.
+- After the draft packet passes review checks and before final output, ask at least two fine-tuning questions in one checkpoint.
 - Do not skip this checkpoint because assumptions feel obvious.
-- Each question must include your recommended answer and 2-4 concise options when using structured UI.
+- Each question must include your recommended answer and 2-4 concise options when answer choices fit.
 - Aim questions at slice boundaries, acceptance wording, files not to touch, test/manual verification emphasis, and deferred non-goals.
 - Incorporate answers into `packet.md`, then re-run review checks.
 

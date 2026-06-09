@@ -6,6 +6,7 @@ import { describe, it } from "node:test";
 import { fileURLToPath } from "node:url";
 
 const packageRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
+const repoRoot = resolve(packageRoot, "..", "..");
 
 const pkg = JSON.parse(
 	readFileSync(resolve(packageRoot, "package.json"), "utf-8"),
@@ -70,6 +71,13 @@ function advertisedExtensionEntries(): string[] {
 function skillContent(skillName: string): string {
 	return readFileSync(
 		resolve(packageRoot, "skills", skillName, "SKILL.md"),
+		"utf-8",
+	);
+}
+
+function agentTemplateContent(): string {
+	return readFileSync(
+		resolve(repoRoot, "run-warden", "templates", "AGENTS-template.md"),
 		"utf-8",
 	);
 }
@@ -170,7 +178,6 @@ describe("package pi resources", () => {
 			content,
 			/remaining argument text as optional manual feedback evidence/,
 		);
-		assert.match(content, /ask_user_question/);
 		assert.match(content, /Status: Packet solid for TDD/);
 	});
 
@@ -178,12 +185,30 @@ describe("package pi resources", () => {
 		const content = skillContent("warden-start");
 
 		assert.match(content, /late fine-tuning checkpoint/i);
-		assert.match(content, /at least two structured questions/i);
+		assert.match(content, /at least two fine-tuning questions/i);
 		assert.match(
 			content,
 			/Once the packet appears ready, ask at least two fine-tuning questions/,
 		);
 		assert.match(content, /answers incorporated/i);
+	});
+
+	it("centralizes user-question tool policy in the agent template", () => {
+		const template = agentTemplateContent();
+		const forbiddenSkillQuestionTerms =
+			/ask_user_question|questionnaire|structured choice UI|structured confirmation/i;
+
+		assert.match(template, /ask_user_question/);
+		assert.match(template, /stricter exact-confirmation workflows override/i);
+
+		for (const entry of skillEntries()) {
+			const content = readFileSync(resolve(packageRoot, entry), "utf-8");
+			assert.doesNotMatch(
+				content,
+				forbiddenSkillQuestionTerms,
+				`${entry} should not name question-tool or UI-specific policy`,
+			);
+		}
 	});
 
 	it("warden-close validates existing handoffs or creates missing ones", () => {
