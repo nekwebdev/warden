@@ -18,7 +18,6 @@ license: MIT
 - If input is rough intent only, do not shape it into a packet; recommend `/skill:warden-start`.
 - If no manual feedback text is supplied, start by asking whether to start grilling or collect manual feedback first.
 - Use exactly these first-question options: `Start grilling` and `Manual feedback on the packet`.
-- This startup choice does not count toward the five final fine-tuning questions.
 - If the user chooses `Manual feedback on the packet`, ask for that feedback and wait before reviewing.
 - Use resolved packet path and any manual feedback for reads, inline updates, final output, and next-step command.
 
@@ -101,15 +100,15 @@ If a question can be answered by exploring the codebase, explore the codebase in
 6. Interview the user one unresolved decision at a time. Ask as many blocker questions as needed. For each question, provide your recommended answer.
 7. Walk dependency order: settle blocking terminology, boundaries, acceptance, tests, safety, docs, then implementation slice.
 8. When an aspect is resolved, update `$1` inline immediately. Do not batch packet edits.
-9. Continue the question → packet update → next question loop until all non-budget review checks pass. Once `$1` appears TDD-ready, ask five final fine-tuning questions one at a time, updating `$1` after each resolved answer. If a fine-tuning answer reveals a blocker, return to the blocker loop, confirm readiness again, then continue remaining fine-tuning questions. After five final fine-tuning questions have been answered and the packet still passes review checks, finish with a readiness summary and next-step command. If the packet cannot be made safe or testable, explain the blocker and stop.
-10. When `$1` appears ready for TDD, enter a final fine-tuning round before final output.
-  - Ask exactly five additional substantive fine-tuning questions in that final round.
-  - Count only questions asked after the packet first appears TDD-ready as final fine-tuning questions.
+9. Continue the question → packet update → next question loop until all non-budget review checks pass. Once `$1` appears TDD-ready, ask five final adversorial questions one at a time, updating `$1` after each resolved answer. If an adversorial answer reveals a blocker, return to the blocker loop, confirm readiness again, then continue remaining adversorial questions. After adversorial questions have been answered and the packet still passes review checks, finish with a readiness summary and next-step command. If the packet cannot be made safe or testable, explain the blocker and stop.
+10. When `$1` appears ready for TDD, enter a final adversorial round before final output.
+  - Ask two to four additional substantive adversorial questions in that final round.
+  - Count only questions asked after the packet first appears TDD-ready as final adversorial questions.
   - Do not count the startup mode question, raw feedback collection, or earlier blocker questions toward the five.
   - Ask one question at a time and wait for feedback before continuing.
   - Provide your recommended answer for each question.
-  - Use final fine-tuning questions to search for hidden weaknesses in terminology, boundaries, acceptance, test strategy, safety, durable docs, or manual verification.
-  - If a final fine-tuning answer reveals a blocker, update `$1`, resolve the blocker, confirm readiness again, then continue any remaining final fine-tuning questions.
+  - Use final adversorial questions to search for hidden weaknesses in terminology, boundaries, acceptance, test strategy, safety, durable docs, or manual verification.
+  - If a final adversorial answer reveals a blocker, update `$1`, resolve the blocker, confirm readiness again, then continue any remaining final adversorial questions.
 
 </supporting-info>
 
@@ -117,10 +116,10 @@ If a question can be answered by exploring the codebase, explore the codebase in
 
 Before final output, verify:
 
-0. Fine-tuning budget
+0. adversorial budget
    - No minimum substantive question count was enforced before readiness.
-   - Packet was judged TDD-ready on all non-budget checks before final fine-tuning began.
-   - Five additional substantive fine-tuning questions were asked and answered after readiness.
+   - Packet was judged TDD-ready on all non-budget checks before final adversorial began.
+   - Additional substantive adversorial questions were asked and answered after readiness.
    - Startup mode choice, raw feedback collection, and earlier blocker questions were not counted.
 1. Slice
    - One vertical implementation pass.
@@ -151,9 +150,9 @@ Before final output, verify:
 
 <output-format>
 
-During the loop, output only one next question with your recommended answer, or a brief note that `$1` was updated before the next question. Do not finalize when the packet first appears ready; ask five final fine-tuning questions first.
+During the loop, output only one next question with your recommended answer, or a brief note that `$1` was updated before the next question. Do not finalize when the packet first appears ready; ask adversorial questions first.
 
-Only when no unresolved questions remain and the five-question fine-tuning round is complete, use this final shape. Keep concise. Prefer specific fixes over abstract criticism.
+Only when no unresolved questions remain and the adversorial round is complete, use this final shape. Keep concise. Prefer specific fixes over abstract criticism.
 
 ```md
 # Warden Grill
