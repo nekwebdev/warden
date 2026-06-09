@@ -539,18 +539,24 @@ warden_agent_cwd_status_for_display() {
 	fi
 }
 
+warden_agent_resolve_configured_cwd() {
+	name=$1
+	cwd_value=${2:-}
+	expanded_cwd=$(warden_agent_expand_cwd_value "$cwd_value") || return $?
+	if [ ! -d "$expanded_cwd" ]; then
+		printf '%s\n' "warden: configured cwd is not an existing directory for agent '$name': $cwd_value" >&2
+		return 2
+	fi
+	(cd "$expanded_cwd" && pwd -P) || return 1
+}
+
 warden_agent_cd_to_configured_cwd() {
 	name=$1
 	cwd_value=${2:-}
 	if [ -z "$cwd_value" ]; then
 		return 0
 	fi
-	expanded_cwd=$(warden_agent_expand_cwd_value "$cwd_value") || return $?
-	if [ ! -d "$expanded_cwd" ]; then
-		printf '%s\n' "warden: configured cwd is not an existing directory for agent '$name': $cwd_value" >&2
-		return 2
-	fi
-	resolved_cwd=$(cd "$expanded_cwd" && pwd -P) || return 1
+	resolved_cwd=$(warden_agent_resolve_configured_cwd "$name" "$cwd_value") || return $?
 	cd "$resolved_cwd" || return 1
 }
 
@@ -872,6 +878,36 @@ warden_pi_update() {
 	warden_agent_update_pi "$name" "$agent_dir"
 }
 
+warden_pi_launch_existing_agent() {
+	name=$1
+	agent_dir=$2
+	launch_cwd=${3:-}
+	shift 3
+
+	pi_bin=$(warden_agent_pi_bin "$agent_dir")
+	if [ ! -x "$pi_bin" ]; then
+		printf '%s\n' "warden: Pi executable missing for agent '$name': $pi_bin" >&2
+		printf '%s\n' "Remove or move the broken agent directory, then recreate it with: warden agents new $name" >&2
+		return 1
+	fi
+	if [ -n "$launch_cwd" ]; then
+		cd "$launch_cwd" || return 1
+	fi
+
+	pi_lens_dir=$(warden_agent_pi_lens_dir "$agent_dir")
+	context_mode_dir=$(warden_agent_context_mode_dir "$agent_dir")
+	mkdir -p "$pi_lens_dir" "$context_mode_dir" || return 1
+	if [ -n "${TMUX:-}" ]; then
+		warden_pi_run_with_tmux_window "$name" "$agent_dir" "$pi_bin" "$pi_lens_dir" "$context_mode_dir" "$@"
+		return $?
+	fi
+	if [ "${1:-}" = "update" ]; then
+		warden_pi_update "$name" "$agent_dir" "$pi_bin" "$pi_lens_dir" "$context_mode_dir" "$@"
+		return $?
+	fi
+	PI_CODING_AGENT_DIR="$agent_dir" PILENS_DATA_DIR="$pi_lens_dir" CONTEXT_MODE_DIR="$context_mode_dir" exec "$pi_bin" "$@"
+}
+
 warden_pi() {
 	if [ $# -lt 1 ]; then
 		printf '%s\n' "usage: warden pi NAME [ARGS...]" >&2
@@ -894,27 +930,12 @@ warden_pi() {
 		agent_dir=$(warden_agent_dir "$agents_root" "$name")
 	fi
 
-	pi_bin=$(warden_agent_pi_bin "$agent_dir")
-	if [ ! -x "$pi_bin" ]; then
-		printf '%s\n' "warden: Pi executable missing for agent '$name': $pi_bin" >&2
-		printf '%s\n' "Remove or move the broken agent directory, then recreate it with: warden agents new $name" >&2
-		return 1
-	fi
-
 	settings_path=$(warden_agent_settings_path "$agent_dir")
 	configured_cwd=$(warden_agent_settings_get_cwd "$settings_path" "$name") || return 1
-	warden_agent_cd_to_configured_cwd "$name" "$configured_cwd" || return $?
-
-	pi_lens_dir=$(warden_agent_pi_lens_dir "$agent_dir")
-	context_mode_dir=$(warden_agent_context_mode_dir "$agent_dir")
-	mkdir -p "$pi_lens_dir" "$context_mode_dir" || return 1
-	if [ -n "${TMUX:-}" ]; then
-		warden_pi_run_with_tmux_window "$name" "$agent_dir" "$pi_bin" "$pi_lens_dir" "$context_mode_dir" "$@"
-		return $?
+	if [ -n "$configured_cwd" ]; then
+		launch_cwd=$(warden_agent_resolve_configured_cwd "$name" "$configured_cwd") || return $?
+	else
+		launch_cwd=
 	fi
-	if [ "${1:-}" = "update" ]; then
-		warden_pi_update "$name" "$agent_dir" "$pi_bin" "$pi_lens_dir" "$context_mode_dir" "$@"
-		return $?
-	fi
-	PI_CODING_AGENT_DIR="$agent_dir" PILENS_DATA_DIR="$pi_lens_dir" CONTEXT_MODE_DIR="$context_mode_dir" exec "$pi_bin" "$@"
+	warden_pi_launch_existing_agent "$name" "$agent_dir" "$launch_cwd" "$@"
 }

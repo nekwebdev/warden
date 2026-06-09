@@ -93,6 +93,7 @@ SH
   [[ "$output" == *"agents NAME cwd DIR"* ]]
   [[ "$output" == *"agents NAME show [--json]"* ]]
   [[ "$output" == *"pi NAME [ARGS...]"* ]]
+  [[ "$output" == *"worktree AGENT"* ]]
   [[ "$output" == *"@NAME [ARGS...]"* ]]
   [[ "$output" != *"shell snippet"* ]]
   [[ "$output" != *"agents update NAME"* ]]
@@ -323,7 +324,139 @@ NODE
   [[ "$output" == *"agents NAME cwd DIR"* ]]
   [[ "$output" == *"agents NAME show [--json]"* ]]
   [[ "$output" == *"pi NAME [ARGS...]"* ]]
+  [[ "$output" == *"worktree AGENT"* ]]
   [[ "$output" == *"@NAME [ARGS...]"* ]]
+}
+
+make_worktree_fixture() {
+  WORKTREE_REPO="$BATS_TEST_TMPDIR/repo"
+  WORKTREE_LINKED="$BATS_TEST_TMPDIR/linked worktree"
+  WORKTREE_DETACHED="$BATS_TEST_TMPDIR/detached-worktree"
+
+  git init -b main "$WORKTREE_REPO" >/dev/null
+  git -C "$WORKTREE_REPO" config user.email warden@example.invalid
+  git -C "$WORKTREE_REPO" config user.name Warden
+  printf '%s\n' initial >"$WORKTREE_REPO/file.txt"
+  git -C "$WORKTREE_REPO" add file.txt
+  git -C "$WORKTREE_REPO" commit -m initial >/dev/null
+  git -C "$WORKTREE_REPO" worktree add -b topic "$WORKTREE_LINKED" >/dev/null
+  git -C "$WORKTREE_REPO" worktree add --detach "$WORKTREE_DETACHED" HEAD >/dev/null
+}
+
+make_agent_with_cwd() {
+  agents=$1
+  name=$2
+  cwd=$3
+  env HOME="$TEST_HOME" PATH="$FAKE_BIN:$PATH" WARDEN_AGENTS="$agents" NPM_LOG="$BATS_TEST_TMPDIR/npm-$name.log" PI_LOG="$BATS_TEST_TMPDIR/install-pi-$name.log" "$RUN_WARDEN_ROOT/bin/warden" agents new "$name" >/dev/null
+  cat >"$agents/$name/settings.json" <<JSON
+{"theme":"dark","warden":{"agent":{"cwd":"$cwd"},"keep":true}}
+JSON
+}
+
+@test "worktree rejects missing and extra agent arguments" {
+  run env HOME="$TEST_HOME" PATH="$FAKE_BIN:$PATH" "$RUN_WARDEN_ROOT/bin/warden" worktree
+  [ "$status" -eq 2 ]
+  [[ "$output" == *"usage: warden worktree AGENT"* ]]
+
+  run env HOME="$TEST_HOME" PATH="$FAKE_BIN:$PATH" "$RUN_WARDEN_ROOT/bin/warden" worktree ada extra
+  [ "$status" -eq 2 ]
+  [[ "$output" == *"usage: warden worktree AGENT"* ]]
+}
+
+@test "worktree requires existing agent configured cwd and git worktree" {
+  agents="$BATS_TEST_TMPDIR/agents"
+  nongit="$BATS_TEST_TMPDIR/not-git"
+  mkdir -p "$agents/nocwd/npm/node_modules/.bin" "$nongit"
+
+  run env HOME="$TEST_HOME" PATH="$FAKE_BIN:$PATH" WARDEN_AGENTS="$agents" "$RUN_WARDEN_ROOT/bin/warden" worktree missing
+  [ "$status" -eq 2 ]
+  [[ "$output" == *"agent not found"* ]]
+
+  run env HOME="$TEST_HOME" PATH="$FAKE_BIN:$PATH" WARDEN_AGENTS="$agents" "$RUN_WARDEN_ROOT/bin/warden" worktree nocwd
+  [ "$status" -eq 2 ]
+  [[ "$output" == *"configured cwd is required"* ]]
+
+  make_agent_with_cwd "$agents" ada "$nongit"
+  run env HOME="$TEST_HOME" PATH="$FAKE_BIN:$PATH" WARDEN_AGENTS="$agents" "$RUN_WARDEN_ROOT/bin/warden" worktree ada
+  [ "$status" -eq 2 ]
+  [[ "$output" == *"configured cwd is not a Git worktree or repository"* ]]
+}
+
+@test "worktree lists branches fallbacks and launches existing selection from exact path" {
+  agents="$BATS_TEST_TMPDIR/agents"
+  make_worktree_fixture
+  make_agent_with_cwd "$agents" ada "$WORKTREE_REPO"
+  before_settings=$(cat "$agents/ada/settings.json")
+
+  run env HOME="$TEST_HOME" PATH="$FAKE_BIN:$PATH" WARDEN_AGENTS="$agents" PI_LOG="$BATS_TEST_TMPDIR/pi-worktree.log" "$RUN_WARDEN_ROOT/bin/warden" worktree ada <<<"3"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"1) main - $WORKTREE_REPO"* ]]
+  [[ "$output" == *"2) (detached) - $WORKTREE_DETACHED"* ]]
+  [[ "$output" == *"3) topic - $WORKTREE_LINKED"* ]]
+  [[ "$output" == *"4) create new worktree for repo"* ]]
+  grep -F "PWD=$WORKTREE_LINKED" "$BATS_TEST_TMPDIR/pi-worktree.log"
+  grep -F "PI_CODING_AGENT_DIR=$agents/ada" "$BATS_TEST_TMPDIR/pi-worktree.log"
+  [ "$(cat "$agents/ada/settings.json")" = "$before_settings" ]
+}
+
+@test "worktree new option captures validated dry-run inputs without creating worktree" {
+  agents="$BATS_TEST_TMPDIR/agents"
+  make_worktree_fixture
+  make_agent_with_cwd "$agents" ada "$WORKTREE_REPO"
+
+  run env HOME="$TEST_HOME" PATH="$FAKE_BIN:$PATH" WARDEN_AGENTS="$agents" "$RUN_WARDEN_ROOT/bin/warden" worktree ada <<'EOF'
+4
+issue-123-fix
+2
+EOF
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"worktree folder"* ]]
+  [[ "$output" == *"Example: issue-123-fix"* ]]
+  [[ "$output" == *"no spaces"* ]]
+  [[ "$output" == *"branch type"* ]]
+  [[ "$output" == *"dry-run"* ]]
+  [[ "$output" == *"no branch is created"* ]]
+  [[ "$output" == *"agent: ada"* ]]
+  [[ "$output" == *"source: repo"* ]]
+  [[ "$output" == *"name: issue-123-fix"* ]]
+  [[ "$output" == *"type: bugfix"* ]]
+  [[ "$output" == *"no worktree created"* ]]
+  ! git -C "$WORKTREE_REPO" worktree list --porcelain | grep -F "issue-123-fix"
+  [ ! -e "$BATS_TEST_TMPDIR/issue-123-fix" ]
+}
+
+@test "worktree invalid choices names types and eof fail clearly" {
+  agents="$BATS_TEST_TMPDIR/agents"
+  make_worktree_fixture
+  make_agent_with_cwd "$agents" ada "$WORKTREE_REPO"
+
+  run env HOME="$TEST_HOME" PATH="$FAKE_BIN:$PATH" WARDEN_AGENTS="$agents" "$RUN_WARDEN_ROOT/bin/warden" worktree ada <<<"99"
+  [ "$status" -eq 2 ]
+  [[ "$output" == *"invalid worktree choice"* ]]
+
+  run env HOME="$TEST_HOME" PATH="$FAKE_BIN:$PATH" WARDEN_AGENTS="$agents" "$RUN_WARDEN_ROOT/bin/warden" worktree ada <<'EOF'
+4
+Bad_Name
+EOF
+  [ "$status" -eq 2 ]
+  [[ "$output" == *"invalid worktree name"* ]]
+  [[ "$output" == *"lowercase letters"* ]]
+  [[ "$output" == *"numbers"* ]]
+  [[ "$output" == *"hyphens"* ]]
+  [[ "$output" == *"no spaces"* ]]
+  [[ "$output" == *"Example: issue-123-fix"* ]]
+
+  run env HOME="$TEST_HOME" PATH="$FAKE_BIN:$PATH" WARDEN_AGENTS="$agents" "$RUN_WARDEN_ROOT/bin/warden" worktree ada <<'EOF'
+4
+valid-name
+99
+EOF
+  [ "$status" -eq 2 ]
+  [[ "$output" == *"invalid worktree type"* ]]
+
+  run env HOME="$TEST_HOME" PATH="$FAKE_BIN:$PATH" WARDEN_AGENTS="$agents" "$RUN_WARDEN_ROOT/bin/warden" worktree ada </dev/null
+  [ "$status" -eq 2 ]
+  [[ "$output" == *"unexpected EOF reading worktree choice"* ]]
 }
 
 @test "@NAME alias matches pi NAME argv and agent environment" {
@@ -720,6 +853,7 @@ NODE
     grep -F "warden agents NAME cwd DIR" "$doc"
     grep -F "warden agents NAME show [--json]" "$doc"
     grep -F "warden pi NAME" "$doc"
+    grep -F "warden worktree AGENT" "$doc"
     grep -F "warden @NAME" "$doc"
     ! grep -F "warden agents update <name>" "$doc"
     ! grep -F "warden agents set <name> cwd <dir>" "$doc"

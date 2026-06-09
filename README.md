@@ -79,6 +79,7 @@ warden agents NAME update-pi
 warden agents NAME cwd DIR
 warden agents NAME show [--json]
 warden pi NAME [ARGS...]
+warden worktree AGENT
 warden @NAME [ARGS...]
 ```
 
@@ -161,6 +162,8 @@ CONTEXT_MODE_DIR="$AGENT_DIR/context-mode"
 ```
 
 `warden @NAME ...` is a direct alias for `warden pi NAME ...` after stripping `@`.
+
+`warden worktree AGENT` lists Git worktrees for the agent's configured cwd and launches Pi from the selected worktree without changing `settings.json`. The new-worktree option only validates and prints captured inputs for now; it creates no branch or worktree.
 
 If no cwd is configured, Warden preserves the caller's current working directory. When run inside tmux, `warden pi NAME ...` renames the current tmux window to `󱚤 NAME` before launch, then restores the previous window name and automatic rename setting after Pi exits; missing or failing tmux commands are ignored.
 

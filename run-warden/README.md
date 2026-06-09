@@ -33,6 +33,7 @@ warden agents NAME update-pi
 warden agents NAME cwd DIR
 warden agents NAME show [--json]
 warden pi NAME [ARGS...]
+warden worktree AGENT
 warden @NAME [ARGS...]
 ```
 
@@ -66,6 +67,8 @@ functions/warden.fish
 `warden agents NAME show` prints the agent dir, Pi executable, Pi Lens dir, context-mode dir, settings path, effective cwd, and the complete formatted `settings.json`. `--json` emits the same information as JSON. `warden agents list --json` emits an array of agent summaries.
 
 `warden pi NAME ...` reads configured cwd from agent-local settings, changes to it when present, then runs the local Pi executable with `PI_CODING_AGENT_DIR`, `PILENS_DATA_DIR`, and `CONTEXT_MODE_DIR` pointed inside the agent directory. `PILENS_DATA_DIR` is `$PI_CODING_AGENT_DIR/pi-lens`; `CONTEXT_MODE_DIR` is `$PI_CODING_AGENT_DIR/context-mode`. Without configured cwd, it preserves the caller's current working directory. `warden @NAME ...` is a direct alias for `warden pi NAME ...` after stripping `@`. Inside tmux, launch renames the current window to `󱚤 NAME`, then restores the previous window name and automatic rename setting after Pi exits; missing or failing tmux commands are ignored.
+
+`warden worktree AGENT` reads that agent's configured cwd, lists existing Git worktrees as `branch - path`, then launches `warden pi AGENT` from the selected worktree without rewriting `settings.json`. Its new-worktree option is dry-run only in this slice: it validates a lowercase hyphenated name, captures a type, prints the captured values, and creates no branch or worktree.
 
 ## Scope boundary
 
