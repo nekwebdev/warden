@@ -119,7 +119,7 @@ Treat each `warden_commit_snapshot` section as an input to review, not as a comp
      - `Commit` — apply exact plan;
      - `Abort` — stop.
 10. If any confirmation answer arrives before the visible plan, discard that answer, do not call apply from it, print the full plan, then ask once after the plan.
-11. Only after exact `Commit`, call `warden_commit_apply` with reviewed `snapshotHash`, `confirmedUserIntent: "Commit"`, and exact planned commits/paths.
+11. Only confirmation, call `warden_commit_apply` with reviewed `snapshotHash`, `confirmedUserIntent: "Commit"`, and exact planned commits/paths.
 12. After apply, report commit hash(es), final `git status --short`, and remaining uncommitted files.
 
 </workflow>
