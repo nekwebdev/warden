@@ -62,7 +62,7 @@ This package does not own Warden runner workflows, agent lifecycle commands, sib
 - Deduplicate injected maps by path and content hash per session.
 - Git context must include branch, short commit, and dirty state when git is available.
 - `warden_commit_snapshot` must stay read-only.
-- `warden_commit_apply` may create local commits only after exact user confirmation and matching snapshot-hash validation; it must stage exact paths only and never push, pull, fetch, reset, rebase, amend, tag, stash, checkout, clean, restore, create PRs, or run remote git operations.
+- Call `warden_commit_apply` only after user confirmation; the tool input assumes confirmation already happened, validates matching snapshot hashes, stages exact paths only, and never pushes, pulls, fetches, resets, rebases, amends, tags, stashes, checks out, cleans, restores, creates PRs, or runs remote git operations.
 - Do not add subagents, workflow runners, sibling package installers, or model override cascades to this package.
 - Runtime effort changes must restore the previous thinking level after the agent turn unless Pi exposes a safer verified non-persistent path.
 

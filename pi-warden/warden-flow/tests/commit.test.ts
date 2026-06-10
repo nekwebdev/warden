@@ -30,7 +30,6 @@ function byPath(files: WardenCommitFile[]): Map<string, WardenCommitFile> {
 function validApplyInput() {
 	return {
 		snapshotHash: "a".repeat(64),
-		confirmedUserIntent: "Commit",
 		commits: [
 			{ subject: "feat(warden-flow): test apply", paths: ["src/a.ts"] },
 		],
@@ -374,22 +373,13 @@ describe("commit apply validation", () => {
 		const result = validateWardenCommitApplyInputFromHelper(validApplyInput());
 
 		assert.equal(result.ok, true);
-		if (result.ok) assert.equal(result.value.confirmedUserIntent, "Commit");
+		if (result.ok) assert.equal(result.value.snapshotHash, "a".repeat(64));
 	});
 
-	it("rejects missing snapshot hash and confirmation intent", () => {
+	it("rejects missing snapshot hash", () => {
 		const missingHash = validApplyInput() as Record<string, unknown>;
 		delete missingHash.snapshotHash;
 		assertInvalidApplyInput(missingHash, /snapshotHash is required/);
-
-		const missingIntent = validApplyInput() as Record<string, unknown>;
-		delete missingIntent.confirmedUserIntent;
-		assertInvalidApplyInput(missingIntent, /confirmedUserIntent/);
-
-		assertInvalidApplyInput(
-			{ ...validApplyInput(), confirmedUserIntent: "commit" },
-			/confirmedUserIntent/,
-		);
 	});
 
 	it("rejects invalid commit message and empty commit shapes", () => {
@@ -645,7 +635,6 @@ describe("commit apply safety", () => {
 				baseCwd: repo,
 				input: {
 					snapshotHash: snapshot.details.snapshotHash,
-					confirmedUserIntent: "Commit",
 					commits: [
 						{
 							subject: "feat(warden-flow): test local apply",
@@ -689,7 +678,6 @@ describe("commit apply safety", () => {
 				baseCwd: repo,
 				input: {
 					snapshotHash: snapshot.details.snapshotHash,
-					confirmedUserIntent: "Commit",
 					commits: [
 						{
 							subject: "chore(warden-flow): test staged rename apply",
@@ -734,7 +722,6 @@ describe("commit snapshot tool", () => {
 		const applyTool = tools.find((tool) => tool.name === "warden_commit_apply");
 		assert.deepEqual(schemaRequiredParameters(applyTool), [
 			"snapshotHash",
-			"confirmedUserIntent",
 			"commits",
 		]);
 	});

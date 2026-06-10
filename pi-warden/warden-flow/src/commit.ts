@@ -40,7 +40,7 @@ const WARDEN_COMMIT_SNAPSHOT_PARAMETERS = {
 const WARDEN_COMMIT_APPLY_PARAMETERS = {
 	type: "object",
 	additionalProperties: false,
-	required: ["snapshotHash", "confirmedUserIntent", "commits"],
+	required: ["snapshotHash", "commits"],
 	properties: {
 		cwd: {
 			type: "string",
@@ -52,12 +52,6 @@ const WARDEN_COMMIT_APPLY_PARAMETERS = {
 			description:
 				"Snapshot hash returned by the reviewed warden_commit_snapshot call.",
 			minLength: 1,
-		},
-		confirmedUserIntent: {
-			type: "string",
-			description:
-				"Must equal exactly Commit after explicit user confirmation.",
-			enum: ["Commit"],
 		},
 		commits: {
 			type: "array",
@@ -126,11 +120,11 @@ export function registerWardenCommit(pi: ExtensionAPI): void {
 		name: "warden_commit_apply",
 		label: "Warden Commit Apply",
 		description:
-			"Create local git commits from an explicit, user-confirmed commit plan that was based on a matching Warden commit snapshot.",
+			"Create local git commits from a reviewed commit plan that was based on a matching Warden commit snapshot.",
 		promptSnippet:
-			"Create local commits only from reviewed Warden commit plans after exact Commit confirmation and snapshot-hash validation.",
+			"Create local commits only from reviewed Warden commit plans after confirmation and snapshot-hash validation.",
 		promptGuidelines: [
-			"Use warden_commit_apply only after warden_commit_snapshot and after the user replies exactly Commit to a fully displayed commit plan.",
+			"Use warden_commit_apply only after warden_commit_snapshot and after the user approves a fully displayed commit plan.",
 			"warden_commit_apply stages only exact repo-relative paths from the matching snapshot, allows snapshot-verified staged renames only when their destination paths are in the first planned commit, refuses risky or mixed staged paths, creates local commits, and never pushes, pulls, fetches, rebases, resets, amends, tags, stashes, checks out, or creates PRs.",
 		],
 		parameters: WARDEN_COMMIT_APPLY_PARAMETERS,

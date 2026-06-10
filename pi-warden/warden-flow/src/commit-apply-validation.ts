@@ -22,7 +22,6 @@ export function validateWardenCommitApplyInput(
 		value: {
 			cwd: typeof input.cwd === "string" ? input.cwd : undefined,
 			snapshotHash: input.snapshotHash as string,
-			confirmedUserIntent: "Commit",
 			commits: commitValidation.commits,
 		},
 	};
@@ -83,9 +82,6 @@ function validateApplyInputRoot(input: Record<string, unknown>): string[] {
 		input.snapshotHash.length === 0
 	) {
 		errors.push("snapshotHash is required");
-	}
-	if (input.confirmedUserIntent !== "Commit") {
-		errors.push('confirmedUserIntent must equal exactly "Commit"');
 	}
 	if (input.cwd !== undefined && typeof input.cwd !== "string") {
 		errors.push("cwd must be a string when provided");

@@ -12,7 +12,7 @@ It reduces repeated repo discovery by maintaining a small map tree, injecting on
 - `/skill:warden-grill` — pressure-tests a work packet or manual feedback through a question/update loop until it is solid for TDD.
 - `/skill:warden-tdd` — implements one grilled work packet slice with strict test-first workflow.
 - `/skill:warden-close` — validates an accepted work packet or existing closure `handoff.md`, creates or updates final `handoff.md`, and decides changelog/map impact.
-- `/skill:warden-commit` — plans safe, atomic local commits and can apply them after exact `Commit` confirmation.
+- `/skill:warden-commit` — plans safe, atomic local commits and can apply them after confirmation.
 - `/warden:effort` — opens the Warden panel Effort pane for Warden skill thinking-level settings through `@nekwebdev/warden-panel`.
 - `extensions/warden-map` — injects map capsules and git context.
 - `extensions/warden-commit` — registers `warden_commit_snapshot` and `warden_commit_apply` for safe local commit planning and execution.
@@ -151,7 +151,7 @@ Use it when accepted work needs final closure documented, or when an existing cl
 
 `warden_commit_snapshot` is read-only. It reports compact git status, Warden boundaries, path risks, deterministic buckets, recent commit subjects, and a stable snapshot hash. It does not stage, commit, push, pull, fetch, rebase, reset, amend, tag, or create PRs.
 
-`warden_commit_apply` can create local commits only from an explicit plan after the user replies exactly `Commit`. It recomputes the snapshot, refuses when the hash changed, validates exact repo-relative paths, rejects risky/excluded paths by default, refuses mixed staged/unstaged changes, allows pre-existing staged renames only when their destination paths are included in the first planned commit, stages only exact paths, verifies the staged set before `git commit`, and returns commit hashes plus final `git status --short`.
+`warden_commit_apply` is intended to run only after the user approves an explicit plan. Tool input assumes that approval already happened, so it does not include a separate confirmation field. It recomputes the snapshot, refuses when the hash changed, validates exact repo-relative paths, rejects risky/excluded paths by default, refuses mixed staged/unstaged changes, allows pre-existing staged renames only when their destination paths are included in the first planned commit, stages only exact paths, verifies the staged set before `git commit`, and returns commit hashes plus final `git status --short`.
 
 It never pushes, pulls, fetches, rebases, resets, amends, tags, stashes, checks out, cleans, restores, creates PRs, or runs remote git operations.
 

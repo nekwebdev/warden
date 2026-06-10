@@ -88,7 +88,6 @@ export interface WardenCommitApplyPlanCommit {
 export interface WardenCommitApplyParams {
 	cwd?: string;
 	snapshotHash: string;
-	confirmedUserIntent: "Commit";
 	commits: WardenCommitApplyPlanCommit[];
 }
 
