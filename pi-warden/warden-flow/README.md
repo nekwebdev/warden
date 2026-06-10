@@ -101,6 +101,34 @@ When git is available, the extension injects:
 
 Git context is cached and re-injected only when branch, commit, or dirty state changes.
 
+## Runtime directives
+
+`extensions/warden-directives` can inject invocation-scoped Warden Flow guidance before a skill turn. Current support is limited to `warden-start` auto mode.
+
+Use an explicit flag to run `warden-start` without optional fine-tuning prompts:
+
+```text
+/skill:warden-start --auto add a tiny change
+```
+
+The `--auto` token is control syntax. The skill receives cleaned user intent such as `add a tiny change`, not the literal flag.
+
+You can also set a Pi agent fallback in `settings.json`:
+
+```json
+{
+  "warden": {
+    "flow": {
+      "interactionMode": "auto"
+    }
+  }
+}
+```
+
+Precedence is explicit invocation flag, then `warden.flow.interactionMode`, then normal interactive behavior. Unsupported modes or missing directive files fail safe by injecting no directive. This slice has no per-invocation `--interactive` escape flag; disable or change the setting to restore plain interactive default behavior.
+
+Runtime directives stay inside the `@nekwebdev/warden-flow` package. They do not implement runner workflows, agent lifecycle commands, Pi launch plumbing, or sibling package behavior.
+
 ## Skill effort
 
 Warden Flow stores per-skill effort settings and the skill status indicator toggle in Pi `settings.json`:

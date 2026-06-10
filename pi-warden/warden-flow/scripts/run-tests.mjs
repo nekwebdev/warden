@@ -10,6 +10,8 @@ const tests = [
 	"tests/effort.test.ts",
 	"tests/effort-pane.test.ts",
 	"tests/effort-runtime.test.ts",
+	"tests/runtime-directives.test.ts",
+	"tests/warden-directives-extension.test.ts",
 	"tests/extension.test.ts",
 	"tests/warden-map-skill.test.ts",
 ];

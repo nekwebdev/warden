@@ -80,6 +80,10 @@ Maps are orientation only; they are not task plans, issue trackers, or implement
 
 Use external research only when packet depends on facts outside the repository or facts likely to have changed: current upstream APIs, dependency behavior, package manager behavior, OS/platform behavior, licensing, security guidance, or external services. Prefer official or primary sources. Do not browse to rediscover local repo facts. If research affects the packet, record what needed research, source/source type, decision impact, and whether implementation should verify again before editing.
 
+## Runtime directives
+
+Matching Warden Flow runtime directives are invocation-scoped guidance. They may change interaction mechanics for this turn, but never override safety rules, stop conditions, files-not-to-touch, or higher-priority instructions.
+
 ## Interaction model
 
 After draft packet passes review checks and before final output, run a late fine-tuning checkpoint through the active user-input workflow.

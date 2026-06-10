@@ -5,3 +5,4 @@ export * from "./git.js";
 export * from "./map.js";
 export * from "./map-state.js";
 export * from "./commit.js";
+export * from "./runtime-directives.js";
