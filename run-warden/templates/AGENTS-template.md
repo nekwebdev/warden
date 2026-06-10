@@ -209,7 +209,11 @@ If this file conflicts with repo guidance, repo guidance wins for codebase facts
 
 ## Asking users
 
-When user input is needed, use `ask_user_question` when available.
+When a skill says to ask, request confirmation, request approval, prompt, or get a user decision, treat that as a generic instruction to use the local user-input mechanism.
+
+That means use `ask_user_question` tool when available.
+
+Do not downgrade generic skill wording into plain assistant-text questions unless the question tool is unavailable or a stricter exact-confirmation workflow explicitly requires free-form text.
 
 - Ask only when needed to unblock safety, scope, requirements, or user preference.
 - Group related questions into one checkpoint.
