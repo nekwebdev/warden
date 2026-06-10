@@ -348,6 +348,13 @@ make_worktree_fixture() {
   git -C "$WORKTREE_REPO" worktree add --detach "$WORKTREE_DETACHED" HEAD >/dev/null
 }
 
+make_worktree_origin() {
+  WORKTREE_ORIGIN="$BATS_TEST_TMPDIR/origin.git"
+  git init --bare -b main "$WORKTREE_ORIGIN" >/dev/null
+  git -C "$WORKTREE_REPO" remote add origin "$WORKTREE_ORIGIN"
+  git -C "$WORKTREE_REPO" push -u origin main >/dev/null
+}
+
 make_agent_with_cwd() {
   agents=$1
   name=$2
@@ -356,6 +363,23 @@ make_agent_with_cwd() {
   cat >"$agents/$name/settings.json" <<JSON
 {"theme":"dark","warden":{"agent":{"cwd":"$cwd"},"keep":true}}
 JSON
+}
+
+write_fake_git_failing_command() {
+  failing_command=$1
+  real_git=$(command -v git)
+  case "$real_git" in "$FAKE_BIN"/*) real_git=/usr/bin/git ;; esac
+  cat >"$FAKE_BIN/git" <<SH
+#!/usr/bin/env sh
+for arg do
+  if [ "\$arg" = "$failing_command" ]; then
+    printf '%s\n' "fake git $failing_command failure" >&2
+    exit 128
+  fi
+done
+exec "$real_git" "\$@"
+SH
+  chmod +x "$FAKE_BIN/git"
 }
 
 @test "worktree rejects missing and extra agent arguments" {
@@ -404,12 +428,16 @@ JSON
   [ "$(cat "$agents/ada/settings.json")" = "$before_settings" ]
 }
 
-@test "worktree new option captures validated dry-run inputs without creating worktree" {
+@test "worktree new option creates branch worktree pushes upstream and launches from new path" {
   agents="$BATS_TEST_TMPDIR/agents"
   make_worktree_fixture
+  make_worktree_origin
   make_agent_with_cwd "$agents" ada "$WORKTREE_REPO"
+  before_settings=$(cat "$agents/ada/settings.json")
+  new_path="$agents/ada/worktree/issue-123-fix"
+  branch="bugfix/issue-123-fix"
 
-  run env HOME="$TEST_HOME" PATH="$FAKE_BIN:$PATH" WARDEN_AGENTS="$agents" "$RUN_WARDEN_ROOT/bin/warden" worktree ada <<'EOF'
+  run env HOME="$TEST_HOME" PATH="$FAKE_BIN:$PATH" WARDEN_AGENTS="$agents" PI_LOG="$BATS_TEST_TMPDIR/pi-new-worktree.log" "$RUN_WARDEN_ROOT/bin/warden" worktree ada <<'EOF'
 4
 issue-123-fix
 2
@@ -417,17 +445,185 @@ EOF
   [ "$status" -eq 0 ]
   [[ "$output" == *"worktree folder"* ]]
   [[ "$output" == *"Example: issue-123-fix"* ]]
-  [[ "$output" == *"no spaces"* ]]
   [[ "$output" == *"branch type"* ]]
-  [[ "$output" == *"dry-run"* ]]
-  [[ "$output" == *"no branch is created"* ]]
-  [[ "$output" == *"agent: ada"* ]]
-  [[ "$output" == *"source: repo"* ]]
-  [[ "$output" == *"name: issue-123-fix"* ]]
-  [[ "$output" == *"type: bugfix"* ]]
-  [[ "$output" == *"no worktree created"* ]]
-  ! git -C "$WORKTREE_REPO" worktree list --porcelain | grep -F "issue-123-fix"
-  [ ! -e "$BATS_TEST_TMPDIR/issue-123-fix" ]
+  [[ "$output" == *"created worktree: $new_path"* ]]
+  [[ "$output" == *"created branch: $branch"* ]]
+  [ -d "$new_path" ]
+  [ "$(git -C "$new_path" symbolic-ref --short HEAD)" = "$branch" ]
+  git --git-dir="$WORKTREE_ORIGIN" show-ref --verify --quiet "refs/heads/$branch"
+  git -C "$new_path" status --short --branch | grep -F "## $branch...origin/$branch"
+  grep -F "PWD=$new_path" "$BATS_TEST_TMPDIR/pi-new-worktree.log"
+  grep -F "PI_CODING_AGENT_DIR=$agents/ada" "$BATS_TEST_TMPDIR/pi-new-worktree.log"
+  [ "$(cat "$agents/ada/settings.json")" = "$before_settings" ]
+}
+
+@test "worktree new option prompts for missing origin and keeps settings unchanged" {
+  agents="$BATS_TEST_TMPDIR/agents"
+  make_worktree_fixture
+  prompted_origin="$BATS_TEST_TMPDIR/prompt-origin.git"
+  git init --bare -b main "$prompted_origin" >/dev/null
+  git -C "$WORKTREE_REPO" push "$prompted_origin" main >/dev/null
+  make_agent_with_cwd "$agents" ada "$WORKTREE_REPO"
+  before_settings=$(cat "$agents/ada/settings.json")
+  new_path="$agents/ada/worktree/no-origin-fix"
+  branch="docs/no-origin-fix"
+
+  run env HOME="$TEST_HOME" PATH="$FAKE_BIN:$PATH" WARDEN_AGENTS="$agents" PI_LOG="$BATS_TEST_TMPDIR/pi-no-origin.log" "$RUN_WARDEN_ROOT/bin/warden" worktree ada <<EOF
+4
+no-origin-fix
+5
+$prompted_origin
+EOF
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"No Git remote named origin is configured"* ]]
+  [[ "$output" == *"Git URL for origin"* ]]
+  [ "$(git -C "$WORKTREE_REPO" remote get-url origin)" = "$prompted_origin" ]
+  [ -d "$new_path" ]
+  [ "$(git -C "$new_path" symbolic-ref --short HEAD)" = "$branch" ]
+  git --git-dir="$prompted_origin" show-ref --verify --quiet "refs/heads/$branch"
+  grep -F "PWD=$new_path" "$BATS_TEST_TMPDIR/pi-no-origin.log"
+  [ "$(cat "$agents/ada/settings.json")" = "$before_settings" ]
+}
+
+@test "worktree new option refuses target local and remote branch collisions before worktree creation" {
+  agents="$BATS_TEST_TMPDIR/agents"
+  make_worktree_fixture
+  make_worktree_origin
+  make_agent_with_cwd "$agents" ada "$WORKTREE_REPO"
+  target="$agents/ada/worktree/issue-123-fix"
+  branch="bugfix/issue-123-fix"
+  mkdir -p "$target"
+
+  run env HOME="$TEST_HOME" PATH="$FAKE_BIN:$PATH" WARDEN_AGENTS="$agents" PI_LOG="$BATS_TEST_TMPDIR/pi-target-collision.log" "$RUN_WARDEN_ROOT/bin/warden" worktree ada <<'EOF'
+4
+issue-123-fix
+2
+EOF
+  [ "$status" -eq 2 ]
+  [[ "$output" == *"worktree target already exists"* ]]
+  ! git -C "$WORKTREE_REPO" show-ref --verify --quiet "refs/heads/$branch"
+  [ ! -e "$BATS_TEST_TMPDIR/pi-target-collision.log" ]
+
+  rm -rf "$target"
+  git -C "$WORKTREE_REPO" branch "$branch"
+  run env HOME="$TEST_HOME" PATH="$FAKE_BIN:$PATH" WARDEN_AGENTS="$agents" PI_LOG="$BATS_TEST_TMPDIR/pi-local-collision.log" "$RUN_WARDEN_ROOT/bin/warden" worktree ada <<'EOF'
+4
+issue-123-fix
+2
+EOF
+  [ "$status" -eq 2 ]
+  [[ "$output" == *"local branch already exists"* ]]
+  [ ! -e "$target" ]
+  [ ! -e "$BATS_TEST_TMPDIR/pi-local-collision.log" ]
+
+  git -C "$WORKTREE_REPO" branch -D "$branch" >/dev/null
+  git -C "$WORKTREE_REPO" push origin main:"refs/heads/$branch" >/dev/null
+  run env HOME="$TEST_HOME" PATH="$FAKE_BIN:$PATH" WARDEN_AGENTS="$agents" PI_LOG="$BATS_TEST_TMPDIR/pi-remote-collision.log" "$RUN_WARDEN_ROOT/bin/warden" worktree ada <<'EOF'
+4
+issue-123-fix
+2
+EOF
+  [ "$status" -eq 2 ]
+  [[ "$output" == *"remote branch already exists"* ]]
+  [ ! -e "$target" ]
+  [ ! -e "$BATS_TEST_TMPDIR/pi-remote-collision.log" ]
+}
+
+@test "worktree new option fails closed when remote collision probe errors" {
+  agents="$BATS_TEST_TMPDIR/agents"
+  make_worktree_fixture
+  make_worktree_origin
+  make_agent_with_cwd "$agents" ada "$WORKTREE_REPO"
+  target="$agents/ada/worktree/issue-123-fix"
+  branch="bugfix/issue-123-fix"
+  write_fake_git_failing_command ls-remote
+
+  run env HOME="$TEST_HOME" PATH="$FAKE_BIN:$PATH" WARDEN_AGENTS="$agents" PI_LOG="$BATS_TEST_TMPDIR/pi-ls-remote-fail.log" "$RUN_WARDEN_ROOT/bin/warden" worktree ada <<'EOF'
+4
+issue-123-fix
+2
+EOF
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"failed to check remote branch collision"* ]]
+  ! git -C "$WORKTREE_REPO" show-ref --verify --quiet "refs/heads/$branch"
+  [ ! -e "$target" ]
+  [ ! -e "$BATS_TEST_TMPDIR/pi-ls-remote-fail.log" ]
+}
+
+@test "worktree new option stops after push failure without launching Pi" {
+  agents="$BATS_TEST_TMPDIR/agents"
+  make_worktree_fixture
+  make_worktree_origin
+  make_agent_with_cwd "$agents" ada "$WORKTREE_REPO"
+  target="$agents/ada/worktree/issue-123-fix"
+  branch="bugfix/issue-123-fix"
+  write_fake_git_failing_command push
+
+  run env HOME="$TEST_HOME" PATH="$FAKE_BIN:$PATH" WARDEN_AGENTS="$agents" PI_LOG="$BATS_TEST_TMPDIR/pi-push-fail.log" "$RUN_WARDEN_ROOT/bin/warden" worktree ada <<'EOF'
+4
+issue-123-fix
+2
+EOF
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"failed to push new worktree branch"* ]]
+  [ -d "$target" ]
+  [ "$(git -C "$target" symbolic-ref --short HEAD)" = "$branch" ]
+  [ ! -e "$BATS_TEST_TMPDIR/pi-push-fail.log" ]
+}
+
+@test "worktree new option reports created worktree when Pi launch fails after push" {
+  agents="$BATS_TEST_TMPDIR/agents"
+  make_worktree_fixture
+  make_worktree_origin
+  make_agent_with_cwd "$agents" ada "$WORKTREE_REPO"
+  target="$agents/ada/worktree/issue-123-fix"
+  branch="bugfix/issue-123-fix"
+
+  run env HOME="$TEST_HOME" PATH="$FAKE_BIN:$PATH" WARDEN_AGENTS="$agents" PI_LOG="$BATS_TEST_TMPDIR/pi-launch-fail.log" PI_EXIT=7 "$RUN_WARDEN_ROOT/bin/warden" worktree ada <<'EOF'
+4
+issue-123-fix
+2
+EOF
+  [ "$status" -eq 7 ]
+  [[ "$output" == *"created worktree: $target"* ]]
+  [[ "$output" == *"created branch: $branch"* ]]
+  [ -d "$target" ]
+  git --git-dir="$WORKTREE_ORIGIN" show-ref --verify --quiet "refs/heads/$branch"
+  grep -F "PWD=$target" "$BATS_TEST_TMPDIR/pi-launch-fail.log"
+}
+
+@test "worktree new option fails missing origin prompt eof and fetch failure without branch or worktree" {
+  agents="$BATS_TEST_TMPDIR/agents"
+  make_worktree_fixture
+  make_agent_with_cwd "$agents" ada "$WORKTREE_REPO"
+  target="$agents/ada/worktree/issue-123-fix"
+  branch="bugfix/issue-123-fix"
+
+  run env HOME="$TEST_HOME" PATH="$FAKE_BIN:$PATH" WARDEN_AGENTS="$agents" PI_LOG="$BATS_TEST_TMPDIR/pi-origin-eof.log" "$RUN_WARDEN_ROOT/bin/warden" worktree ada <<'EOF'
+4
+issue-123-fix
+2
+EOF
+  [ "$status" -eq 2 ]
+  [[ "$output" == *"unexpected EOF reading origin URL"* ]]
+  ! git -C "$WORKTREE_REPO" remote get-url origin >/dev/null 2>&1
+  ! git -C "$WORKTREE_REPO" show-ref --verify --quiet "refs/heads/$branch"
+  [ ! -e "$target" ]
+  [ ! -e "$BATS_TEST_TMPDIR/pi-origin-eof.log" ]
+
+  missing_origin="$BATS_TEST_TMPDIR/missing-origin.git"
+  run env HOME="$TEST_HOME" PATH="$FAKE_BIN:$PATH" WARDEN_AGENTS="$agents" PI_LOG="$BATS_TEST_TMPDIR/pi-origin-fetch-fail.log" "$RUN_WARDEN_ROOT/bin/warden" worktree ada <<EOF
+4
+issue-123-fix
+2
+$missing_origin
+EOF
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"failed to fetch origin/main"* ]]
+  [ "$(git -C "$WORKTREE_REPO" remote get-url origin)" = "$missing_origin" ]
+  ! git -C "$WORKTREE_REPO" show-ref --verify --quiet "refs/heads/$branch"
+  [ ! -e "$target" ]
+  [ ! -e "$BATS_TEST_TMPDIR/pi-origin-fetch-fail.log" ]
 }
 
 @test "worktree invalid choices names types and eof fail clearly" {

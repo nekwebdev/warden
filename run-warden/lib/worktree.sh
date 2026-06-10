@@ -108,7 +108,7 @@ warden_worktree_read_name() {
 }
 
 warden_worktree_read_type() {
-	printf '%s\n' "Choose future branch type for this dry-run worktree request; no branch is created in this step:" >&2
+	printf '%s\n' "Choose branch type for the new worktree:" >&2
 	printf '%s\n' "1) feature" >&2
 	printf '%s\n' "2) bugfix" >&2
 	printf '%s\n' "3) hotfix" >&2
@@ -135,16 +135,99 @@ warden_worktree_read_type() {
 	esac
 }
 
-warden_worktree_new_dry_run() {
+warden_worktree_read_origin_url() {
+	printf '%s\n' "No Git remote named origin is configured." >&2
+	printf '%s\n' "Git URL for origin (examples: git@github.com:owner/repo.git, https://github.com/owner/repo.git, /path/to/repo.git):" >&2
+	if ! IFS= read -r origin_url; then
+		printf '%s\n' "warden: unexpected EOF reading origin URL" >&2
+		return 2
+	fi
+	if [ -z "$origin_url" ]; then
+		printf '%s\n' "warden: origin URL is required" >&2
+		return 2
+	fi
+	printf '%s\n' "$origin_url"
+}
+
+warden_worktree_ensure_origin() {
+	repo_root=$1
+	if git -C "$repo_root" remote get-url origin >/dev/null 2>&1; then
+		return 0
+	fi
+	origin_url=$(warden_worktree_read_origin_url) || return $?
+	git -C "$repo_root" remote add origin "$origin_url" || {
+		printf '%s\n' "warden: failed to add origin remote: $origin_url" >&2
+		return 1
+	}
+}
+
+warden_worktree_fetch_origin_main() {
+	repo_root=$1
+	if ! git -C "$repo_root" fetch origin main:refs/remotes/origin/main; then
+		printf '%s\n' "warden: failed to fetch origin/main from origin" >&2
+		return 1
+	fi
+	if ! git -C "$repo_root" rev-parse --verify --quiet refs/remotes/origin/main >/dev/null; then
+		printf '%s\n' "warden: missing origin/main after fetch" >&2
+		return 2
+	fi
+}
+
+warden_worktree_check_remote_branch_absent() {
+	repo_root=$1
+	branch=$2
+	if git -C "$repo_root" ls-remote --exit-code origin "refs/heads/$branch" >/dev/null 2>&1; then
+		printf '%s\n' "warden: remote branch already exists: origin/$branch" >&2
+		return 2
+	else
+		ls_remote_status=$?
+	fi
+	if [ "$ls_remote_status" -eq 2 ]; then
+		return 0
+	fi
+	printf '%s\n' "warden: failed to check remote branch collision: origin/$branch" >&2
+	return 1
+}
+
+warden_worktree_create_new() {
 	name=$1
-	resolved_cwd=$2
+	agent_dir=$2
+	repo_root=$3
 	worktree_name=$(warden_worktree_read_name) || return $?
 	worktree_type=$(warden_worktree_read_type) || return $?
-	printf 'agent: %s\n' "$name"
-	printf 'source: %s\n' "${resolved_cwd##*/}"
-	printf 'name: %s\n' "$worktree_name"
-	printf 'type: %s\n' "$worktree_type"
-	printf '%s\n' "no worktree created"
+	branch=$worktree_type/$worktree_name
+	worktree_parent=$agent_dir/worktree
+	worktree_path=$worktree_parent/$worktree_name
+
+	if [ -e "$worktree_path" ]; then
+		printf '%s\n' "warden: worktree target already exists: $worktree_path" >&2
+		return 2
+	fi
+	if git -C "$repo_root" show-ref --verify --quiet "refs/heads/$branch"; then
+		printf '%s\n' "warden: local branch already exists: $branch" >&2
+		return 2
+	fi
+	warden_worktree_ensure_origin "$repo_root" || return $?
+	warden_worktree_fetch_origin_main "$repo_root" || return $?
+	warden_worktree_check_remote_branch_absent "$repo_root" "$branch" || return $?
+
+	mkdir -p "$worktree_parent" || return 1
+	if ! git -C "$repo_root" worktree add --no-track -b "$branch" "$worktree_path" origin/main; then
+		printf '%s\n' "warden: failed to create worktree: $worktree_path" >&2
+		return 1
+	fi
+	if ! git -C "$worktree_path" push -u origin "$branch"; then
+		printf '%s\n' "warden: failed to push new worktree branch: $branch" >&2
+		return 1
+	fi
+
+	printf 'created worktree: %s\n' "$worktree_path"
+	printf 'created branch: %s\n' "$branch"
+	warden_pi_launch_existing_agent "$name" "$agent_dir" "$worktree_path" || {
+		launch_status=$?
+		printf '%s\n' "warden: worktree creation succeeded, but Pi launch failed for agent '$name'" >&2
+		return "$launch_status"
+	}
 }
 
 warden_worktree() {
@@ -166,6 +249,10 @@ warden_worktree() {
 		printf '%s\n' "warden: configured cwd is not a Git worktree or repository for agent '$name': $resolved_cwd" >&2
 		return 2
 	fi
+	repo_root=$(git -C "$resolved_cwd" rev-parse --show-toplevel) || {
+		printf '%s\n' "warden: failed to resolve Git repository root for agent '$name': $resolved_cwd" >&2
+		return 1
+	}
 
 	worktree_tmp_dir=${TMPDIR:-/tmp}
 	porcelain_file=$(mktemp "$worktree_tmp_dir/warden-worktree-porcelain.XXXXXX") || return 1
@@ -174,7 +261,7 @@ warden_worktree() {
 		return 1
 	}
 
-	if ! git -C "$resolved_cwd" worktree list --porcelain >"$porcelain_file"; then
+	if ! git -C "$repo_root" worktree list --porcelain >"$porcelain_file"; then
 		rm -f "$porcelain_file" "$entries_file"
 		printf '%s\n' "warden: failed to list Git worktrees for agent '$name': $resolved_cwd" >&2
 		return 1
@@ -206,7 +293,7 @@ warden_worktree() {
 	fi
 	if [ "$worktree_choice" -eq "$new_choice" ]; then
 		rm -f "$porcelain_file" "$entries_file"
-		warden_worktree_new_dry_run "$name" "$resolved_cwd"
+		warden_worktree_create_new "$name" "$agent_dir" "$repo_root"
 		return $?
 	fi
 

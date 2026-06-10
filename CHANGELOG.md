@@ -20,6 +20,7 @@ All notable Warden changes are recorded here.
 
 ### Changed
 
+- `warden worktree AGENT` new-worktree flow now creates `${type}/${name}` from `origin/main`, pushes upstream, and launches the agent from the created worktree while preserving agent settings.
 - `run-warden` CLI dispatch now documents and accepts final command forms: `warden shell init`, name-first `warden agents NAME ...`, and direct `warden @NAME`, while removed forms fail through the normal unsupported-command path.
 - Warden Flow map freshness now uses the requested map's per-map basis and committed changes since that basis, so commits containing only map-owned files keep refreshed maps fresh while later non-map commits mark them stale.
 - Warden Flow docs and `warden-docs` guidance now describe classifier-based map freshness instead of direct map-state SHA equality with `HEAD`.
