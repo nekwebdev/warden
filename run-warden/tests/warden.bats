@@ -61,6 +61,10 @@ SH
   chmod +x "$FAKE_BIN/tmux"
 }
 
+run_noninteractive() {
+  run bash -c 'exec "$@" </dev/null' bash "$@"
+}
+
 @test "run-warden welcome prints WARDEN_HOME" {
   run env HOME="$TEST_HOME" WARDEN_HOME=/tmp/warden "$RUN_WARDEN_ROOT/bin/warden" welcome
   [ "$status" -eq 0 ]
@@ -152,7 +156,7 @@ SH
   [[ "$output" == *"./warden shell init bash|zsh|fish"* ]]
   [[ "$output" != *"shell snippet"* ]]
 
-  run env HOME="$TEST_HOME" WARDEN_HOME="$repo_root" PATH="$FAKE_BIN:$PATH" WARDEN_CURRENT_SHELL=bash "$RUN_WARDEN_ROOT/bin/warden" shell install
+  run_noninteractive env HOME="$TEST_HOME" WARDEN_HOME="$repo_root" PATH="$FAKE_BIN:$PATH" WARDEN_CURRENT_SHELL=bash "$RUN_WARDEN_ROOT/bin/warden" shell install
   [ "$status" -eq 0 ]
   [[ "$output" == *"shell integration declined. Manual snippets: ./warden shell init bash|zsh|fish"* ]]
   [[ "$output" != *"shell snippet"* ]]
@@ -273,7 +277,8 @@ NODE
 
   run env HOME="$TEST_HOME" PATH="$FAKE_BIN:$PATH" WARDEN_AGENTS="$agents" NPM_LOG="$BATS_TEST_TMPDIR/update-npm.log" "$RUN_WARDEN_ROOT/bin/warden" agents ada update-pi
   [ "$status" -eq 0 ]
-  [[ "$output" == *"updated agent ada Pi"* ]]
+  [[ "$output" == $'\n\033[32mUpdated agent ada Pi:'* ]]
+  [[ "$output" == *$'\033[0m'* ]]
   [ -x "$agents/ada/npm/node_modules/.bin/pi" ]
   grep -F "arg=--prefix" "$BATS_TEST_TMPDIR/update-npm.log"
   grep -F "arg=$agents/ada/npm" "$BATS_TEST_TMPDIR/update-npm.log"
@@ -310,7 +315,7 @@ NODE
 }
 
 @test "agents new without name fails with usage in non-tty" {
-  run env HOME="$TEST_HOME" PATH="$FAKE_BIN:$PATH" NPM_LOG="$BATS_TEST_TMPDIR/npm.log" "$RUN_WARDEN_ROOT/bin/warden" agents new
+  run_noninteractive env HOME="$TEST_HOME" PATH="$FAKE_BIN:$PATH" NPM_LOG="$BATS_TEST_TMPDIR/npm.log" "$RUN_WARDEN_ROOT/bin/warden" agents new
   [ "$status" -eq 2 ]
   [[ "$output" == *"usage: warden agents new [NAME]"* ]]
 }
@@ -567,6 +572,8 @@ EOF
   grep -F "argc=2" "$BATS_TEST_TMPDIR/pi.log"
   grep -F "arg=update" "$BATS_TEST_TMPDIR/pi.log"
   grep -F "arg=--extensions" "$BATS_TEST_TMPDIR/pi.log"
+  [[ "$output" == $'\n\033[32mUpdated agent ada Pi:'* ]]
+  [[ "$output" == *$'\033[0m'* ]]
   grep -F "arg=$agents/ada/npm" "$BATS_TEST_TMPDIR/update-npm.log"
   grep -F "arg=@earendil-works/pi-coding-agent@latest" "$BATS_TEST_TMPDIR/update-npm.log"
 }
@@ -619,7 +626,7 @@ EOF
 
 @test "pi missing agent declines creation in non-tty" {
   agents="$BATS_TEST_TMPDIR/agents"
-  run env HOME="$TEST_HOME" PATH="$FAKE_BIN:$PATH" WARDEN_AGENTS="$agents" "$RUN_WARDEN_ROOT/bin/warden" pi ada --help
+  run_noninteractive env HOME="$TEST_HOME" PATH="$FAKE_BIN:$PATH" WARDEN_AGENTS="$agents" "$RUN_WARDEN_ROOT/bin/warden" pi ada --help
   [ "$status" -eq 2 ]
   [[ "$output" == *"agent not found"* ]]
   [[ "$output" == *"Create it with: warden agents new ada"* ]]

@@ -412,7 +412,7 @@ warden_agent_update_pi() {
 		printf '%s\n' "warden: Pi update completed, but executable is missing: $pi_bin" >&2
 		return 1
 	fi
-	printf 'updated agent %s Pi: %s\n' "$name" "$pi_bin"
+	printf '\n\033[32mUpdated agent %s Pi: %s\033[0m\n' "$name" "$pi_bin"
 }
 
 warden_agents_new() {
