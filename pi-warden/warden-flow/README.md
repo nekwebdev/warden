@@ -8,11 +8,12 @@ It reduces repeated repo discovery by maintaining a small map tree, injecting on
 
 - `/skill:warden-map` — creates or refreshes repository map files.
 - `/skill:warden-docs` — aligns stale `README.md` and `AGENTS.md` files with repo evidence when map freshness is current.
+- `/skill:warden-create-skill` — creates a new global or project Agent Skill from the bundled Warden skill template.
 - `/skill:warden-start` — turns rough intent into one small `.warden/work/<slug>/packet.md` work packet for a lean dev cycle.
 - `/skill:warden-grill` — pressure-tests a work packet or manual feedback through a question/update loop until it is solid for TDD.
 - `/skill:warden-tdd` — implements one grilled work packet slice with strict test-first workflow.
 - `/skill:warden-close` — validates an accepted work packet or existing closure `handoff.md`, creates or updates final `handoff.md`, and decides changelog/map impact.
-- `/skill:warden-commit` — plans safe, atomic local commits and can apply them after confirmation.
+- `/skill:warden-commit` — plans safe, atomic local commits and can apply them after plan approval.
 - `/warden:effort` — opens the Warden panel Effort pane for Warden skill thinking-level settings through `@nekwebdev/warden-panel`.
 - `extensions/warden-map` — injects map capsules and git context.
 - `extensions/warden-commit` — registers `warden_commit_snapshot` and `warden_commit_apply` for safe local commit planning and execution.
@@ -116,6 +117,7 @@ Warden Flow stores per-skill effort settings and the skill status indicator togg
         "warden-tdd": "high",
         "warden-close": "medium",
         "warden-commit": "medium",
+        "warden-create-skill": "high",
         "warden-docs": "medium"
       }
     }
@@ -131,6 +133,7 @@ Current defaults seeded at session start:
 - `warden-tdd`: `high`
 - `warden-close`: `medium`
 - `warden-commit`: `medium`
+- `warden-create-skill`: `high`
 - `warden-docs`: `medium`
 
 `/warden:effort` opens the Effort pane contributed through the public pane API from `@nekwebdev/warden-panel`. `warden-flow` declares that package as a dependency so the pane framework is available when the Effort extension loads. Space/Enter cycles a selected skill through `off`, `minimal`, `low`, `medium`, `high`, `xhigh` and writes immediately; there is no Apply step.
@@ -138,6 +141,12 @@ Current defaults seeded at session start:
 `extensions/warden-effort` also contributes a Display pane setting for the skill status indicator through `contributeWardenDisplaySetting()`. The indicator defaults off. Toggle it from Display; the setting writes inline.
 
 When a `/skill:warden-*` turn starts, `extensions/warden-effort` reads the configured level, calls Pi's public `setThinkingLevel()`, shows a small themed Pi status indicator with the active skill and effort level when `warden.effort.showSkillStatus` is `true` (default off), then restores the previous thinking level and clears the status indicator after the agent turn. Pi may clamp unsupported levels depending on the active model/provider.
+
+## Create skill workflow
+
+`/skill:warden-create-skill` creates a new Agent Skill under either `$PI_CODING_AGENT_DIR/.agents/skills/<skill-name>/SKILL.md` for global use by the current Pi agent environment, or `<git-root>/.agents/skills/<skill-name>/SKILL.md` for project use.
+
+It asks the user to choose global or project scope, reads `skills/warden-create-skill/templates/SKILL-template.md`, strips template-only guidance, and writes only the new skill's final `SKILL.md`. It refuses silent overwrites.
 
 ## Close workflow
 
@@ -161,7 +170,7 @@ It never pushes, pulls, fetches, rebases, resets, amends, tags, stashes, checks 
 
 ## Scope boundary
 
-This package owns Warden workflow/orientation Pi behavior, including `warden-map`, `warden-docs`, `warden-start`, `warden-grill`, `warden-tdd`, `warden-close`, `warden-commit`, map capsule injection, commit snapshot/apply tooling, and Warden Flow skill effort settings.
+This package owns Warden workflow/orientation Pi behavior, including `warden-map`, `warden-docs`, `warden-create-skill`, `warden-start`, `warden-grill`, `warden-tdd`, `warden-close`, `warden-commit`, map capsule injection, commit snapshot/apply tooling, and Warden Flow skill effort settings.
 
 It does not own Warden runner workflows, Pi agent lifecycle commands, or sibling package installation workflows.
 

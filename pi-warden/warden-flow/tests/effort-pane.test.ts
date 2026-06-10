@@ -194,6 +194,7 @@ describe("Effort pane", () => {
 					skills: {
 						"warden-zed": "high",
 						"warden-commit": "medium",
+						"warden-create-skill": "high",
 						"warden-docs": "medium",
 						"warden-alpha": "minimal",
 						"warden-map": "low",
@@ -207,6 +208,7 @@ describe("Effort pane", () => {
 			[
 				"> warden-map: low",
 				"warden-commit: medium",
+				"warden-create-skill: high",
 				"warden-docs: medium",
 				"warden-alpha: minimal",
 				"warden-zed: high",

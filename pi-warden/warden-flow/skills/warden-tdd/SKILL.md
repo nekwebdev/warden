@@ -5,24 +5,56 @@ argument-hint: [packet.md path]
 license: MIT
 ---
 
-<argument-handling>
+# Warden TDD
 
-- Treat `$1` as the user's packet path argument, not as a skill-file-relative path.
-- Require an existing file with basename `packet.md`.
-- Accept absolute paths and relative paths.
-- Resolve relative paths from current working directory first.
-- If cwd-relative path does not exist, resolve from Git repository root.
-- Do not resolve `$1` against this skill directory unless user supplied that exact absolute path.
-- If no valid packet path is provided, stop and ask user to call `/skill:warden-tdd <path-to-packet.md>`.
-- Use resolved packet path for first read, scope checks, result reporting, and any final next-step reference.
+## When to use
 
-</argument-handling>
+Use when the user provides one existing Warden `packet.md` that is ready for one safe, test-first implementation slice.
 
-<scope-gates>
+## Outcome
 
-Implement one approved Warden work packet slice after `/skill:warden-grill` has tightened it.
+- Ready packet implemented through RED → GREEN → TRIANGULATE → REFACTOR.
+- `packet.md` updated only with compact `## TDD Evidence`.
+- Checks, manual verification, files changed, and next safe step reported.
+- Unsafe or under-specified packets stopped before target-file edits.
 
-Before implementation, confirm packet has:
+## Argument handling
+
+Treat the skill argument as the packet path. Require an existing file named `packet.md`.
+
+Accept absolute paths and relative paths. Resolve relative paths from current working directory first, then Git repository root. Never resolve against this skill directory unless the user supplied that exact absolute path.
+
+If no valid packet path is provided, stop and report `/skill:warden-tdd <path-to-packet.md>` as the next safe command.
+
+Use the resolved path for first read, scope checks, evidence updates, reporting, and next-step references.
+
+## Non-goals
+
+Do not implement runner workflows, agent lifecycle commands, subagents, model override cascades, broad orchestration, or work outside the packet slice.
+
+Do not rewrite packet scope, acceptance behavior, safety guidance, docs decisions, files-not-to-touch, or ownership guidance while continuing TDD. If those need changes, stop and send the packet back to `/skill:warden-grill` unless the user explicitly changes the task to packet revision.
+
+## Execution tracking
+
+When the harness exposes a plan or todo tool, mirror the top-level `## Procedure` steps in an ephemeral task list before starting. Use the tool name and schema advertised by the harness.
+
+Track progress in the harness only. Do not create repo task files or durable work artifacts. Keep exactly one task in progress; mark each task complete immediately when its step finishes.
+
+## Safety rules
+
+- Read the resolved packet end-to-end before editing any target file.
+- Read repository and package guidance required by the packet's work area before editing target files.
+- Inspect `git status --short` and record preexisting dirty paths before editing target files.
+- Treat preexisting dirty paths as user work unless the packet explicitly names them and user intent is clear.
+- Request a user decision through the active user-input workflow before touching any preexisting dirty path not clearly in scope.
+- Keep edits inside packet work area and outside files-not-to-touch.
+- Use maps only as orientation; verify repo facts before relying on them.
+- Do not edit `.warden/map.md` or `.warden/maps/**/map.md`.
+- Never claim tests, builds, manual checks, or verification ran unless they actually ran.
+
+## Packet readiness
+
+Before implementation, confirm the packet has:
 
 - one small vertical slice;
 - concrete acceptance behavior;
@@ -30,99 +62,102 @@ Before implementation, confirm packet has:
 - manual verification steps;
 - safety and files-not-to-touch guidance;
 - docs decision clarity;
-- work area narrow enough to implement without crossing unrelated owners.
+- work area narrow enough to avoid unrelated owners.
 
-Do not require a magic grilled marker or exact status text. Judge packet quality from content.
+Do not require a magic grilled marker or exact status text. Judge readiness from content.
 
-Stop without editing target files when scope, acceptance, tests, manual verification, safety, docs, or ownership are missing, unresolved, contradictory, or too broad. Ask user to run `/skill:warden-grill <packet>` or tighten the packet.
+Stop before target-file edits when scope, acceptance, tests, manual verification, safety, docs, or ownership are missing, unresolved, contradictory, or too broad.
 
-Do not implement runner workflows, agent lifecycle commands, subagents, model override cascades, broad orchestration, or work outside the packet slice.
+## Context and evidence
 
-</scope-gates>
+Use the packet as the primary task source. Use repository files, required guidance, package manifests, scripts, existing tests, nearby source/docs, and current `git status --short` as supporting evidence.
 
-<safety>
-
-Required first reads before editing any target file:
-
-1. Read the resolved packet end-to-end.
-2. Read repository and package guidance required by the packet's work area.
-3. Inspect current `git status --short`.
-4. Record preexisting dirty paths.
-
-Protect preexisting dirty paths as user work unless packet explicitly names them and user intent is clear. Ask before touching any preexisting dirty path not clearly in scope.
-
-Keep edits inside packet work area and outside files-not-to-touch. Avoid unrelated dirty files.
-
-If code exploration reveals packet contradiction, missing decision, or needed scope change, stop and ask user. Do not rewrite the packet and continue.
-
-Packet evidence is the only routine packet edit this skill may make. Append or update a compact `## TDD Evidence` section in `packet.md` as the work proceeds. Do not change packet scope, acceptance behavior, safety guidance, docs decisions, files-not-to-touch, or ownership guidance unless user explicitly changes task to packet revision.
-
-Never claim tests, builds, or manual verification ran unless commands/checks actually ran.
-
-</safety>
-
-<context-sources>
-
-Use the packet as the primary task source. Use repository evidence to verify and implement it:
-
-- repo and package `AGENTS.md` guidance;
-- relevant `README.md` files;
-- package manifests and scripts;
-- existing tests and test utilities;
-- nearby source/docs named or implied by the packet;
-- current `git status --short` for dirty-path safety.
-
-Use maps only as stale orientation hints. Verify repo facts before relying on map content. Do not edit `.warden/map.md` or `.warden/maps/**/map.md` from this skill.
-
-Use external research only when packet or implementation depends on current upstream APIs, dependency behavior, OS/platform behavior, licensing, security guidance, external services, or third-party docs. Prefer official or primary sources. Do not browse to rediscover local repo facts.
+Use external research only when implementation depends on current upstream APIs, dependency behavior, OS/platform behavior, licensing, security guidance, external services, or third-party docs. Prefer official or primary sources. Do not browse to rediscover local repo facts.
 
 Test commands come from the packet first, then nearest package guidance, then repo guidance. If commands conflict, prefer nearest applicable guidance and report the choice.
 
-</context-sources>
+Append or update only `## TDD Evidence` in `packet.md` as work proceeds.
 
-<workflow>
+## Procedure
 
-1. Resolve and read `$1` end-to-end.
-2. Read required repo/package guidance and inspect `git status --short`.
-3. Apply `<scope-gates>`. Stop if packet is not implementable as one safe slice.
-4. Inspect only enough code/docs/tests to choose the smallest verification surface.
-5. Run a RED → GREEN → TRIANGULATE → REFACTOR cycle and leave evidence in `packet.md`:
-   - RED: choose the smallest automated check that can fail for the packet's acceptance behavior, add or update only that failing check, run the narrow command from packet or nearest guidance, confirm failure for the expected reason, and record command plus expected failure in `## TDD Evidence`.
-   - GREEN: implement the smallest valid code/docs change needed for that acceptance behavior, run the narrow check again, confirm it passes, and record the passing command/result in `## TDD Evidence`.
-   - TRIANGULATE: when first green could be overfit, acceptance has a boundary, or a second focused example would prove the general behavior, add one more narrow contrast/edge/example inside the packet slice, run it red, make it green, and record the example plus result. If triangulation would add no value or broaden scope, record that decision instead.
-   - REFACTOR: with checks green, inspect changed surface for duplication, unclear names, poor seams, or avoidable coupling. Refactor only to improve design without changing behavior, rerun the narrow check, and record the refactor result. If no refactor is needed, record the no-op reason.
-6. Repeat the cycle only for additional acceptance behavior already inside the packet slice. Do not expand scope to chase unrelated coverage or cleanup.
-7. If packet clearly explains no automated test fits, do not invent a fake test. Record the no-automated-test reason in `## TDD Evidence`, then use existing validation/manual checks required by packet or guidance.
-8. Run broader tests only when packet or package guidance requires them, or when changed surface affects shared assumptions.
-9. Manually verify the packet's human-visible checks and record the outcome in `## TDD Evidence`.
-10. Report result using `<output-format>`.
+### Step 1: Resolve and gate
 
-</workflow>
+1. Resolve and read the packet end-to-end.
+2. Read required repo/package guidance.
+3. Inspect `git status --short` and record preexisting dirty paths.
+4. Apply `## Safety rules` and `## Packet readiness`.
+5. Stop before target-file edits if the packet is not one safe implementable slice.
 
-<review-checks>
+### Step 2: Inspect
 
-Before final response, verify:
+1. Inspect only enough code, docs, and tests to choose the smallest verification surface.
+2. Stop and request a user decision through the active user-input workflow if repo evidence contradicts the packet or requires a scope decision.
 
-- packet was read before target edits;
-- relevant guidance was read before target edits;
+### Step 3: RED
+
+1. Choose the smallest automated check that can fail for the packet's acceptance behavior.
+2. Add or update only that failing check.
+3. Run the narrow command from the packet or nearest guidance.
+4. Confirm failure for the expected reason.
+5. Record command plus expected failure in `## TDD Evidence`.
+
+If the packet clearly explains no automated test fits, do not invent a fake test. Record the reason in `## TDD Evidence`, then use required existing validation or manual checks.
+
+### Step 4: GREEN
+
+1. Implement the smallest valid code/docs change for the acceptance behavior.
+2. Run the narrow check again.
+3. Confirm it passes.
+4. Record command/result in `## TDD Evidence`.
+
+### Step 5: TRIANGULATE
+
+1. Add one focused contrast, edge, or example when first green could be overfit, acceptance has a boundary, or a second example proves general behavior.
+2. Run it red, make it green, and record the example plus result.
+3. If triangulation adds no value or broadens scope, record that decision instead.
+
+### Step 6: REFACTOR
+
+1. With checks green, inspect changed surface for duplication, unclear names, poor seams, or avoidable coupling.
+2. Refactor only to improve design without changing behavior.
+3. Rerun the narrow check and record the result.
+4. If no refactor is needed, record why.
+
+### Step 7: Validate and report
+
+1. Repeat only for additional acceptance behavior already inside the packet slice.
+2. Run broader tests only when the packet or guidance requires them, or when changed surface affects shared assumptions.
+3. Manually verify the packet's human-visible checks and record the outcome in `## TDD Evidence`.
+4. Report using `## Output format`.
+
+## Review checklist
+
+Before final response, confirm:
+
+- packet and required guidance were read before target edits;
 - preexisting dirty paths were recorded and protected;
-- edits stayed within packet work area;
-- files-not-to-touch were not changed;
-- unresolved packet contradictions caused a stop instead of silent scope changes;
-- `packet.md` evidence edits were limited to `## TDD Evidence` and did not revise packet scope;
-- failing check was added/updated before implementation when automated testing fit;
-- failure reason was expected before implementation;
-- narrow test passed after implementation;
-- triangulation was performed for overfit/boundary risk, or skipped with a recorded reason;
-- refactor happened only while green, or was skipped with a recorded no-op reason;
-- broader tests were run when required, or skipped with exact reason;
-- manual verification ran, or skipped with exact reason;
-- result reports only commands/checks actually run;
-- next safe step does not imply commit/push unless user asks.
+- edits stayed inside packet work area and outside files-not-to-touch;
+- packet scope was not silently revised;
+- `packet.md` edits were limited to `## TDD Evidence`;
+- RED happened before implementation when automated testing fit;
+- narrow check passed after implementation;
+- triangulation and refactor were done or skipped with recorded reasons;
+- broader tests and manual verification ran, or skipped with exact reasons;
+- result reports only commands/checks actually run.
 
-</review-checks>
+## Stop conditions
 
-<output-format>
+Stop without target-file edits when:
+
+- no valid `packet.md` path was provided;
+- packet quality gates fail;
+- ownership, safety, docs, tests, or manual verification expectations are unresolved;
+- repo evidence contradicts the packet;
+- requested changes cross forbidden boundaries;
+- preexisting dirty paths would be touched without clear scope and user intent;
+- tests fail for unexpected reasons that need packet or user decisions.
+
+## Output format
 
 Respond in this shape:
 
@@ -145,14 +180,9 @@ If changes are required after manual verification:
 
 `/skill:warden-grill <resolved-packet-path>`
 
-If packet is corrrectly implemented:
+If packet is correctly implemented:
 
 `/skill:warden-close <resolved-packet-path>`
-
 ```
 
-Report only commands actually run. If a command was skipped or unavailable, state exact reason.
-
-For stopped work, use the same shape and put blocker in `## Result`, with next safe step such as `/skill:warden-grill <resolved-packet-path>`.
-
-</output-format>
+For stopped work, use the same shape and put the blocker in `## Result`.

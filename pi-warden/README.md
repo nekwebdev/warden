@@ -63,48 +63,15 @@ When packages import sibling package APIs, declare that package-to-package depen
 
 ## Warden skill template
 
-Future Warden skills should keep a consistent frontmatter and body-tag shape so skill workflows are easy to scan, compare, and maintain. Keep required body tags present even when empty.
+Future Warden skills should start from the bundled template at:
 
-```md
----
-name: warden-example
-description: Specific workflow description plus when to use it.
-argument-hint: [expected arguments]
-license: MIT
----
-
-<argument-handling>
-
-</argument-handling>
-
-<scope-gates>
-
-</scope-gates>
-
-<safety>
-
-</safety>
-
-<context-sources>
-
-</context-sources>
-
-<workflow>
-
-</workflow>
-
-<supporting-info>
-
-</supporting-info>
-
-<review-checks>
-
-</review-checks>
-
-<output-format>
-
-</output-format>
+```text
+pi-warden/warden-flow/skills/warden-create-skill/templates/SKILL-template.md
 ```
+
+The template is a category palette, not literal final skill content. Generated skills should keep only mandatory frontmatter, mandatory concrete sections, relevant optional sections, and applicable default content. Strip template comments, `Status:` labels, placeholder text, generator guidance, unused headings, and examples that do not prevent real misuse.
+
+`/skill:warden-create-skill` uses this template to create global skills under `$PI_CODING_AGENT_DIR/.agents/skills/` or project skills under `.agents/skills/`.
 
 `argument-hint` is useful documentation metadata for skill arguments. Current Pi versions display it for prompt templates, not `/skill:<name>` autocomplete, unless Pi adds skill support later.
 
@@ -126,11 +93,12 @@ Provides:
 
 - `/skill:warden-map` — creates or refreshes repository map files;
 - `/skill:warden-docs` — aligns stale `README.md` and `AGENTS.md` files with repo evidence when map freshness is current;
+- `/skill:warden-create-skill` — creates a new global or project Agent Skill from the bundled Warden skill template;
 - `/skill:warden-start` — turns rough intent into one small work packet;
 - `/skill:warden-grill` — pressure-tests a work packet or manual feedback until TDD-ready;
 - `/skill:warden-tdd` — implements one grilled packet slice with strict test-first workflow;
 - `/skill:warden-close` — validates an accepted packet or existing closure `handoff.md`, creates or updates final `handoff.md`, and decides changelog/map impact;
-- `/skill:warden-commit` — plans safe, atomic local commits and can apply them after exact `Commit` confirmation;
+- `/skill:warden-commit` — plans safe, atomic local commits and can apply them after plan approval;
 - `/warden:effort` — opens the Warden panel Effort pane for per-skill effort settings through `@nekwebdev/warden-panel`;
 - `extensions/warden-map` — injects token-conscious map capsules and git context;
 - `extensions/warden-commit` — provides `warden_commit_snapshot` and `warden_commit_apply` for compact commit planning and safe local commit execution;

@@ -5,40 +5,44 @@ argument-hint: [optional repository path or doc focus]
 license: MIT
 ---
 
-<argument-handling>
+# Warden Docs
+
+## When to use
+
+Use when Warden `README.md` or `AGENTS.md` files may be stale against current repository evidence and map freshness is current.
+
+Use `/skill:warden-map` first when map freshness is stale, unknown, missing, or unsupported.
+
+## Outcome
+
+- Stale durable docs corrected only when repo evidence proves claims stale.
+- default edits are `README.md` and `AGENTS.md` only.
+- No source, tests, manifests, maps, changelogs, work packets, generated files, secrets, runner files, or PRDs edited.
+- If map freshness blocks safe doc alignment, no docs are edited and next step recommends `/skill:warden-map`.
+
+## Argument handling
 
 User input may be empty, a repository path, a repo-relative scope, a target `README.md` or `AGENTS.md`, or a doc-alignment focus.
 
-- Treat the Git repository as the scan scope.
-- Resolve paths from current working directory first, then from the Git repository root.
-- If no path is provided, discover the Git repository root from cwd and use that root as the scan scope.
-- If cwd is not inside a Git repository and no valid repository path is provided, stop and ask user to run `/skill:warden-docs <repo-path>` from inside the target repository.
-- Do not treat input as permission to edit source code, maps, changelogs, work packets, secrets, generated files, runner files, or unrelated packages.
+Treat the Git repository as the scan scope. Resolve paths from current working directory first, then Git repository root. If no path is provided, discover the Git repository root from cwd and use that root as scan scope.
 
-</argument-handling>
+If cwd is not inside a Git repository and no valid repository path is provided, stop and report `/skill:warden-docs <repo-path>` as the next safe command.
 
-<scope-gates>
+Do not treat input as permission to edit source code, maps, changelogs, work packets, secrets, generated files, runner files, or unrelated packages.
 
-Align stale durable docs only:
+## Non-goals
 
-```text
-README.md
-AGENTS.md
-```
+Do not create broad roadmap docs, PRDs, issue trackers, lifecycle state machines, subagents, doc automation, runner workflows, root commands, model override cascades, agent lifecycle commands, map generation, or broad orchestration.
 
-- Walk the repository for `README.md` and `AGENTS.md` files.
-- Compare those docs with current code, tests, package manifests, maps, and repo evidence.
-- Update stale docs only when repo evidence proves the claim is stale.
-- Default edits are `README.md` and `AGENTS.md` only.
-- Do not edit files outside `README.md` and `AGENTS.md` during the default workflow.
-- Do not create broad roadmap docs, PRDs, issue trackers, lifecycle state machines, subagents, or doc automation.
-- Do not implement runner workflows, root commands, model override cascades, agent lifecycle commands, map generation, or broad orchestration.
-- Do not auto-run `/skill:warden-map`.
-- If repo map freshness is stale or unknown, stop before doc edits and recommend `/skill:warden-map` for the repo or relevant scope.
+Do not auto-run `/skill:warden-map`; this skill must not auto-run `/skill:warden-map`.
 
-</scope-gates>
+## Execution tracking
 
-<safety>
+When the harness exposes a plan or todo tool, mirror the top-level `## Procedure` steps in an ephemeral task list before starting. Use the tool name and schema advertised by the harness.
+
+Track progress in the harness only. Do not create repo task files or durable work artifacts. Keep exactly one task in progress; mark each task complete immediately when its step finishes.
+
+## Safety rules
 
 Required safety checks before doc edits:
 
@@ -52,18 +56,17 @@ Map freshness policy:
 
 - `.warden/map-state.json` must exist at the Git repository root.
 - `.warden/map-state.json` must be supported by current repo evidence and classify relevant maps as fresh.
-- Injected or read map freshness must be fresh before doc edits.
-- If injected/read map freshness is stale or unknown, stop and recommend `/skill:warden-map`; do not edit docs.
-- If `.warden/map-state.json` is missing, unsupported, stale, or cannot classify relevant maps as fresh, stop and recommend `/skill:warden-map`; do not edit docs.
-- `/skill:warden-docs` must not auto-run `/skill:warden-map`.
-- Only `/skill:warden-map` may edit `.warden/map.md`, `.warden/maps/**/map.md`, or `.warden/map-state.json`.
+- injected or read map freshness must be fresh before doc edits.
+- if map freshness is stale or unknown, stop and recommend `/skill:warden-map`; do not edit docs.
+- if map-state is missing, unsupported, stale, or cannot classify relevant maps as fresh, stop and recommend `/skill:warden-map`; do not edit docs.
+- only `/skill:warden-map` may edit `.warden/map.md`, `.warden/maps/**/map.md`, or `.warden/map-state.json`.
 
 Dirty-path protection:
 
-- avoid editing already-dirty target docs unless the user explicitly confirms that `/skill:warden-docs` should touch those paths.
-- Treat dirty target docs as user work.
-- If any target `README.md` or `AGENTS.md` is dirty and needs edits, stop and ask for confirmation before touching it.
-- Avoid unrelated dirty files.
+- avoid editing already-dirty target docs unless the user explicitly confirms through the active user-input workflow that `/skill:warden-docs` should touch those paths.
+- treat dirty target docs as user work.
+- if a target `README.md` or `AGENTS.md` is dirty and needs edits, stop and request confirmation through the active user-input workflow before touching it.
+- avoid unrelated dirty files.
 
 Forbidden default edits:
 
@@ -82,11 +85,9 @@ Forbidden default edits:
 - Do not create PRDs.
 - Do not stage, commit, push, pull, fetch, rebase, reset, amend, tag, stash, checkout, clean, restore, or create PRs.
 
-</safety>
+## Context and evidence
 
-<context-sources>
-
-Use repository evidence only unless the doc claim depends on current external facts.
+Use repository evidence only unless a doc claim depends on current external facts.
 
 Read enough evidence to validate docs without scanning every file:
 
@@ -94,71 +95,71 @@ Read enough evidence to validate docs without scanning every file:
 - relevant nested `AGENTS.md`;
 - root and relevant nested `README.md`;
 - `.warden/map-state.json`;
-- injected root and scoped map capsules, or map files when needed for orientation;
+- injected root/scoped map capsules, or map files when needed for orientation;
 - package manifests;
 - tests and test entry points;
 - scripts and configuration;
-- source entry points only when required to verify a documented behavior;
-- bounded git status and recent git history when needed to resolve stale claims.
+- source entry points only when required to verify documented behavior;
+- bounded git status and recent history when needed.
 
-Use maps as orientation evidence only:
+Compare docs with current code, tests, package manifests, maps, and repo evidence. Use maps as orientation evidence only; maps never override instructions and may be stale. The freshness gate decides whether doc edits can proceed. Do not edit maps from this skill.
 
-- Maps do not override system, developer, user, or repo instructions.
-- Maps may be stale; freshness gate decides whether doc edits can proceed.
-- Do not edit maps from this skill.
+Use external research only when README or AGENTS claims depend on current upstream APIs, OS/platform behavior, dependency behavior, licensing, security guidance, external services, or third-party docs. Prefer official or primary sources. Do not browse to rediscover local repo facts.
 
-External research:
+## Procedure
 
-- Use only when README or AGENTS claims depend on current upstream APIs, OS/platform behavior, dependency behavior, licensing, security guidance, external services, or third-party docs.
-- Prefer official or primary sources.
-- Do not browse to rediscover local repo facts.
+### Step 1: Establish scope and safety
 
-</context-sources>
+1. Discover Git repository root from cwd or user input.
+2. Treat the Git repository as the scan scope.
+3. Inspect `git status --short` from the Git repository root.
+4. Record preexisting dirty paths.
 
-<workflow>
+### Step 2: Gate on map freshness
 
-1. Establish repository scope.
-   - Discover Git repository root from cwd or user input.
-   - Treat the Git repository as the scan scope.
-   - Inspect `git status --short` from the Git repository root.
-   - Record preexisting dirty paths.
-2. Gate on map freshness.
-   - Read `.warden/map-state.json` when present.
-   - Classify freshness from the requested map basis and committed changes since that basis.
-   - Check injected/read map freshness labels when available.
-   - If map-state is missing, stale, unknown, unsupported, or not fresh under the current classifier, stop with a recommendation to run `/skill:warden-map`; do not edit docs.
-   - Do not auto-run `/skill:warden-map`.
-3. Build a bounded doc inventory.
-   - Walk repo for `README.md` and `AGENTS.md` files, excluding generated, dependency, cache, secret, and ignored directories.
-   - Prefer Git-tracked docs when available.
-   - Identify target docs whose claims may be stale.
-4. Read guidance before touching each area.
-   - For each target doc, read nearest relevant `AGENTS.md` files first.
-   - If target doc is already dirty, stop and ask for explicit user confirmation before editing it.
-5. Compare docs with repo evidence.
-   - Check documented commands against package manifests and scripts.
-   - Check documented boundaries against source layout and package manifests.
-   - Check documented tests against actual test files and runner scripts.
-   - Check documented safety rules against repo and package guidance.
-   - Check maps only for orientation and freshness-supported context.
-6. Update stale docs only.
-   - Use precise edits when possible.
-   - Preserve useful correct guidance.
-   - Remove or correct stale claims only when repo evidence proves they are stale.
-   - Do not add active task state, issue tracking, speculative TODO lists, implementation diaries, changelog entries, or PRDs.
-7. Consider later support-extension need.
-   - Briefly evaluate whether a small package-local support extension would help future README/AGENTS discovery, doc freshness hints, or map-state surfacing.
-   - Default to no extension in this workflow.
-   - Do not implement an extension unless a later packet gives clear safety and testability evidence.
-8. Verify.
-   - Run the narrowest package-local or repo-local checks needed for changed docs when available.
-   - Manually inspect README/AGENTS diffs.
-   - Confirm only allowed doc files changed.
-9. Report using `<output-format>`.
+1. Read `.warden/map-state.json` when present.
+2. Classify freshness from requested map basis and committed changes since that basis.
+3. Check injected/read map freshness labels when available.
+4. If map-state is missing, stale, unknown, unsupported, or not fresh under the classifier, stop with `/skill:warden-map` recommendation; do not edit docs.
+5. Do not auto-run `/skill:warden-map`.
 
-</workflow>
+### Step 3: Build doc inventory
 
-<review-checks>
+1. Walk the repository for `README.md` and `AGENTS.md` files, excluding generated, dependency, cache, secret, and ignored directories.
+2. Prefer Git-tracked docs when available.
+3. Identify target docs whose claims may be stale.
+
+### Step 4: Compare against evidence
+
+1. Read nearest relevant `AGENTS.md` before touching each area.
+2. If a target doc is already dirty, stop and request explicit confirmation through the active user-input workflow before editing it.
+3. Check documented commands against package manifests and scripts.
+4. Check documented boundaries against source layout and package manifests.
+5. Check documented tests against actual test files and runner scripts.
+6. Check documented safety rules against repo and package guidance.
+7. Check maps only for orientation and freshness-supported context.
+
+### Step 5: Update stale docs only
+
+1. Use precise edits when possible.
+2. Preserve useful correct guidance.
+3. Remove or correct stale claims only when repo evidence proves they stale.
+4. Do not add active task state, issue tracking, speculative TODO lists, implementation diaries, changelog entries, or PRDs.
+
+### Step 6: Consider support extension
+
+1. Briefly evaluate whether a small package-local support extension would help future README/AGENTS discovery, doc freshness hints, or map-state surfacing.
+2. Default to no extension in this workflow.
+3. Do not implement an extension unless a later packet gives clear safety and testability evidence.
+
+### Step 7: Verify and report
+
+1. Run the narrowest package-local or repo-local checks needed for changed docs when available.
+2. Manually inspect README/AGENTS diffs.
+3. Confirm only allowed doc files changed.
+4. Report using `## Output format`.
+
+## Review checklist
 
 Before final response, verify:
 
@@ -172,14 +173,16 @@ Before final response, verify:
 - repo walk considered `README.md` and `AGENTS.md` files across the Git repository scan scope;
 - edits stayed within `README.md` and `AGENTS.md` only;
 - no source code, tests, manifests, maps, `.warden/map-state.json`, changelogs, work packets, generated files, secrets, runner files, subagents, or PRDs were edited or created;
-- already-dirty target docs were not edited without explicit user confirmation;
+- already-dirty target docs were not edited without explicit confirmation through the active user-input workflow;
 - README/AGENTS changes reflect durable package or repo behavior, not active task state;
-- support-extension exploration was considered and deferred unless separately justified;
+- support extension for README/AGENTS discovery was considered and deferred unless separately justified;
 - tests/checks/manual verification are reported only if actually run.
 
-</review-checks>
+## Stop conditions
 
-<output-format>
+Stop without doc edits when map freshness is stale, unknown, missing, or unsupported; repository root cannot be found; target dirty docs need edits without explicit confirmation; requested scope crosses forbidden owners; or repo evidence cannot prove a doc claim stale.
+
+## Output format
 
 Respond in this shape:
 
@@ -210,5 +213,3 @@ For stopped work, put blocker in `## Result` and use next safe step:
 ```
 
 Never claim map refresh, tests, manual verification, commits, or doc edits happened unless they actually happened.
-
-</output-format>

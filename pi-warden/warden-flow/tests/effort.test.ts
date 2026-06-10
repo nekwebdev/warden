@@ -34,6 +34,7 @@ const SEEDED_SKILL_EFFORTS = {
 	"warden-tdd": EFFORT_HIGH,
 	"warden-close": EFFORT_MEDIUM,
 	"warden-commit": EFFORT_MEDIUM,
+	"warden-create-skill": EFFORT_HIGH,
 	"warden-docs": EFFORT_MEDIUM,
 } as const;
 

@@ -44,6 +44,7 @@ function skillEntries(): string[] {
 const expectedSkillEntries = [
 	join("skills", "warden-close", "SKILL.md"),
 	join("skills", "warden-commit", "SKILL.md"),
+	join("skills", "warden-create-skill", "SKILL.md"),
 	join("skills", "warden-docs", "SKILL.md"),
 	join("skills", "warden-grill", "SKILL.md"),
 	join("skills", "warden-map", "SKILL.md"),
@@ -51,14 +52,12 @@ const expectedSkillEntries = [
 	join("skills", "warden-tdd", "SKILL.md"),
 ];
 
-const requiredWardenSkillBodyTags = [
-	"argument-handling",
-	"scope-gates",
-	"safety",
-	"context-sources",
-	"workflow",
-	"review-checks",
-	"output-format",
+const requiredHeadingSkillSections = [
+	"When to use",
+	"Outcome",
+	"Execution tracking",
+	"Procedure",
+	"Output format",
 ];
 
 function advertisedExtensionEntries(): string[] {
@@ -88,16 +87,15 @@ function bodyTagNames(content: string): string[] {
 	);
 }
 
-function hasClosedBodyTag(content: string, tag: string): boolean {
-	const openTag = `<${tag}>`;
-	const closeTag = `</${tag}>`;
-	const openIndex = content.indexOf(`${openTag}\n`);
-	if (openIndex < 0) return false;
-	const closeIndex = content.indexOf(
-		`\n${closeTag}`,
-		openIndex + openTag.length,
+function headingNames(content: string): string[] {
+	return [...content.matchAll(/^##\s+(.+)$/gm)].map((match) => match[1] ?? "");
+}
+
+function hasHeadingSkillShape(content: string): boolean {
+	const headings = headingNames(content);
+	return requiredHeadingSkillSections.every((section) =>
+		headings.includes(section),
 	);
-	return closeIndex >= 0;
 }
 
 describe("package pi resources", () => {
@@ -178,17 +176,17 @@ describe("package pi resources", () => {
 			content,
 			/remaining argument text as optional manual feedback evidence/,
 		);
-		assert.match(content, /Status: Packet solid for TDD/);
+		assert.match(content, /Verdict: Packet solid for TDD/);
 	});
 
-	it("warden-start asks packet-ready fine-tuning questions", () => {
+	it("warden-start requests packet-ready fine-tuning through active workflow", () => {
 		const content = skillContent("warden-start");
 
 		assert.match(content, /late fine-tuning checkpoint/i);
 		assert.match(content, /at least two fine-tuning questions/i);
 		assert.match(
 			content,
-			/Once the packet appears ready, ask at least two fine-tuning questions/,
+			/Once the packet appears ready, request at least two fine-tuning questions through the active user-input workflow/,
 		);
 		assert.match(content, /answers incorporated/i);
 	});
@@ -252,6 +250,24 @@ describe("package pi resources", () => {
 		assert.match(content, /support extension.*README\/AGENTS discovery/s);
 	});
 
+	it("warden-create-skill creates global or project skills from the bundled template", () => {
+		const content = skillContent("warden-create-skill");
+
+		assert.match(content, /^name:\s*warden-create-skill$/m);
+		assert.match(content, /^argument-hint:\s*\[skill name or intent\]$/m);
+		assert.match(content, /\$PI_CODING_AGENT_DIR\/\.agents\/skills\//);
+		assert.match(content, /<git-root>\/\.agents\/skills\//);
+		assert.match(content, /templates\/SKILL-template\.md/);
+		assert.match(content, /ask the user to choose exactly one scope/i);
+		assert.match(content, /### Step 1: Choose scope/);
+		assert.match(content, /### Step 2: Read template/);
+		assert.match(content, /### Step 3: Collect inputs and grill skill shape/);
+		assert.match(content, /Grill the user one unresolved decision at a time/);
+		assert.match(content, /For each question, provide your recommended answer/);
+		assert.match(content, /Never silently overwrite an existing/);
+		assert.match(content, /<skill-name>\/SKILL\.md/);
+	});
+
 	it("all skill directories contain SKILL.md with minimal frontmatter", () => {
 		const entries = skillEntries();
 		assert.ok(entries.length > 0, "expected at least one bundled skill");
@@ -267,23 +283,20 @@ describe("package pi resources", () => {
 		}
 	});
 
-	it("all Warden Flow skills follow the package body tag template", () => {
+	it("all Warden Flow skills use heading-based workflow shape", () => {
 		const entries = skillEntries();
 		for (const entry of entries) {
 			const target = resolve(packageRoot, entry);
 			const content = readFileSync(target, "utf-8");
-			const tags = bodyTagNames(content);
-			for (const tag of requiredWardenSkillBodyTags) {
-				assert.ok(
-					tags.includes(tag),
-					`${entry} should include <${tag}> body tag`,
-				);
-				assert.equal(
-					hasClosedBodyTag(content, tag),
-					true,
-					`${entry} should close <${tag}> body tag`,
-				);
-			}
+			assert.deepEqual(
+				bodyTagNames(content),
+				[],
+				`${entry} should not use legacy body tags`,
+			);
+			assert.ok(
+				hasHeadingSkillShape(content),
+				`${entry} should use the heading-based skill shape`,
+			);
 		}
 	});
 

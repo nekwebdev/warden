@@ -2,107 +2,80 @@
 name: warden-commit
 description: Plan safe local git commits from the current workspace and apply them only after plan approval.
 argument-hint: [optional commit focus]
+disable-model-invocation: true
 license: MIT
 ---
 
 # Warden Commit
 
-<scope-gates>
-
 ## When to use
 
-Use this when the user wants to inspect current local Git changes, plan atomic commits, and optionally apply the exact reviewed plan.
-
-Do not use this for pushing, pulling, rebasing, amending, branch switching, stash work, PR creation, workspace cleanup, repo repair, or creating new changes.
+Use when the user wants current local Git changes inspected, grouped into atomic commits, and optionally committed locally after reviewing the exact plan.
 
 ## Outcome
 
-A reviewed, diff-backed commit plan that groups the current workspace changes into safe atomic local commits.
+- Without approval: a diff-backed commit plan, no mutation.
+- With approval: the exact reviewed plan committed locally, with commit hashes and remaining workspace state reported.
+- When unsafe: a clear blocker and next safe step.
 
-If plan approved, the repository has those exact commits applied locally, with commit hashes and remaining workspace state reported.
+## Argument handling
 
-</scope-gates>
+User-provided arguments may guide workspace focus, path scope, grouping, subject wording, or body wording.
 
-<argument-handling>
+Arguments never authorize applying commits.
 
-## Inputs and arguments
+Pi skill command arguments arrive after the `</skill>` block as user text. Do not rely on `$ARGUMENTS`, `$0`, or `$1` substitution inside this file.
 
-Use:
+## Non-goals
 
-- user-provided skill arguments, when present
-- current Git workspace
-- `warden_commit_snapshot` tool output
-- targeted diff or file inspection
-- user approval or rejection after the visible plan
+Do not implement changes, clean the workspace, repair the repo, create PRs, write changelogs, create task artifacts, or perform remote/destructive Git operations.
 
-User-provided skill arguments may guide target Git workspace, focus, grouping, paths, subject wording, or body wording.
+## Execution tracking
 
-Arguments guide planning only. They never authorize apply.
+When the harness exposes a plan or todo tool, mirror the top-level `## Procedure` steps in an ephemeral task list before starting. Use the tool name and schema advertised by the harness.
 
-Pi skill commands append arguments after the `</skill>` block as normal user text. Do not rely on `$ARGUMENTS`, `$0`, or `$1` substitution inside this file.
+Track progress in the harness only. Do not create repo task files or durable work artifacts. Keep exactly one task in progress; mark each task complete immediately when its step finishes.
 
-</argument-handling>
+## Safety rules
 
-<safety>
-
-## Rules
-
-- Plan local commits only.
 - Use `warden_commit_snapshot` before planning.
+- Inspect exact content for every planned path, including untracked files.
+- Show the full plan before requesting approval through the active user-input workflow.
 - Use `warden_commit_apply` as the only mutation path.
 - Never manually stage files or run `git commit`.
 - Never push, pull, fetch, rebase, reset, amend, tag, stash, checkout, clean, restore, or create PRs.
-- Inspect exact content for every planned path, including untracked files.
-- Show the full plan before asking for approval.
-- Apply only the exact visible plan; no hidden files, path changes, or message changes.
-- If the workspace changes after planning, take a new snapshot and rebuild the plan.
+- Apply only the exact visible plan: same `snapshotHash`, subjects, bodies, and repo-relative paths.
+- If workspace state changes after planning, discard the plan, take a new snapshot, and rebuild.
+- Exclude risky, excluded, hidden, generated, secret-looking, dependency, runtime-output, active work-packet, or unrelated paths unless snapshot evidence and user intent make them safe.
 - Never add AI attribution, `Co-authored-by`, or `Generated with ...` text.
-- Never claim tests or verification commands ran unless they actually ran.
+- Never claim tests, checks, approval, commits, or manual verification happened unless they actually happened in this run or are present in reliable prior evidence.
 
-</safety>
+## Context and evidence
 
-<context-sources>
+Use `warden_commit_snapshot` for changed files, warnings, excluded paths, boundaries, suggested buckets, recent commit subjects, and `snapshotHash`.
 
-Use the current Git workspace, `warden_commit_snapshot`, targeted diffs, file reads, and user approval or rejection after the visible plan.
+Use targeted diffs and file reads for semantic grouping, safety, and commit message wording. Use overview diffs only as supporting context, never as sole evidence for non-trivial changes.
 
-</context-sources>
+Infer commit message style from recent commit subjects in the snapshot. If unclear, fall back to `feat|fix|chore|docs|refactor|test(scope): short text` style.
 
-<workflow>
+## Tool contract
 
-## Procedure
+`warden_commit_snapshot` is read-only. It does not authorize mutation.
 
-Use an ephemeral todo list when the harness provides one. Do not create repo task files or durable work artifacts.
+`warden_commit_apply` may run only after the user clearly approves the exact visible plan. Call it with only:
 
-### Step 1: Snapshot
+- reviewed `snapshotHash`;
+- exact planned commits;
+- exact repo-relative file paths.
 
-1. Call the `warden_commit_snapshot` tool.
-2. Review changed files, warnings, excluded paths, boundaries, suggested buckets, recent commit subjects, and `snapshotHash`.
-3. Stop on safety blockers such as risky paths, excluded paths, mixed staged and unstaged files, unsafe staged files, or unclear workspace state.
-4. Ask only when grouping, focus, message intent, or scope is unclear.
-
-### Step 2: Inspect diffs
-
-1. Inspect every path that may be committed.
-2. Use overview commands only as supporting context, never as the only evidence for non-trivial changes.
-3. For large diffs, inspect bounded chunks until enough evidence exists for safety, grouping, and message wording.
-
-Preferred tracked-file command:
+Useful inspection commands:
 
 ```sh
 git diff -- <path>
-```
-
-For related tracked files:
-
-```sh
 git diff -- <path1> <path2> ...
-```
-
-For overview only:
-
-```sh
 git diff --stat -- <paths>
 git diff --name-status -- <paths>
+git diff --staged --name-status
 ```
 
 For untracked text files, use `read` or:
@@ -113,41 +86,9 @@ git diff --no-index -- /dev/null <path>
 
 `git diff --no-index` exits `1` when differences exist; that is expected.
 
-For staged renames:
+## Approval policy
 
-```sh
-git diff --staged --name-status
-```
-
-### Step 3: Plan commits
-
-1. Group files by logical purpose, Warden boundary, and package locality.
-2. Keep one cohesive slice together when docs, tests, implementation, and package docs belong to the same change.
-3. Split unrelated boundaries into separate commits.
-4. Match recent commit style when clear; otherwise prefer Conventional Commits.
-5. Use concrete subjects.
-6. For non-trivial commits, include a body with `Why`, `What`, and `Verification`.
-7. In `Verification`, list commands actually run or `Not run — <reason>`.
-
-### Step 4: Show plan
-
-Show the full plan before asking for approval.
-
-The plan must include:
-
-- `snapshotHash`
-- each commit subject
-- exact body or `(none)`
-- exact repo-relative paths
-- warnings or excluded files
-- diff inspection performed
-- grouping reason when useful
-
-If the workspace changes after the plan is shown, discard the plan, take a new snapshot, and rebuild.
-
-### Step 5: Ask user
-
-Request a user decision through the active agent or harness user-input workflow.
+After showing the full plan request a user decision through the active user-input workflow.
 
 Question text:
 
@@ -155,39 +96,84 @@ Question text:
 Apply this exact commit plan?
 ```
 
-Treat the reply as approval only when it clearly and unconditionally accepts the exact visible plan without edits, conditions, questions, or partial selection.
+Approval must clearly and unconditionally accept the exact visible plan. Ambiguous, conditional, partial, edited, or questioning replies are not approval. If not approved, revise, abort, or request one clarifying answer through the active user-input workflow; do not apply.
 
-Any other reply means do not apply. Revise, abort, or ask one clarifying question.
+## Procedure
+
+### Step 1: Snapshot
+
+1. Call `warden_commit_snapshot`.
+2. Review changed files, warnings, excluded paths, Warden boundaries, suggested buckets, recent commit subjects, and `snapshotHash`.
+3. Stop on safety blockers or unclear workspace state.
+
+### Step 2: Inspect
+
+1. Inspect every path that may be committed.
+2. For large diffs, inspect bounded chunks until grouping, safety, and message wording are supported by evidence.
+3. Request user input through the active user-input workflow only when grouping, focus, message intent, or scope remains unclear after inspection.
+
+### Step 3: Plan
+
+1. Group files by logical purpose, Warden boundary, and package locality.
+2. Keep one cohesive slice together when docs, tests, implementation, and package docs belong to the same change.
+3. Split unrelated boundaries into separate commits.
+4. Use the snapshot's recent commit subjects as the first source for subject style.
+5. If recent subjects do not show a clear style, fall back to `feat|fix|chore|docs|refactor|test(scope): short text`.
+6. Use concrete subjects.
+7. For non-trivial commits, include a body with `Why`, `What`, and `Verification`.
+8. In `Verification`, list commands actually run or `Not run — <reason>`.
+
+### Step 4: Review
+
+Show the full plan with:
+
+- `snapshotHash`;
+- each commit subject;
+- exact body or `(none)`;
+- exact repo-relative paths;
+- warnings or excluded files;
+- diff inspection performed;
+- grouping reason when useful.
+
+### Step 5: Request approval
+
+Request `Apply this exact commit plan?` through the active user-input workflow. Do not apply unless approval is clear and unconditional.
 
 ### Step 6: Apply
 
-If approved, call `warden_commit_apply` with:
-
-- reviewed `snapshotHash`
-- exact planned commits
-- exact repo-relative file paths
+If approved, call `warden_commit_apply` with the reviewed `snapshotHash`, exact planned commits, and exact repo-relative file paths.
 
 ### Step 7: Report
 
-After apply, report:
+Report created commit hashes, final `git status --short`, remaining uncommitted files, or the exact blocker/tool refusal.
 
-- created commit hash or hashes
-- final `git status --short`
-- remaining uncommitted files
+## Review checklist
 
-If apply fails, report the tool refusal or error and the next safe step.
+Before calling `warden_commit_apply`, confirm:
 
-</workflow>
+- snapshot ran;
+- every planned path was inspected;
+- full plan was visible to the user;
+- approval came after the visible plan;
+- approval clearly accepted the exact visible plan;
+- tool arguments exactly match the reviewed plan;
+- no excluded, risky, hidden, generated, or unrelated paths are included;
+- no manual staging or `git commit` command was used.
 
-<review-checks>
+## Stop conditions
 
-Before calling `warden_commit_apply`, confirm the full plan was visible, approval came after that plan through the active user-input workflow, snapshot hash still matches the visible plan, and every tool argument exactly matches the reviewed plan.
+Stop without applying when:
 
-</review-checks>
+- snapshot reports blockers;
+- workspace state is unclear or changed after planning;
+- planned paths are unsafe or uninspected;
+- grouping or message intent remains unclear;
+- approval is missing or ambiguous;
+- `warden_commit_apply` refuses the plan.
 
-<output-format>
+## Output format
 
-## Plan format
+### Plan
 
 ```md
 # Warden Commit Plan
@@ -214,29 +200,34 @@ Why this grouping:
 ## Diff inspection
 
 - <commands, files, or chunks inspected>
+
+## Next step
+
+Request approval through the active user-input workflow with `Apply this exact commit plan?`.
 ```
 
-After showing the plan, request the user decision through the active agent or harness user-input workflow:
-
-```text
-Apply this exact commit plan?
-```
-
-## Result format
+### Result
 
 ````md
 # Warden Commit Result
 
-Created:
+Status: Applied | Planned | Blocked
+
+## Result
+
+## Created
+
 - `<hash>` `<subject>`
 
-Final status:
+## Final status
+
 ```text
 <git status --short>
 ```
 
-Remaining uncommitted files:
-- <path or "None">
-````
+## Remaining uncommitted files
 
-</output-format>
+- <path or "None">
+
+## Next safe step
+````

@@ -60,6 +60,7 @@ Use only folders that fit the package.
   - Owns Warden workflow/orientation Pi behavior.
   - Owns `/skill:warden-map`, map capsule injection, scoped map loading, and git context injection.
   - Owns `/skill:warden-docs` for stale durable doc alignment when map freshness is current.
+  - Owns `/skill:warden-create-skill` and its bundled Warden skill template.
   - Owns `/skill:warden-start`, `/skill:warden-grill`, `/skill:warden-tdd`, and `/skill:warden-close` workflow skills.
   - Owns `/skill:warden-commit`, commit snapshot/apply tools, and local commit safety rules.
   - Owns `/warden:effort` and per-skill effort defaults for Warden Flow skills.
@@ -105,53 +106,18 @@ Use only folders that fit the package.
 
 ## Warden skill template
 
-Future Warden skills should start from this shape. Keep every body tag present, even when a tag is empty for a narrow skill.
+Future Warden skills should start from the bundled template at:
 
-```md
----
-name: warden-example
-description: Specific workflow description plus when to use it.
-argument-hint: [type of argument 1, type of argument 2, ...]
-license: MIT
----
-
-<argument-handling>
-
-</argument-handling>
-
-<scope-gates>
-
-</scope-gates>
-
-<safety>
-
-</safety>
-
-<context-sources>
-
-</context-sources>
-
-<workflow>
-
-</workflow>
-
-<supporting-info>
-
-</supporting-info>
-
-<review-checks>
-
-</review-checks>
-
-<output-format>
-
-</output-format>
+```text
+pi-warden/warden-flow/skills/warden-create-skill/templates/SKILL-template.md
 ```
 
-- `name`, `description`, and `license` follow the Agent Skills frontmatter shape used by `warden-grill`.
+Use it as a category palette, not literal final skill content. Final generated skills should keep only mandatory frontmatter, mandatory concrete sections, relevant optional sections, and applicable default content. Strip template comments, `Status:` labels, placeholder text, generator guidance, unused headings, and examples that do not prevent real misuse.
+
+`/skill:warden-create-skill` uses the template to create global skills under `$PI_CODING_AGENT_DIR/.agents/skills/` or project skills under `.agents/skills/`.
+
+- `name`, `description`, and `license` follow the Agent Skills frontmatter shape used by Warden skills.
 - `argument-hint` documents expected `/skill:<name>` arguments. Pi currently treats it as metadata for skills; do not rely on autocomplete display unless Pi adds skill support.
-- Add extra body tags only when the skill truly needs them; any clear tag name may be used when it captures relevant, repeated structure for that skill.
-- Good optional tag candidates include `<inputs>`, `<state-files>`, `<decision-points>`, `<handoff>`, and `<failure-modes>`.
 - Keep deterministic, repeated, safety-sensitive, or testable behavior in package code instead of only in template prose.
 
 ## Testing
