@@ -1,0 +1,48 @@
+{
+	"name": "@nekwebdev/fresh-skill",
+	"version": "0.1.0",
+	"type": "module",
+	"author": "nekwebdev",
+	"license": "MIT",
+	"description": "Pi extension package providing /fresh to restart cleanly into a selected skill.",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/nekwebdev/warden.git",
+		"directory": "pi-warden/fresh-skill"
+	},
+	"keywords": [
+		"pi-package",
+		"fresh-skill",
+		"pi-extension"
+	],
+	"files": [
+		"README.md",
+		"AGENTS.md",
+		"LICENSE",
+		"extensions/**/*.ts",
+		"src/**/*.ts",
+		"scripts/**/*.mjs",
+		"tests/**/*.test.ts"
+	],
+	"exports": {
+		".": "./src/index.ts"
+	},
+	"scripts": {
+		"test": "node scripts/run-tests.mjs"
+	},
+	"pi": {
+		"extensions": [
+			"./extensions/fresh/index.ts"
+		]
+	},
+	"peerDependencies": {
+		"@earendil-works/pi-coding-agent": "*",
+		"@earendil-works/pi-tui": "*"
+	},
+	"devDependencies": {
+		"@earendil-works/pi-coding-agent": "*",
+		"@earendil-works/pi-tui": "*",
+		"@types/node": "^25.9.3",
+		"tsx": "^4.20.0"
+	}
+}

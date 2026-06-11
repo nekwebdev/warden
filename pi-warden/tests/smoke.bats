@@ -3,6 +3,10 @@
 setup() { PROJECT_ROOT=$(cd "$BATS_TEST_DIRNAME/.." && pwd -P); }
 
 @test "pi-warden contains current package folders" {
+  [ -d "$PROJECT_ROOT/fresh-skill" ]
+  [ -f "$PROJECT_ROOT/fresh-skill/package.json" ]
+  [ -d "$PROJECT_ROOT/fresh-skill/extensions/fresh" ]
+
   [ -d "$PROJECT_ROOT/warden-panel" ]
   [ -f "$PROJECT_ROOT/warden-panel/package.json" ]
   [ -d "$PROJECT_ROOT/warden-panel/extensions/warden-panel" ]
@@ -28,6 +32,14 @@ setup() { PROJECT_ROOT=$(cd "$BATS_TEST_DIRNAME/.." && pwd -P); }
   [ -d "$PROJECT_ROOT/warden-web" ]
   [ -f "$PROJECT_ROOT/warden-web/package.json" ]
   [ -d "$PROJECT_ROOT/warden-web/src/server" ]
+}
+
+@test "fresh-skill declares package and bundled extension manifest" {
+  run grep -F '"name": "@nekwebdev/fresh-skill"' "$PROJECT_ROOT/fresh-skill/package.json"
+  [ "$status" -eq 0 ]
+
+  run grep -F '"./extensions/fresh/index.ts"' "$PROJECT_ROOT/fresh-skill/package.json"
+  [ "$status" -eq 0 ]
 }
 
 @test "warden-panel declares package and bundled extension manifest" {

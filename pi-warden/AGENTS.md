@@ -56,6 +56,11 @@ Use only folders that fit the package.
 
 ## Current package boundaries
 
+- `fresh-skill/`
+  - Owns the standalone `/fresh` Pi extension for clean-session skill replay.
+  - Owns skill-only autocomplete, loaded-skill validation, argument preservation, and replacement-session replay.
+  - Does not own `warden-flow`, runner workflows, agent lifecycle commands, panel UI, or package-manager behavior.
+
 - `warden-flow/`
   - Owns Warden workflow/orientation Pi behavior.
   - Owns `/skill:warden-map`, map capsule injection, scoped map loading, and git context injection.
@@ -131,11 +136,13 @@ Use it as a category palette, not literal final skill content. Final generated s
 From the repo root:
 
 ```sh
+npm install --prefix pi-warden/fresh-skill
 npm install --prefix pi-warden/warden-panel
 npm install --prefix pi-warden/warden-flow
 npm install --prefix pi-warden/warden-subagents
 npm install --prefix pi-warden/warden-web
 
+npm test --prefix pi-warden/fresh-skill
 npm test --prefix pi-warden/warden-panel
 npm test --prefix pi-warden/warden-flow
 npm test --prefix pi-warden/warden-subagents

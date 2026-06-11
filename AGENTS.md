@@ -100,6 +100,7 @@ Current GitHub package/area labels:
 - `warden`
 - `run-warden`
 - `pi-warden`
+- `fresh-skill`
 - `warden-flow`
 - `warden-panel`
 - `warden-subagents`

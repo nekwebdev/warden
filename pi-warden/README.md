@@ -23,6 +23,7 @@ pi-warden/
 ├── README.md
 ├── AGENTS.md
 ├── tests/
+├── fresh-skill/
 ├── warden-flow/
 ├── warden-panel/
 ├── warden-subagents/
@@ -83,6 +84,23 @@ Packages that add `warden-*` skills should seed default effort settings in Pi `s
 Effort defaults and runtime thinking-level behavior belong in package code and extensions, not skill frontmatter, skill descriptions, or `[effort:*]` prose prefixes.
 
 ## Current packages
+
+### `fresh-skill/`
+
+Package: `@nekwebdev/fresh-skill`
+
+Standalone `/fresh` extension package for starting a clean Pi session and replaying a selected loaded skill with preserved arguments.
+
+Provides:
+
+- `/fresh <skill> [args...]` — validates a loaded skill, creates a replacement session, and sends `/skill:<skill> [args...]` from replacement-session context.
+
+Package docs:
+
+```text
+pi-warden/fresh-skill/README.md
+pi-warden/fresh-skill/AGENTS.md
+```
 
 ### `warden-flow/`
 
@@ -218,11 +236,13 @@ Do not mutate root `./warden` or `run-warden/` from package work unless the task
 From the Warden repo root:
 
 ```sh
+npm install --prefix pi-warden/fresh-skill
 npm install --prefix pi-warden/warden-panel
 npm install --prefix pi-warden/warden-flow
 npm install --prefix pi-warden/warden-subagents
 npm install --prefix pi-warden/warden-web
 
+npm test --prefix pi-warden/fresh-skill
 npm test --prefix pi-warden/warden-panel
 npm test --prefix pi-warden/warden-flow
 npm test --prefix pi-warden/warden-subagents
@@ -239,6 +259,7 @@ Package-local commands should remain independently runnable.
 From the Warden repo root, local packages can be loaded temporarily during development:
 
 ```sh
+pi -e ./pi-warden/fresh-skill
 pi -e ./pi-warden/warden-panel
 pi -e ./pi-warden/warden-flow
 pi -e ./pi-warden/warden-subagents
@@ -248,6 +269,7 @@ pi -e ./pi-warden/warden-theme
 Or installed locally into a Pi environment:
 
 ```sh
+pi install ./pi-warden/fresh-skill
 pi install ./pi-warden/warden-panel
 pi install ./pi-warden/warden-flow
 pi install ./pi-warden/warden-subagents

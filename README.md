@@ -218,12 +218,15 @@ pi-warden/<package>/
 Current package areas include:
 
 ```text
+pi-warden/fresh-skill/
 pi-warden/warden-flow/
 pi-warden/warden-panel/
 pi-warden/warden-subagents/
 pi-warden/warden-theme/
 pi-warden/warden-web/
 ```
+
+`pi-warden/fresh-skill/` contains the standalone `/fresh` extension for starting a clean Pi session and replaying a selected loaded skill.
 
 `pi-warden/warden-flow/` contains Warden flow/orientation work, including map/docs/start/grill/TDD/close/commit skills plus related map/git-context, effort, and commit-safety extensions.
 
@@ -277,7 +280,7 @@ Issue templates, package auto-labeling, and the PR package/area checklist track 
 
 - root private package/bootstrap: `warden`;
 - top-level subproject/product areas: `run-warden`, `pi-warden`, `nix-warden`, and `dev-warden`;
-- direct Pi package folders with `package.json`: `warden-flow`, `warden-panel`, `warden-subagents`, `warden-theme`, and `warden-web`.
+- direct Pi package folders with `package.json`: `fresh-skill`, `warden-flow`, `warden-panel`, `warden-subagents`, `warden-theme`, and `warden-web`.
 
 Current labels use `pkg:<slug>`, for example `pkg:run-warden` or `pkg:warden-flow`.
 

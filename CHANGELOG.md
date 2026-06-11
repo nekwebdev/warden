@@ -7,6 +7,7 @@ All notable Warden changes are recorded here.
 ### Added
 
 - Added `@nekwebdev/warden-flow` active-flow footer status showing current packet tracker state through a default-on Display setting.
+- Added `@nekwebdev/fresh-skill` standalone Pi package with `/fresh` clean-session skill replay.
 - Added `@nekwebdev/warden-flow` packet tracker extension for allowlisted packet lifecycle state in `.warden/work/packet-tracker.json`.
 - Added `@nekwebdev/warden-flow` invocation-scoped runtime directives for `warden-start` auto mode through `/skill:warden-start --auto` and `warden.flow.interactionMode = "auto"`.
 - Added `@nekwebdev/warden-subagents` package-local Pi event-bus RPC for `subagents:rpc:ping`, `subagents:rpc:spawn`, and `subagents:rpc:stop`, plus focused lifecycle events for cross-extension interop.
