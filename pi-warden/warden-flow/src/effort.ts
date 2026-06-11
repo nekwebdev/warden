@@ -44,7 +44,8 @@ export type WardenSkillEffortEntry = {
 	readonly effort: WardenEffortLevel;
 };
 
-export const DEFAULT_WARDEN_SKILL_STATUS_ENABLED = false;
+export const DEFAULT_WARDEN_SKILL_STATUS_ENABLED = true;
+export const DEFAULT_WARDEN_ACTIVE_FLOW_STATUS_ENABLED = true;
 
 type PiAgentSettingsReadResult =
 	| { readonly ok: true; readonly settings: Record<string, unknown> }
@@ -128,7 +129,28 @@ export function readWardenSkillStatusEnabled(): boolean {
 	const result = readPiAgentSettings();
 	if (!result.ok) return DEFAULT_WARDEN_SKILL_STATUS_ENABLED;
 	const { currentEffort } = settingsParts(result.settings);
-	return currentEffort.showSkillStatus === true;
+	return currentEffort.showSkillStatus !== false;
+}
+
+export function readWardenActiveFlowStatusEnabled(): boolean {
+	const result = readPiAgentSettings();
+	if (!result.ok) return DEFAULT_WARDEN_ACTIVE_FLOW_STATUS_ENABLED;
+	const { currentFlow } = settingsParts(result.settings);
+	return currentFlow.showActiveFlowStatus !== false;
+}
+
+export function setWardenActiveFlowStatusEnabled(
+	enabled: boolean,
+): WardenEffortSettingsResult {
+	const result = readPiAgentSettings();
+	if (!result.ok) return result;
+	const { currentWarden, currentFlow } = settingsParts(result.settings);
+	return writePiAgentSettings(
+		withWardenFlowSettings(result.settings, currentWarden, {
+			...currentFlow,
+			showActiveFlowStatus: enabled,
+		}),
+	);
 }
 
 export function setWardenSkillStatusEnabled(
@@ -247,16 +269,20 @@ function writeSettingsJson(
 function settingsParts(settings: Record<string, unknown>): {
 	readonly currentWarden: Record<string, unknown>;
 	readonly currentEffort: Record<string, unknown>;
+	readonly currentFlow: Record<string, unknown>;
 	readonly currentSkills: Record<string, unknown>;
 } {
 	const currentWarden = isPlainObject(settings.warden) ? settings.warden : {};
 	const currentEffort = isPlainObject(currentWarden.effort)
 		? currentWarden.effort
 		: {};
+	const currentFlow = isPlainObject(currentWarden.flow)
+		? currentWarden.flow
+		: {};
 	const currentSkills = isPlainObject(currentEffort.skills)
 		? currentEffort.skills
 		: {};
-	return { currentWarden, currentEffort, currentSkills };
+	return { currentWarden, currentEffort, currentFlow, currentSkills };
 }
 
 function withWardenSkillEfforts(
@@ -281,6 +307,20 @@ function withWardenEffortSettings(
 		warden: {
 			...currentWarden,
 			effort,
+		},
+	};
+}
+
+function withWardenFlowSettings(
+	settings: Record<string, unknown>,
+	currentWarden: Record<string, unknown>,
+	flow: Record<string, unknown>,
+): Record<string, unknown> {
+	return {
+		...settings,
+		warden: {
+			...currentWarden,
+			flow,
 		},
 	};
 }

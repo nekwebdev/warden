@@ -1,11 +1,23 @@
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import {
+	contributeWardenDisplaySetting,
+	contributeWardenPaneActionHandler,
+	hasWardenDisplaySetting,
+	type WardenPanelPaneAction,
+	type WardenPanelPaneContext,
+} from "@nekwebdev/warden-panel";
+import {
 	applyPacketTrackerUpdate,
+	loadActiveFlowStatus,
 	parsePacketName,
 	parsePacketPath,
 	parsePacketStatus,
 	type PacketTrackerStep,
 } from "../../src/packet-tracker.js";
+import {
+	readWardenActiveFlowStatusEnabled,
+	setWardenActiveFlowStatusEnabled,
+} from "../../src/effort.js";
 
 type InputEvent = {
 	readonly text?: string;
@@ -25,6 +37,7 @@ type PacketTrackerContext = {
 	readonly hasUI?: boolean;
 	readonly ui?: {
 		select?: (prompt: string, options: string[]) => Promise<string | undefined>;
+		setStatus?: (key: string, text: string | undefined) => void;
 	};
 };
 
@@ -33,9 +46,21 @@ type PendingInvocation = {
 	readonly packetPath?: string;
 };
 
+type ActiveFlowSettings = {
+	readonly showActiveFlowStatus?: boolean;
+	readonly [key: string]: unknown;
+};
+
 export interface WardenPacketTrackerOptions {
 	readonly now?: () => string;
 }
+
+export const ACTIVE_FLOW_STATUS_KEY = "warden-flow.active-flow";
+export const ACTIVE_FLOW_DISPLAY_SETTING_ID = "warden-flow.active-flow-status";
+export const ACTIVE_FLOW_DISPLAY_SETTING_LABEL = "Show active flow status";
+
+const DISPLAY_PANE_ID = "display";
+const ACTIVE_FLOW_STATUS_REFRESH_ACTION = "refresh-active-flow-status";
 
 const ALLOWLISTED_STEPS = new Set<PacketTrackerStep>([
 	"warden-start",
@@ -50,6 +75,8 @@ export function registerWardenPacketTracker(
 ): void {
 	let pendingInvocation: PendingInvocation | undefined;
 	const now = options.now ?? (() => new Date().toISOString());
+
+	registerActiveFlowDisplaySetting();
 
 	function clearPending(): void {
 		pendingInvocation = undefined;
@@ -93,15 +120,119 @@ export function registerWardenPacketTracker(
 				nextStepChoice,
 				now: now(),
 			});
+			refreshActiveFlowStatus(ctx);
 			return undefined;
 		},
 	);
 
+	pi.on("session_start", (_event, ctx: PacketTrackerContext) => {
+		refreshActiveFlowStatus(ctx);
+	});
 	pi.on("session_shutdown", clearPending);
 }
 
 export default function wardenPacketTracker(pi: ExtensionAPI): void {
 	registerWardenPacketTracker(pi);
+}
+
+export function refreshActiveFlowStatus(ctx: PacketTrackerContext): void {
+	if (!canSetStatus(ctx)) return;
+	if (!readWardenActiveFlowStatusEnabled()) {
+		ctx.ui.setStatus(ACTIVE_FLOW_STATUS_KEY, undefined);
+		return;
+	}
+	ctx.ui.setStatus(
+		ACTIVE_FLOW_STATUS_KEY,
+		loadActiveFlowStatus(ctx.cwd ?? process.cwd()).text,
+	);
+}
+
+function registerActiveFlowDisplaySetting(): void {
+	if (!hasWardenDisplaySetting(ACTIVE_FLOW_DISPLAY_SETTING_ID)) {
+		contributeWardenDisplaySetting(createActiveFlowDisplaySetting());
+	}
+	contributeWardenPaneActionHandler(DISPLAY_PANE_ID, async (action, ctx) => {
+		if (!isActiveFlowRefreshAction(action)) return;
+		refreshActiveFlowStatus(ctx.commandContext);
+	});
+}
+
+function createActiveFlowDisplaySetting() {
+	return {
+		id: ACTIVE_FLOW_DISPLAY_SETTING_ID,
+		order: 10,
+		itemCount: () => 1,
+		render: (ctx: WardenPanelPaneContext, _width: number, active: boolean) => [
+			renderActiveFlowSettingRow(
+				wardenFlowSettings(ctx.draftSettings).showActiveFlowStatus !== false,
+				active && ctx.selectedIndex === 0,
+				ctx,
+			),
+			"",
+		],
+		handleInput: (_data: string, ctx: WardenPanelPaneContext) => {
+			if (ctx.selectedIndex !== 0) return false;
+			const currentFlow = wardenFlowSettings(ctx.draftSettings);
+			const enabled = currentFlow.showActiveFlowStatus === false;
+			const result = setWardenActiveFlowStatusEnabled(enabled);
+			if (!result.ok) return false;
+			ctx.updateDraftSettings({
+				flow: {
+					...currentFlow,
+					showActiveFlowStatus: enabled,
+				},
+			});
+			return { action: ACTIVE_FLOW_STATUS_REFRESH_ACTION };
+		},
+	};
+}
+
+function wardenFlowSettings(
+	settings: WardenPanelPaneContext["draftSettings"],
+): ActiveFlowSettings {
+	const flow = (settings as { readonly flow?: unknown }).flow;
+	return isPlainObject(flow) ? flow : {};
+}
+
+function renderActiveFlowSettingRow(
+	enabled: boolean,
+	active: boolean,
+	ctx: WardenPanelPaneContext,
+): string {
+	const mark = enabled ? ctx.glyphs.checkboxOn : ctx.glyphs.checkboxOff;
+	return renderSelectableRow(
+		`${mark} ${ACTIVE_FLOW_DISPLAY_SETTING_LABEL}`,
+		active,
+		ctx,
+	);
+}
+
+function renderSelectableRow(
+	text: string,
+	active: boolean,
+	ctx: WardenPanelPaneContext,
+): string {
+	const pointer = active
+		? ctx.theme.bold(ctx.theme.fg("text", ctx.glyphs.pointer))
+		: "  ";
+	const row = `${pointer}${text}`;
+	return active
+		? ctx.theme.bold(ctx.theme.fg("text", row))
+		: ctx.theme.fg("text", row);
+}
+
+function isActiveFlowRefreshAction(action: WardenPanelPaneAction): boolean {
+	return action.action === ACTIVE_FLOW_STATUS_REFRESH_ACTION;
+}
+
+function canSetStatus(
+	ctx: PacketTrackerContext,
+): ctx is PacketTrackerContext & {
+	readonly ui: {
+		readonly setStatus: (key: string, text: string | undefined) => void;
+	};
+} {
+	return ctx.hasUI !== false && typeof ctx.ui?.setStatus === "function";
 }
 
 export function parseSkillInvocation(

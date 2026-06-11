@@ -18,7 +18,7 @@ It reduces repeated repo discovery by maintaining a small map tree, injecting on
 - `extensions/warden-map` — injects map capsules and git context.
 - `extensions/warden-commit` — registers `warden_commit_snapshot` and `warden_commit_apply` for safe local commit planning and execution.
 - `extensions/warden-effort` — seeds Warden skill effort defaults and applies configured effort before `/skill:warden-*` expansion.
-- `extensions/warden-packet-tracker` — records allowlisted Warden Flow packet lifecycle state in `.warden/work/packet-tracker.json` after completed skill turns.
+- `extensions/warden-packet-tracker` — records allowlisted Warden Flow packet lifecycle state in `.warden/work/packet-tracker.json` after completed skill turns and publishes the active packet in the Pi footer.
 - Session-start map injection — hidden root map capsule from `<git-root>/.warden/map.md`.
 - Scoped map injection — hidden scoped capsules from `<git-root>/.warden/maps/<scope>/map.md` appended to relevant tool results.
 - Git context injection — branch, short commit, and dirty state.
@@ -178,6 +178,8 @@ Lifecycle behavior is deterministic:
 
 The extension captures allowlisted invocations from raw `input` or expanded `before_agent_start` skill prompts, then processes final assistant messages at `agent_end`. It parses `Packet name:`, `Packet path:`, `Tracker status:`, and `Summary:` only from the top tracker block before the first `##` heading, while keeping `nextStep` extension-owned. Existing malformed or schema-invalid tracker JSON is left unchanged for that update.
 
+When `warden.flow.showActiveFlowStatus` is absent or `true`, the extension sets Pi footer status key `warden-flow.active-flow` to `Active Flow: <packetName> - next: <nextStep>` using `current.packetName` and `current.nextStep`. Missing, malformed, schema-invalid, or `current: null` tracker state renders `Active Flow: none` without rewriting tracker JSON. Set `warden.flow.showActiveFlowStatus` to `false` from the Display pane to clear the footer status immediately and keep it cleared on later refreshes.
+
 ## Skill effort
 
 Warden Flow stores per-skill effort settings and the skill status indicator toggle in Pi `settings.json`:
@@ -186,7 +188,7 @@ Warden Flow stores per-skill effort settings and the skill status indicator togg
 {
   "warden": {
     "effort": {
-      "showSkillStatus": false,
+      "showSkillStatus": true,
       "skills": {
         "warden-map": "low",
         "warden-start": "medium",
@@ -215,9 +217,9 @@ Current defaults seeded at session start:
 
 `/warden:effort` opens the Effort pane contributed through the public pane API from `@nekwebdev/warden-panel`. `warden-flow` declares that package as a dependency so the pane framework is available when the Effort extension loads. Space/Enter cycles a selected skill through `off`, `minimal`, `low`, `medium`, `high`, `xhigh` and writes immediately; there is no Apply step.
 
-`extensions/warden-effort` also contributes a Display pane setting for the skill status indicator through `contributeWardenDisplaySetting()`. The indicator defaults off. Toggle it from Display; the setting writes inline.
+`extensions/warden-effort` also contributes a Display pane setting for the skill status indicator through `contributeWardenDisplaySetting()`. The indicator defaults on. Toggle it from Display; the setting writes inline.
 
-When a `/skill:warden-*` turn starts, `extensions/warden-effort` reads the configured level, calls Pi's public `setThinkingLevel()`, shows a small themed Pi status indicator with the active skill and effort level when `warden.effort.showSkillStatus` is `true` (default off), then restores the previous thinking level and clears the status indicator after the agent turn. Pi may clamp unsupported levels depending on the active model/provider.
+When a `/skill:warden-*` turn starts, `extensions/warden-effort` reads the configured level, calls Pi's public `setThinkingLevel()`, shows a small themed Pi status indicator with the active skill and effort level unless `warden.effort.showSkillStatus` is explicitly `false`, then restores the previous thinking level and clears the status indicator after the agent turn. Pi may clamp unsupported levels depending on the active model/provider.
 
 ## Create skill workflow
 

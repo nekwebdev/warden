@@ -242,7 +242,7 @@ describe("Effort pane", () => {
 		};
 
 		assert.deepEqual(setting.render(ctx, 80, true), [
-			"> [ ] Show skill status indicator",
+			"> [x] Show skill status indicator",
 			"",
 		]);
 		assert.ok(
@@ -254,7 +254,7 @@ describe("Effort pane", () => {
 		assert.equal(setting.handleInput?.(" ", ctx), true);
 		assert.deepEqual(draftSettings.effort, {
 			profiles: { careful: true },
-			showSkillStatus: true,
+			showSkillStatus: false,
 			skills: { "warden-map": "low" },
 		});
 	});

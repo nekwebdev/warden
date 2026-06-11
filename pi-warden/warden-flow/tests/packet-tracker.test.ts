@@ -14,6 +14,8 @@ import { afterEach, beforeEach, describe, it } from "node:test";
 import {
 	PACKET_TRACKER_RELATIVE_PATH,
 	applyPacketTrackerUpdate,
+	formatActiveFlowStatus,
+	loadActiveFlowStatus,
 	loadPacketTrackerState,
 	packetNameFromPath,
 	parsePacketName,
@@ -76,6 +78,60 @@ function existingEntry(packetPath: string, step = "warden-start") {
 }
 
 describe("packet tracker core", () => {
+	it("formats active-flow status from current packet name and next step", () => {
+		assert.equal(
+			formatActiveFlowStatus({
+				version: 1,
+				current: {
+					packetPath: ".warden/work/slug/packet.md",
+					packetName: "foo",
+					lastStep: "warden-grill",
+					lastStatus: "success",
+					lastSummary: "ready",
+					nextStep: "warden-tdd",
+					timestamp: now,
+				},
+				queue: [],
+				recentCompleted: [],
+			}),
+			"Active Flow: foo - next: warden-tdd",
+		);
+		assert.equal(
+			formatActiveFlowStatus({
+				version: 1,
+				current: null,
+				queue: [],
+				recentCompleted: [],
+			}),
+			"Active Flow: none",
+		);
+		assert.equal(formatActiveFlowStatus(undefined), "Active Flow: none");
+	});
+
+	it("loads active-flow status as none for missing, malformed, invalid, or null tracker", () => {
+		assert.equal(loadActiveFlowStatus(cwd).text, "Active Flow: none");
+
+		mkdirSync(join(trackerPath(), ".."), { recursive: true });
+		writeFileSync(trackerPath(), "{not json", "utf-8");
+		assert.equal(loadActiveFlowStatus(cwd).text, "Active Flow: none");
+
+		writeTracker({
+			version: 1,
+			current: { packetPath: "x" },
+			queue: [],
+			recentCompleted: [],
+		});
+		assert.equal(loadActiveFlowStatus(cwd).text, "Active Flow: none");
+
+		writeTracker({
+			version: 1,
+			current: null,
+			queue: [],
+			recentCompleted: [],
+		});
+		assert.equal(loadActiveFlowStatus(cwd).text, "Active Flow: none");
+	});
+
 	it("initializes missing tracker and normalizes packet paths from nested cwd", () => {
 		const result = applyPacketTrackerUpdate({
 			cwd: nestedCwd,

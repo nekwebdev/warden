@@ -275,8 +275,8 @@ describe("Warden effort runtime hook", () => {
 		assert.deepEqual(pi.setCalls, ["xhigh"]);
 	});
 
-	it("shows a themed footer capsule when a Warden skill starts", async () => {
-		writeSettings({ warden: { effort: { showSkillStatus: true } } });
+	it("shows a themed footer capsule by default when a Warden skill starts", async () => {
+		writeSettings({ warden: { effort: {} } });
 		const statuses: StatusUpdate[] = [];
 		const ctx = createStatusContext(statuses);
 		const pi = createFakePi("high");

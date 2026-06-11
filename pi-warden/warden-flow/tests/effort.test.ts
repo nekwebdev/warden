@@ -183,7 +183,7 @@ describe("Warden skill effort settings", () => {
 				},
 			},
 			() => {
-				assert.equal(readWardenSkillStatusEnabled(), false);
+				assert.equal(readWardenSkillStatusEnabled(), true);
 
 				assert.deepEqual(setWardenSkillStatusEnabled(true), { ok: true });
 				assert.equal(readWardenSkillStatusEnabled(), true);
@@ -212,6 +212,18 @@ describe("Warden skill effort settings", () => {
 						},
 					},
 				});
+			},
+		);
+	});
+
+	it("defaults Warden skill status indicator on unless explicitly disabled", async () => {
+		await withTempSettings({}, () => {
+			assert.equal(readWardenSkillStatusEnabled(), true);
+		});
+		await withTempSettings(
+			{ warden: { effort: { showSkillStatus: false } } },
+			() => {
+				assert.equal(readWardenSkillStatusEnabled(), false);
 			},
 		);
 	});

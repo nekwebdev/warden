@@ -5,6 +5,7 @@ import { canonicalMapRoot } from "./map.js";
 export const PACKET_TRACKER_RELATIVE_PATH = ".warden/work/packet-tracker.json";
 export const PACKET_TRACKER_VERSION = 1;
 export const PACKET_TRACKER_SUMMARY_LIMIT = 300;
+export const ACTIVE_FLOW_STATUS_NONE = "Active Flow: none";
 
 export const PACKET_TRACKER_STEPS = [
 	"warden-start",
@@ -113,6 +114,22 @@ export function loadPacketTrackerState(cwd: string): {
 	const repoRoot = canonicalMapRoot(cwd);
 	const path = packetTrackerPath(repoRoot);
 	return { path, ...loadPacketTrackerStateFromPath(path) };
+}
+
+export function loadActiveFlowStatus(cwd: string): {
+	path: string;
+	text: string;
+} {
+	const loaded = loadPacketTrackerState(cwd);
+	return { path: loaded.path, text: formatActiveFlowStatus(loaded.state) };
+}
+
+export function formatActiveFlowStatus(
+	state: PacketTrackerState | undefined,
+): string {
+	const current = state?.current;
+	if (!current) return ACTIVE_FLOW_STATUS_NONE;
+	return `Active Flow: ${current.packetName} - next: ${current.nextStep}`;
 }
 
 export function packetTrackerPath(repoRoot: string): string {

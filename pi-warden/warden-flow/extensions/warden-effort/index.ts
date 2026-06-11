@@ -138,7 +138,7 @@ function createSkillStatusDisplaySetting() {
 		itemCount: () => 1,
 		render: (ctx: WardenPanelPaneContext, _width: number, active: boolean) => [
 			renderSkillStatusSettingRow(
-				ctx.draftSettings.effort?.showSkillStatus === true,
+				ctx.draftSettings.effort?.showSkillStatus !== false,
 				active && ctx.selectedIndex === 0,
 				ctx,
 			),
@@ -148,7 +148,7 @@ function createSkillStatusDisplaySetting() {
 			ctx.updateDraftSettings({
 				effort: {
 					...ctx.draftSettings.effort,
-					showSkillStatus: ctx.draftSettings.effort?.showSkillStatus !== true,
+					showSkillStatus: ctx.draftSettings.effort?.showSkillStatus === false,
 				},
 			});
 			ctx.requestRender();
