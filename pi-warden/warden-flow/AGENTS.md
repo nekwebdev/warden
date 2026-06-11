@@ -21,6 +21,7 @@ Package-owned areas:
 - commit snapshot/apply extension in `extensions/warden-commit/`;
 - effort panel/runtime extension in `extensions/warden-effort/`, which uses the public `@nekwebdev/warden-panel` API;
 - packet lifecycle tracker extension in `extensions/warden-packet-tracker/` and deterministic tracker core in `src/packet-tracker.ts`;
+- tmux ask-user wait glyph alert and Linux desktop notification in `extensions/warden-tmux-question-alert/` with deterministic helpers in `src/tmux-question-alert.ts`;
 - `warden-map` skill in `skills/warden-map/`;
 - `warden-docs` skill in `skills/warden-docs/`;
 - `warden-create-skill` skill and bundled skill template in `skills/warden-create-skill/`;
@@ -68,6 +69,7 @@ This package does not own Warden runner workflows, agent lifecycle commands, sib
 - Do not add subagents, workflow runners, sibling package installers, or model override cascades to this package.
 - Runtime effort changes must restore the previous thinking level after the agent turn unless Pi exposes a safer verified non-persistent path.
 - Packet tracker state is owned by `extensions/warden-packet-tracker/` plus `src/packet-tracker.ts`, not by skill prose.
+- Tmux question alerts must preserve Warden's captured window name, ignore missing/failing tmux, `notify-send`, or `dms notify`, only change Warden-prefixed robot windows, and keep notification bodies limited to ask-user question text.
 - Tracker-affecting `warden-*` skills must be added to the extension allowlist and covered by package tests.
 - Allowlisted tracker skill final outputs should use exact status words `success`, `failure`, or `aborted` so extension parsing stays deterministic.
 - Skills must not emit tracker `nextStep` decisions; the extension computes deterministic next steps and owns the post-`warden-tdd` prompt.

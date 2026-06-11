@@ -64,6 +64,7 @@ Use only folders that fit the package.
   - Owns `/skill:warden-start`, `/skill:warden-grill`, `/skill:warden-tdd`, and `/skill:warden-close` workflow skills.
   - Owns `/skill:warden-commit`, commit snapshot/apply tools, and local commit safety rules.
   - Owns `/warden:effort` and per-skill effort defaults for Warden Flow skills.
+  - Owns tmux ask-user wait glyph alerts and Linux desktop notifications for `ask_user_question` prompts.
   - Declares `@nekwebdev/warden-panel` as its package dependency for Effort pane contribution through the public panel API.
   - Does not own general runner workflows or agent lifecycle commands.
 

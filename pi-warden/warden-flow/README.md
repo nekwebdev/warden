@@ -19,6 +19,7 @@ It reduces repeated repo discovery by maintaining a small map tree, injecting on
 - `extensions/warden-commit` — registers `warden_commit_snapshot` and `warden_commit_apply` for safe local commit planning and execution.
 - `extensions/warden-effort` — seeds Warden skill effort defaults and applies configured effort before `/skill:warden-*` expansion.
 - `extensions/warden-packet-tracker` — records allowlisted Warden Flow packet lifecycle state in `.warden/work/packet-tracker.json` after completed skill turns and publishes the active packet in the Pi footer.
+- `extensions/warden-tmux-question-alert` — when `ask_user_question` waits for user input, flashes the Warden tmux robot prefix between `󱚤` and `󱚥` and sends a Linux desktop notification with the agent name and question text.
 - Session-start map injection — hidden root map capsule from `<git-root>/.warden/map.md`.
 - Scoped map injection — hidden scoped capsules from `<git-root>/.warden/maps/<scope>/map.md` appended to relevant tool results.
 - Git context injection — branch, short commit, and dirty state.
@@ -129,6 +130,14 @@ You can also set a Pi agent fallback in `settings.json`:
 Precedence is explicit invocation flag, then `warden.flow.interactionMode`, then normal interactive behavior. Unsupported modes or missing directive files fail safe by injecting no directive. This slice has no per-invocation `--interactive` escape flag; disable or change the setting to restore plain interactive default behavior.
 
 Runtime directives stay inside the `@nekwebdev/warden-flow` package. They do not implement runner workflows, agent lifecycle commands, Pi launch plumbing, or sibling package behavior.
+
+## Tmux question alert
+
+`extensions/warden-tmux-question-alert` listens for the public `rpiv:ask-user:prompt` event emitted by `@juicesharp/rpiv-ask-user-question`. If Pi is running under tmux and the Pi pane's window name starts with Warden's robot prefix (`󱚤`), it targets `$TMUX_PANE` and alternates that prefix with `󱚥` until the `ask_user_question` tool returns, the agent turn ends, or the session shuts down. It restores the captured base window name afterward and ignores missing, unavailable, or failing tmux commands.
+
+At the same prompt event, the extension best-effort runs `notify-send` with title `Question ready from <agent>` and the question text as the notification body. If `notify-send` is missing or fails, it falls back to `dms notify` with the same title/body arguments. The agent name resolves from `WARDEN_AGENT_NAME` when present, then `$PI_CODING_AGENT_DIR`'s basename. Missing or failing notification commands are ignored.
+
+The extension only changes Warden-prefixed tmux windows, so local `pi -e ./pi-warden/warden-flow` runs outside `warden pi NAME ...` are left alone unless the window already uses the Warden robot prefix. Desktop notifications can still run outside tmux when an agent name is available.
 
 ## Packet tracker
 

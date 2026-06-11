@@ -14,6 +14,7 @@ const tests = [
 	"tests/packet-tracker.test.ts",
 	"tests/packet-tracker-extension.test.ts",
 	"tests/warden-directives-extension.test.ts",
+	"tests/tmux-question-alert.test.ts",
 	"tests/extension.test.ts",
 	"tests/warden-map-skill.test.ts",
 ];
