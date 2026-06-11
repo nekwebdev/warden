@@ -88,7 +88,7 @@ git diff --no-index -- /dev/null <path>
 
 ## Approval policy
 
-After showing the full plan request a user decision through the active user-input workflow.
+Print the full plan as a normal assistant response first. Then request a user decision through the active user-input workflow. Do not put the plan inside the user-input prompt.
 
 Question text:
 
