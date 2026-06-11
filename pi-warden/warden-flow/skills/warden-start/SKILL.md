@@ -2,6 +2,7 @@
 name: warden-start
 description: Start a lean Warden dev cycle by turning rough intent into one small, testable work packet.
 argument-hint: [rough intent or packet.md path]
+disable-model-invocation: true
 license: MIT
 ---
 
@@ -211,11 +212,20 @@ Stop or preview without writing when canonical root cannot resolve, packet path 
 
 ## Output format
 
+Every final response must include the exact tracker field line:
+
+```text
+Tracker status: success | failure | aborted
+```
+
+Use `success` only when a real `packet.md` path is ready for the next Warden Flow step. Use `failure` when blocked, preview-only, or no usable packet path exists. Use `aborted` when the user stops the workflow. Do not emit a tracker `nextStep`; the extension owns next-step state.
+
 Respond in this shape:
 
 ```md
 # Warden Start Result
 
+Tracker status: success | failure | aborted
 Packet path:
 Packet action:
 

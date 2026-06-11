@@ -20,6 +20,7 @@ Package-owned areas:
 - map injection extension in `extensions/warden-map/`;
 - commit snapshot/apply extension in `extensions/warden-commit/`;
 - effort panel/runtime extension in `extensions/warden-effort/`, which uses the public `@nekwebdev/warden-panel` API;
+- packet lifecycle tracker extension in `extensions/warden-packet-tracker/` and deterministic tracker core in `src/packet-tracker.ts`;
 - `warden-map` skill in `skills/warden-map/`;
 - `warden-docs` skill in `skills/warden-docs/`;
 - `warden-create-skill` skill and bundled skill template in `skills/warden-create-skill/`;
@@ -66,6 +67,11 @@ This package does not own Warden runner workflows, agent lifecycle commands, sib
 - Call `warden_commit_apply` only after user confirmation; the tool input assumes confirmation already happened, validates matching snapshot hashes, stages exact paths only, and never pushes, pulls, fetches, resets, rebases, amends, tags, stashes, checks out, cleans, restores, creates PRs, or runs remote git operations.
 - Do not add subagents, workflow runners, sibling package installers, or model override cascades to this package.
 - Runtime effort changes must restore the previous thinking level after the agent turn unless Pi exposes a safer verified non-persistent path.
+- Packet tracker state is owned by `extensions/warden-packet-tracker/` plus `src/packet-tracker.ts`, not by skill prose.
+- Tracker-affecting `warden-*` skills must be added to the extension allowlist and covered by package tests.
+- Allowlisted tracker skill final outputs should use exact status words `success`, `failure`, or `aborted` so extension parsing stays deterministic.
+- Skills must not emit tracker `nextStep` decisions; the extension computes deterministic next steps and owns the post-`warden-tdd` prompt.
+- Do not add tracker mutation logic to `SKILL.md` files.
 
 ## Testing
 

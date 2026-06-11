@@ -2,6 +2,7 @@
 name: warden-tdd
 description: Implement one grilled Warden work packet slice with strict test-first workflow.
 argument-hint: [packet.md path]
+disable-model-invocation: true
 license: MIT
 ---
 
@@ -159,10 +160,20 @@ Stop without target-file edits when:
 
 ## Output format
 
+Every final or stopped response must include the exact tracker field line:
+
+```text
+Tracker status: success | failure | aborted
+```
+
+Use `success` only when the packet slice is correctly implemented or intentionally validated with accepted no-code evidence. Use `failure` when blocked, under-specified, tests fail, or implementation is incomplete. Use `aborted` when the user stops the workflow. Do not emit a tracker `nextStep`; the extension owns next-step state and post-TDD choice.
+
 Respond in this shape:
 
 ```md
 # Warden TDD Result
+
+Tracker status: success | failure | aborted
 
 ## Result
 

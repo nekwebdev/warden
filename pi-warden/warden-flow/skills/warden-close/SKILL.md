@@ -2,6 +2,7 @@
 name: warden-close
 description: Close an accepted Warden work packet by validating closure, creating or validating final handoff.md, and deciding changelog/map impact.
 argument-hint: [packet.md or handoff.md path]
+disable-model-invocation: true
 license: MIT
 ---
 
@@ -195,11 +196,20 @@ If only a `handoff.md` path exists and sibling `packet.md` is absent, validate f
 
 ## Output format
 
+Every final response must include the exact tracker field line:
+
+```text
+Tracker status: success | failure | aborted
+```
+
+Use `success` only when `Status: Closed`. Use `failure` when `Status: Not ready` or `Status: Blocked`. Use `aborted` when the user stops the workflow. Do not emit a tracker `nextStep`; the extension owns next-step state.
+
 Respond in this shape:
 
 ```md
 # Warden Close Result
 
+Tracker status: success | failure | aborted
 Status: Closed | Not ready | Blocked
 
 ## Result

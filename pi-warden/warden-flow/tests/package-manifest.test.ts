@@ -52,6 +52,13 @@ const expectedSkillEntries = [
 	join("skills", "warden-tdd", "SKILL.md"),
 ];
 
+const packetTrackerSkillNames = [
+	"warden-start",
+	"warden-grill",
+	"warden-tdd",
+	"warden-close",
+];
+
 const requiredHeadingSkillSections = [
 	"When to use",
 	"Outcome",
@@ -220,6 +227,23 @@ describe("package pi resources", () => {
 		assert.match(content, /If `handoff\.md` exists, validate it/);
 		assert.match(content, /If `handoff\.md` is missing.*create it/s);
 		assert.match(content, /Status: Closed \| Not ready \| Blocked/);
+	});
+
+	it("packet tracker skills expose exact final status contract", () => {
+		for (const skillName of packetTrackerSkillNames) {
+			const content = skillContent(skillName);
+
+			assert.match(
+				content,
+				/Tracker status: success \| failure \| aborted/,
+				`${skillName} should expose tracker status field`,
+			);
+			assert.match(
+				content,
+				/Do not emit a tracker `nextStep`/,
+				`${skillName} should keep tracker nextStep extension-owned`,
+			);
+		}
 	});
 
 	it("warden-docs aligns stale README and AGENTS docs only", () => {

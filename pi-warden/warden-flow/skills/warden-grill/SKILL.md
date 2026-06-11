@@ -2,6 +2,7 @@
 name: warden-grill
 description: Grilling session that challenges your warden work packet against the existing domain model, sharpens terminology, and updates it inline as decisions crystallise. Use when user wants to stress-test a warden work packet, including manual feedback from a prior TDD/manual-review pass, against project language and evidence.
 argument-hint: [work packet.md path, manual feedback]
+disable-model-invocation: true
 license: MIT
 ---
 
@@ -142,6 +143,14 @@ Stop when no valid `packet.md` was provided, input is rough intent, packet canno
 
 ## Output format
 
+Every final or stopped response must include the exact tracker field line:
+
+```text
+Tracker status: success | failure | aborted
+```
+
+Use `success` only when the packet is solid for TDD. Use `failure` when the packet is blocked, unsafe, not TDD-ready, or missing. Use `aborted` when the user stops the workflow. Do not emit a tracker `nextStep`; the extension owns next-step state.
+
 During the loop, use the active user-input workflow for one next question with your recommended answer, or output a brief note that the packet was updated before the next question. Do not finalize when the packet first appears ready; request adversarial answers through the active user-input workflow first.
 
 Only when no unresolved questions remain and the adversarial round is complete, use this final shape:
@@ -149,6 +158,7 @@ Only when no unresolved questions remain and the adversarial round is complete, 
 ```md
 # Warden Grill
 
+Tracker status: success | failure | aborted
 Verdict: Packet solid for TDD
 
 ## Slice check

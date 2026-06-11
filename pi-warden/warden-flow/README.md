@@ -18,6 +18,7 @@ It reduces repeated repo discovery by maintaining a small map tree, injecting on
 - `extensions/warden-map` — injects map capsules and git context.
 - `extensions/warden-commit` — registers `warden_commit_snapshot` and `warden_commit_apply` for safe local commit planning and execution.
 - `extensions/warden-effort` — seeds Warden skill effort defaults and applies configured effort before `/skill:warden-*` expansion.
+- `extensions/warden-packet-tracker` — records allowlisted Warden Flow packet lifecycle state in `.warden/work/packet-tracker.json` after completed skill turns.
 - Session-start map injection — hidden root map capsule from `<git-root>/.warden/map.md`.
 - Scoped map injection — hidden scoped capsules from `<git-root>/.warden/maps/<scope>/map.md` appended to relevant tool results.
 - Git context injection — branch, short commit, and dirty state.
@@ -128,6 +129,53 @@ You can also set a Pi agent fallback in `settings.json`:
 Precedence is explicit invocation flag, then `warden.flow.interactionMode`, then normal interactive behavior. Unsupported modes or missing directive files fail safe by injecting no directive. This slice has no per-invocation `--interactive` escape flag; disable or change the setting to restore plain interactive default behavior.
 
 Runtime directives stay inside the `@nekwebdev/warden-flow` package. They do not implement runner workflows, agent lifecycle commands, Pi launch plumbing, or sibling package behavior.
+
+## Packet tracker
+
+`extensions/warden-packet-tracker` observes completed allowlisted Warden Flow skill turns and writes tracker state at the Git repository root:
+
+```text
+<git-root>/.warden/work/packet-tracker.json
+```
+
+The path is always rooted at `git rev-parse --show-toplevel` when cwd is nested inside a repository. It is never rooted at a nested package cwd.
+
+Tracker schema is versioned:
+
+```json
+{
+  "version": 1,
+  "current": null,
+  "queue": [],
+  "recentCompleted": []
+}
+```
+
+`current` and `queue` entries contain exactly:
+
+```json
+{
+  "packetPath": ".warden/work/example/packet.md",
+  "lastStep": "warden-tdd",
+  "lastStatus": "success",
+  "lastSummary": "green",
+  "nextStep": "warden-close",
+  "timestamp": "2026-06-10T12:00:00.000Z"
+}
+```
+
+Completed entries in `recentCompleted` add `handoffPath`. `recentCompleted` keeps the latest 5 closures. Allowed steps are `warden-start`, `warden-grill`, `warden-tdd`, and `warden-close`. Allowed statuses are `success`, `failure`, and `aborted`. Allowed next steps are those steps plus `done`.
+
+Lifecycle behavior is deterministic:
+
+- successful `warden-start` sets `current`, moves any old current to the front of `queue`, and sets `nextStep: "warden-grill"`;
+- successful `warden-grill` sets `nextStep: "warden-tdd"`;
+- successful `warden-tdd` asks through extension UI whether the next step is another `warden-grill` loop or `warden-close`; if UI is unavailable or dismissed, it falls back to `warden-grill`;
+- successful `warden-close` requires sibling `handoff.md`, moves the packet to `recentCompleted`, trims to 5, and promotes the queue front;
+- successful `warden-close` without `handoff.md` records tracker failure and keeps `nextStep: "warden-close"`;
+- failed or aborted steps update the matching packet for retry without advancing the deterministic flow.
+
+The extension captures allowlisted invocations from raw `input` or expanded `before_agent_start` skill prompts, then processes final assistant messages at `agent_end`. It does not parse tracker `nextStep` from skill output. Existing malformed or schema-invalid tracker JSON is left unchanged for that update.
 
 ## Skill effort
 

@@ -2,6 +2,7 @@
 name: warden-docs
 description: Align stale Warden README.md and AGENTS.md files with repository evidence while preserving map ownership and avoiding broad documentation automation.
 argument-hint: [optional repository path or doc focus]
+disable-model-invocation: true
 license: MIT
 ---
 
