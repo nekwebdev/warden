@@ -104,6 +104,7 @@ Current GitHub package/area labels:
 - `warden-panel`
 - `warden-subagents`
 - `warden-theme`
+- `warden-web`
 - `nix-warden`
 - `dev-warden`
 

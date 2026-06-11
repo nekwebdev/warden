@@ -1,0 +1,77 @@
+{
+  "name": "@nekwebdev/warden-web",
+  "version": "0.1.0",
+  "description": "Local web server and future mobile-first web UI for Warden-managed Pi agents",
+  "type": "module",
+  "files": [
+    "dist",
+    "src/**/*.ts",
+    "scripts/**/*.mjs",
+    "README.md",
+    "AGENTS.md",
+    "LICENSE"
+  ],
+  "keywords": [
+    "pi-package",
+    "pi",
+    "pi-agent",
+    "warden",
+    "warden-web",
+    "web",
+    "server"
+  ],
+  "author": "nekwebdev",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/nekwebdev/warden.git",
+    "directory": "pi-warden/warden-web"
+  },
+  "homepage": "https://github.com/nekwebdev/warden#readme",
+  "bugs": {
+    "url": "https://github.com/nekwebdev/warden/issues"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "bin": {
+    "warden-web": "./dist/bin/warden-web.js",
+    "warden-web-server": "./dist/server/index.js"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "dev": "tsx src/server/index.ts",
+    "format": "oxfmt --check",
+    "format:fix": "oxfmt",
+    "lint": "oxlint && oxfmt --check",
+    "lint:fix": "oxlint --fix && oxfmt",
+    "pack:dry": "npm pack --dry-run",
+    "prepack": "npm run build",
+    "prepublishOnly": "npm run verify",
+    "smoke:server": "node scripts/smoke-server.mjs",
+    "start": "tsx src/server/index.ts",
+    "test": "node scripts/run-tests.mjs",
+    "typecheck": "tsc --noEmit",
+    "verify": "npm run format && npm run lint && npm run typecheck && npm test && npm run build && npm run smoke:server && npm run pack:dry"
+  },
+  "peerDependencies": {
+    "@earendil-works/pi-coding-agent": "*"
+  },
+  "devDependencies": {
+    "@earendil-works/pi-coding-agent": "*",
+    "@types/node": "^25.9.1",
+    "oxfmt": "^0.17.0",
+    "oxlint": "^1.30.0",
+    "tsx": "^4.20.0",
+    "typescript": "^5.9.0"
+  }
+}

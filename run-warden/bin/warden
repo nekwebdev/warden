@@ -18,6 +18,7 @@ export WARDEN_HOME RUN_WARDEN_ROOT
 . "$RUN_WARDEN_ROOT/lib/doctor.sh"
 . "$RUN_WARDEN_ROOT/lib/shell-integration.sh"
 . "$RUN_WARDEN_ROOT/lib/pi-agents.sh"
+. "$RUN_WARDEN_ROOT/lib/web.sh"
 . "$RUN_WARDEN_ROOT/lib/worktree.sh"
 
 usage() {
@@ -40,6 +41,7 @@ commands:
   agents NAME cwd DIR        set agent launch working directory
   agents NAME show [--json]  show agent paths and settings
   pi NAME [ARGS...]          run Pi inside isolated agent environment
+  web [ARGS...]              start Warden Web local server
   worktree AGENT             choose existing Git worktree for agent Pi launch
   @NAME [ARGS...]            run Pi inside isolated agent environment
 EOF
@@ -53,6 +55,7 @@ case "$command_name" in
   help|-h|--help) usage ;;
   doctor) warden_doctor ;;
   pi) warden_pi "$@" ;;
+  web) warden_web "$@" ;;
   worktree) warden_worktree "$@" ;;
   @*)
     agent_name=${command_name#@}

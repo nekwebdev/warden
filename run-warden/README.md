@@ -33,6 +33,7 @@ warden agents NAME update-pi
 warden agents NAME cwd DIR
 warden agents NAME show [--json]
 warden pi NAME [ARGS...]
+warden web [ARGS...]
 warden worktree AGENT
 warden @NAME [ARGS...]
 ```
@@ -67,6 +68,8 @@ functions/warden.fish
 `warden agents NAME show` prints the agent dir, Pi executable, Pi Lens dir, context-mode dir, settings path, effective cwd, and the complete formatted `settings.json`. `--json` emits the same information as JSON. `warden agents list --json` emits an array of agent summaries.
 
 `warden pi NAME ...` reads configured cwd from agent-local settings, changes to it when present, then runs the local Pi executable with `PI_CODING_AGENT_DIR`, `PILENS_DATA_DIR`, and `CONTEXT_MODE_DIR` pointed inside the agent directory. `PILENS_DATA_DIR` is `$PI_CODING_AGENT_DIR/pi-lens`; `CONTEXT_MODE_DIR` is `$PI_CODING_AGENT_DIR/context-mode`. Without configured cwd, it preserves the caller's current working directory. `warden @NAME ...` is a direct alias for `warden pi NAME ...` after stripping `@`. Inside tmux, launch renames the current window to `󱚤 NAME`, then restores the previous window name and automatic rename setting after Pi exits; missing or failing tmux commands are ignored.
+
+`warden web [ARGS...]` starts the local `@nekwebdev/warden-web` server package by running `npm run start --prefix "$WARDEN_HOME/pi-warden/warden-web" -- "$@"`. Runner code checks for the package and local `node`/`npm`, forwards args, and never installs dependencies.
 
 `warden worktree AGENT` reads that agent's configured cwd, lists existing Git worktrees as `branch - path`, then launches `warden pi AGENT` from the selected worktree without rewriting `settings.json`. Its new-worktree option validates a lowercase hyphenated name, captures a branch type, creates `${type}/${name}` from `origin/main` under the agent directory at `worktree/${name}`, pushes upstream, then launches the agent from the new worktree path. If `origin` is missing, Warden prompts for a Git URL and fetches `origin/main` before creating the branch or worktree.
 

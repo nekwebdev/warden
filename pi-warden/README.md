@@ -26,7 +26,8 @@ pi-warden/
 ├── warden-flow/
 ├── warden-panel/
 ├── warden-subagents/
-└── warden-theme/
+├── warden-theme/
+└── warden-web/
 ```
 
 Package manifests, source, tests, scripts, extensions, skills, prompts, themes, docs, configs, and web assets belong under the individual package folder:
@@ -172,6 +173,27 @@ pi-warden/warden-theme/README.md
 pi-warden/warden-theme/AGENTS.md
 ```
 
+### `warden-web/`
+
+Package: `@nekwebdev/warden-web`
+
+Warden's local web server package and future mobile-first browser UI for Warden-managed Pi agents.
+
+Provides now:
+
+- a package-local Node HTTP server;
+- `GET /health` and `GET /api/agents`;
+- Warden-managed Pi agent discovery read model;
+- `warden-web` and `warden-web-server` package bins;
+- package-local TypeScript, oxlint, oxfmt, tests, build, smoke, and dry-pack checks.
+
+Package docs:
+
+```text
+pi-warden/warden-web/README.md
+pi-warden/warden-web/AGENTS.md
+```
+
 ## Scope boundary
 
 `pi-warden` packages provide Pi Agent package behavior after they are installed or loaded by Pi.
@@ -199,11 +221,13 @@ From the Warden repo root:
 npm install --prefix pi-warden/warden-panel
 npm install --prefix pi-warden/warden-flow
 npm install --prefix pi-warden/warden-subagents
+npm install --prefix pi-warden/warden-web
 
 npm test --prefix pi-warden/warden-panel
 npm test --prefix pi-warden/warden-flow
 npm test --prefix pi-warden/warden-subagents
 npm test --prefix pi-warden/warden-theme
+npm test --prefix pi-warden/warden-web
 
 mise run test:pi-warden
 ```

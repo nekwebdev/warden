@@ -97,12 +97,50 @@ run_noninteractive() {
   [[ "$output" == *"agents NAME cwd DIR"* ]]
   [[ "$output" == *"agents NAME show [--json]"* ]]
   [[ "$output" == *"pi NAME [ARGS...]"* ]]
+  [[ "$output" == *"web [ARGS...]"* ]]
   [[ "$output" == *"worktree AGENT"* ]]
   [[ "$output" == *"@NAME [ARGS...]"* ]]
   [[ "$output" != *"shell snippet"* ]]
   [[ "$output" != *"agents update NAME"* ]]
   [[ "$output" != *"agents set NAME cwd DIR"* ]]
   [[ "$output" != *"agents unset NAME cwd"* ]]
+}
+
+@test "web dispatches to warden-web package start with forwarded args" {
+  repo_root=$(cd "$RUN_WARDEN_ROOT/.." && pwd -P)
+  run env HOME="$TEST_HOME" WARDEN_HOME="$repo_root" PATH="$FAKE_BIN:$PATH" NPM_LOG="$BATS_TEST_TMPDIR/web-npm.log" "$RUN_WARDEN_ROOT/bin/warden" web --help --port 0
+  [ "$status" -eq 0 ]
+  grep -F "arg=run" "$BATS_TEST_TMPDIR/web-npm.log"
+  grep -F "arg=start" "$BATS_TEST_TMPDIR/web-npm.log"
+  grep -F "arg=--prefix" "$BATS_TEST_TMPDIR/web-npm.log"
+  grep -F "arg=$repo_root/pi-warden/warden-web" "$BATS_TEST_TMPDIR/web-npm.log"
+  grep -F "arg=--" "$BATS_TEST_TMPDIR/web-npm.log"
+  grep -F "arg=--help" "$BATS_TEST_TMPDIR/web-npm.log"
+  grep -F "arg=--port" "$BATS_TEST_TMPDIR/web-npm.log"
+  grep -F "arg=0" "$BATS_TEST_TMPDIR/web-npm.log"
+}
+
+@test "web fails clearly when package is missing" {
+  fixture_root="$BATS_TEST_TMPDIR/missing-web-fixture"
+  mkdir -p "$fixture_root"
+  cp -R "$RUN_WARDEN_ROOT" "$fixture_root/run-warden"
+
+  run env HOME="$TEST_HOME" WARDEN_HOME="$fixture_root" PATH="$FAKE_BIN:$PATH" "$fixture_root/run-warden/bin/warden" web
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"warden-web package missing"* ]]
+  [[ "$output" == *"$fixture_root/pi-warden/warden-web/package.json"* ]]
+}
+
+@test "web fails clearly when npm is missing" {
+  repo_root=$(cd "$RUN_WARDEN_ROOT/.." && pwd -P)
+  deps_bin="$BATS_TEST_TMPDIR/no-npm-bin"
+  mkdir -p "$deps_bin"
+  ln -s "$(command -v sh)" "$deps_bin/sh"
+  ln -s "$(command -v node)" "$deps_bin/node"
+
+  run env HOME="$TEST_HOME" WARDEN_HOME="$repo_root" PATH="$deps_bin" "$RUN_WARDEN_ROOT/bin/warden" web
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"npm is required to run warden web"* ]]
 }
 
 @test "shell init prints manual shell snippets" {
@@ -329,6 +367,7 @@ NODE
   [[ "$output" == *"agents NAME cwd DIR"* ]]
   [[ "$output" == *"agents NAME show [--json]"* ]]
   [[ "$output" == *"pi NAME [ARGS...]"* ]]
+  [[ "$output" == *"web [ARGS...]"* ]]
   [[ "$output" == *"worktree AGENT"* ]]
   [[ "$output" == *"@NAME [ARGS...]"* ]]
 }
@@ -1056,6 +1095,7 @@ NODE
     grep -F "warden agents NAME cwd DIR" "$doc"
     grep -F "warden agents NAME show [--json]" "$doc"
     grep -F "warden pi NAME" "$doc"
+    grep -F "warden web [ARGS...]" "$doc"
     grep -F "warden worktree AGENT" "$doc"
     grep -F "warden @NAME" "$doc"
     ! grep -F "warden agents update <name>" "$doc"

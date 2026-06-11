@@ -79,6 +79,7 @@ warden agents NAME update-pi
 warden agents NAME cwd DIR
 warden agents NAME show [--json]
 warden pi NAME [ARGS...]
+warden web [ARGS...]
 warden worktree AGENT
 warden @NAME [ARGS...]
 ```
@@ -163,6 +164,8 @@ CONTEXT_MODE_DIR="$AGENT_DIR/context-mode"
 
 `warden @NAME ...` is a direct alias for `warden pi NAME ...` after stripping `@`.
 
+`warden web [ARGS...]` starts the local `@nekwebdev/warden-web` server package through runner-owned dispatch. It forwards args such as `--host` and `--port` to the package start command and does not install dependencies.
+
 `warden worktree AGENT` lists Git worktrees for the agent's configured cwd and launches Pi from the selected worktree without changing `settings.json`. The new-worktree option validates a lowercase hyphenated name, captures a branch type, creates `${type}/${name}` from `origin/main` under the agent directory at `worktree/${name}`, pushes upstream, then launches Pi from the new worktree path. If `origin` is missing, Warden prompts for a Git URL and fetches `origin/main` before creating the branch or worktree.
 
 If no cwd is configured, Warden preserves the caller's current working directory. When run inside tmux, `warden pi NAME ...` renames the current tmux window to `󱚤 NAME` before launch, then restores the previous window name and automatic rename setting after Pi exits; missing or failing tmux commands are ignored.
@@ -199,7 +202,8 @@ Owns workflows after root bootstrap:
 - doctor checks;
 - shell integration;
 - Pi agent environment lifecycle commands;
-- Pi launch plumbing.
+- Pi launch plumbing;
+- Warden Web server launch shim.
 
 ### `pi-warden/`
 
@@ -218,6 +222,7 @@ pi-warden/warden-flow/
 pi-warden/warden-panel/
 pi-warden/warden-subagents/
 pi-warden/warden-theme/
+pi-warden/warden-web/
 ```
 
 `pi-warden/warden-flow/` contains Warden flow/orientation work, including map/docs/start/grill/TDD/close/commit skills plus related map/git-context, effort, and commit-safety extensions.
@@ -227,6 +232,8 @@ pi-warden/warden-theme/
 `pi-warden/warden-subagents/` contains Warden's inert scaffold for future Pi subagents extension work.
 
 `pi-warden/warden-theme/` contains Warden Catppuccin Mocha-derived Pi theme resources.
+
+`pi-warden/warden-web/` contains Warden's local web server package and future mobile-first browser UI for Warden-managed Pi agents.
 
 ### `nix-warden/`
 
@@ -270,7 +277,7 @@ Issue templates, package auto-labeling, and the PR package/area checklist track 
 
 - root private package/bootstrap: `warden`;
 - top-level subproject/product areas: `run-warden`, `pi-warden`, `nix-warden`, and `dev-warden`;
-- direct Pi package folders with `package.json`: `warden-flow`, `warden-panel`, `warden-subagents`, and `warden-theme`.
+- direct Pi package folders with `package.json`: `warden-flow`, `warden-panel`, `warden-subagents`, `warden-theme`, and `warden-web`.
 
 Current labels use `pkg:<slug>`, for example `pkg:run-warden` or `pkg:warden-flow`.
 

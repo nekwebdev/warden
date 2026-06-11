@@ -83,6 +83,11 @@ Use only folders that fit the package.
   - Owns `themes/warden-catppuccin-mocha.json`, theme token inventory docs, and theme validation.
   - Does not own Warden runner workflows, agent lifecycle commands, or terminal OSC probing.
 
+- `warden-web/`
+  - Owns Warden's local web server package and future mobile-first browser UI for Warden-managed Pi agents.
+  - Owns the package-local server, `warden-web`/`warden-web-server` bins, protocol types, agent discovery read model, package docs, and package-local tooling/tests.
+  - Does not own root bootstrap, shell integration, Warden agent lifecycle commands, `warden pi` TUI launch behavior, or runner internals beyond the narrow `warden web` dispatch shim in `run-warden/`.
+
 ## Scope rules
 
 - Do not put package manifests, package source, package tests, package scripts, or package build systems directly under `pi-warden/`.
@@ -129,10 +134,12 @@ From the repo root:
 npm install --prefix pi-warden/warden-panel
 npm install --prefix pi-warden/warden-flow
 npm install --prefix pi-warden/warden-subagents
+npm install --prefix pi-warden/warden-web
 
 npm test --prefix pi-warden/warden-panel
 npm test --prefix pi-warden/warden-flow
 npm test --prefix pi-warden/warden-subagents
+npm test --prefix pi-warden/warden-web
 
 mise run test:pi-warden
 ```

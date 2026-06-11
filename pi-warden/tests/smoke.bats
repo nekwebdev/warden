@@ -24,6 +24,10 @@ setup() { PROJECT_ROOT=$(cd "$BATS_TEST_DIRNAME/.." && pwd -P); }
   [ -d "$PROJECT_ROOT/warden-theme" ]
   [ -f "$PROJECT_ROOT/warden-theme/package.json" ]
   [ -d "$PROJECT_ROOT/warden-theme/themes" ]
+
+  [ -d "$PROJECT_ROOT/warden-web" ]
+  [ -f "$PROJECT_ROOT/warden-web/package.json" ]
+  [ -d "$PROJECT_ROOT/warden-web/src/server" ]
 }
 
 @test "warden-panel declares package and bundled extension manifest" {
@@ -63,6 +67,20 @@ setup() { PROJECT_ROOT=$(cd "$BATS_TEST_DIRNAME/.." && pwd -P); }
   [ "$status" -eq 0 ]
 
   [ -f "$PROJECT_ROOT/warden-theme/themes/warden-catppuccin-mocha.json" ]
+}
+
+@test "warden-web declares package and server bins without empty Pi resources" {
+  run grep -F '"name": "@nekwebdev/warden-web"' "$PROJECT_ROOT/warden-web/package.json"
+  [ "$status" -eq 0 ]
+
+  run grep -F '"warden-web-server": "./dist/server/index.js"' "$PROJECT_ROOT/warden-web/package.json"
+  [ "$status" -eq 0 ]
+
+  node - "$PROJECT_ROOT/warden-web/package.json" <<'NODE'
+const fs = require('fs');
+const manifest = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'));
+if (Object.prototype.hasOwnProperty.call(manifest, 'pi')) process.exit(1);
+NODE
 }
 
 @test "former warden-packages package is folded into warden-panel" {
