@@ -10,5 +10,8 @@
     "test:pi-warden": "mise run test:pi-warden",
     "test:nix-warden": "mise run test:nix-warden",
     "test:dev-warden": "mise run test:dev-warden"
+  },
+  "devDependencies": {
+    "@types/node": "^25.9.3"
   }
 }
