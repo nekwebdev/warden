@@ -16,9 +16,9 @@ Default to scoped refresh. Use full remap only when requested or root orientatio
 
 ## Outcome
 
-- Root map: `<git-root>/.warden/map.md`.
-- Scoped maps: `<git-root>/.warden/maps/<repo-relative-scope>/map.md` where useful.
-- Freshness marker: `<git-root>/.warden/map-state.json` after a successful clean map run.
+- Root map: `<repo-root>/.warden/map.md`.
+- Scoped maps: `<repo-root>/.warden/maps/<repo-relative-scope>/map.md` where useful.
+- Freshness marker: `<repo-root>/.warden/map-state.json` after a successful clean map run.
 - Each map has exactly one injectable capsule and remains orientation-only.
 - Dirty repositories stop before map or map-state edits.
 
@@ -28,7 +28,7 @@ Input may be empty, a repository path, a repo-relative scope, or a request such 
 
 Discover the Git repository root from cwd first. Empty input inside a Git repository maps the Git root, not a nested cwd. Resolve absolute or relative paths to a repository root or repo-relative scope before writing.
 
-Interpret repo-relative scopes relative to the Git root and write only under `<git-root>/.warden/**`.
+Interpret repo-relative scopes relative to the Git root and write only under `<repo-root>/.warden/**`.
 
 If cwd is not inside a Git repository, fail clearly unless explicit standalone path behavior is supported by repo evidence.
 
@@ -51,7 +51,7 @@ Track progress in the harness only. Do not create repo task files or durable wor
 ## Safety rules
 
 - Git root `.warden/**` is the only canonical location for maps and `.warden/map-state.json`.
-- Read and write maps and map-state only under `<git-root>/.warden/**` unless nested cwd is itself a separate Git repository.
+- Read and write maps and map-state only under `<repo-root>/.warden/**` unless nested cwd is itself a separate Git repository.
 - Before writing maps or `.warden/map-state.json`, check `git status --porcelain` from the Git root.
 - If the working tree is dirty, stop clearly; do not edit maps; do not edit `.warden/map-state.json`; tell the user to commit, stash, or otherwise clean the repo before running `/skill:warden-map`.
 - Only `warden-map` writes `.warden/map-state.json`; other skills and extensions read it only.

@@ -196,6 +196,8 @@ describe("package pi resources", () => {
 			/Once the packet appears ready, request at least two fine-tuning questions through the active user-input workflow/,
 		);
 		assert.match(content, /answers incorporated/i);
+		assert.match(content, /git status --porcelain/);
+		assert.match(content, /commit, stash, or otherwise clean/);
 	});
 
 	it("centralizes user-question tool policy in the agent template", () => {
@@ -240,8 +242,34 @@ describe("package pi resources", () => {
 			);
 			assert.match(
 				content,
-				/Do not emit a tracker `nextStep`/,
+				/Packet name: <slug>/,
+				`${skillName} should expose tracker packetName field`,
+			);
+			assert.match(
+				content,
+				/Packet path: \.warden\/work\/<slug>\/packet\.md/,
+				`${skillName} should expose tracker packetPath field`,
+			);
+			assert.match(
+				content,
+				/Summary: Put a one-line summary/,
+				`${skillName} should expose tracker lastSummary field`,
+			);
+			assert.doesNotMatch(
+				content,
+				/nextStep:/,
 				`${skillName} should keep tracker nextStep extension-owned`,
+			);
+		}
+	});
+
+	it("warden-flow skills use repo-root placeholder consistently", () => {
+		for (const entry of skillEntries()) {
+			const content = readFileSync(resolve(packageRoot, entry), "utf-8");
+			assert.doesNotMatch(
+				content,
+				/<git-root>/,
+				`${entry} should use <repo-root>`,
 			);
 		}
 	});
@@ -280,7 +308,7 @@ describe("package pi resources", () => {
 		assert.match(content, /^name:\s*warden-create-skill$/m);
 		assert.match(content, /^argument-hint:\s*\[skill name or intent\]$/m);
 		assert.match(content, /\$PI_CODING_AGENT_DIR\/\.agents\/skills\//);
-		assert.match(content, /<git-root>\/\.agents\/skills\//);
+		assert.match(content, /<repo-root>\/\.agents\/skills\//);
 		assert.match(content, /templates\/SKILL-template\.md/);
 		assert.match(content, /ask the user to choose exactly one scope/i);
 		assert.match(content, /### Step 1: Choose scope/);

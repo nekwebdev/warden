@@ -151,11 +151,12 @@ Tracker schema is versioned:
 }
 ```
 
-`current` and `queue` entries contain exactly:
+`current` and `queue` entries contain exactly. `packetPath` is always the full repo-relative packet path. `packetName` is display text from the final skill output `Packet name:` tracker field with a packet-path fallback, and is not validated against the path:
 
 ```json
 {
   "packetPath": ".warden/work/example/packet.md",
+  "packetName": "example",
   "lastStep": "warden-tdd",
   "lastStatus": "success",
   "lastSummary": "green",
@@ -175,7 +176,7 @@ Lifecycle behavior is deterministic:
 - successful `warden-close` without `handoff.md` records tracker failure and keeps `nextStep: "warden-close"`;
 - failed or aborted steps update the matching packet for retry without advancing the deterministic flow.
 
-The extension captures allowlisted invocations from raw `input` or expanded `before_agent_start` skill prompts, then processes final assistant messages at `agent_end`. It does not parse tracker `nextStep` from skill output. Existing malformed or schema-invalid tracker JSON is left unchanged for that update.
+The extension captures allowlisted invocations from raw `input` or expanded `before_agent_start` skill prompts, then processes final assistant messages at `agent_end`. It parses `Packet name:`, `Packet path:`, `Tracker status:`, and `Summary:` only from the top tracker block before the first `##` heading, while keeping `nextStep` extension-owned. Existing malformed or schema-invalid tracker JSON is left unchanged for that update.
 
 ## Skill effort
 

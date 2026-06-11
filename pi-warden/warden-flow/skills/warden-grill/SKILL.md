@@ -143,23 +143,30 @@ Stop when no valid `packet.md` was provided, input is rough intent, packet canno
 
 ## Output format
 
-Every final or stopped response must include the exact tracker field line:
-
-```text
-Tracker status: success | failure | aborted
-```
-
-Use `success` only when the packet is solid for TDD. Use `failure` when the packet is blocked, unsafe, not TDD-ready, or missing. Use `aborted` when the user stops the workflow. Do not emit a tracker `nextStep`; the extension owns next-step state.
-
 During the loop, use the active user-input workflow for one next question with your recommended answer, or output a brief note that the packet was updated before the next question. Do not finalize when the packet first appears ready; request adversarial answers through the active user-input workflow first.
 
 Only when no unresolved questions remain and the adversarial round is complete, use this final shape:
+
+Every final or stopped response must include these exact tracker field lines:
+
+```text
+Tracker status: success | failure | aborted
+Packet name: <slug>
+Packet path: .warden/work/<slug>/packet.md
+Verdict: Packet solid for TDD | Blocked
+Summary: Put a one-line summary
+```
+
+Use `success` only when the packet is solid for TDD. Use `failure` when the packet is blocked, unsafe, not TDD-ready, or missing. Use `aborted` when the user stops the workflow.
 
 ```md
 # Warden Grill
 
 Tracker status: success | failure | aborted
+Packet name: <slug>
+Packet path: .warden/work/<slug>/packet.md
 Verdict: Packet solid for TDD
+Summary: Put a one-line summary
 
 ## Slice check
 

@@ -1,6 +1,8 @@
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import {
 	applyPacketTrackerUpdate,
+	parsePacketName,
+	parsePacketPath,
 	parsePacketStatus,
 	type PacketTrackerStep,
 } from "../../src/packet-tracker.js";
@@ -85,7 +87,8 @@ export function registerWardenPacketTracker(
 				cwd: ctx.cwd ?? process.cwd(),
 				step: invocation.step,
 				status,
-				packetPath: invocation.packetPath ?? packetPathFromText(output),
+				packetPath: parsePacketPath(output) ?? invocation.packetPath,
+				packetName: parsePacketName(output),
 				output,
 				nextStepChoice,
 				now: now(),

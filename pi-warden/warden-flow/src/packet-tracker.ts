@@ -38,6 +38,7 @@ type ResolvedPacketTrackerUpdate = {
 	step: PacketTrackerStep;
 	status: PacketTrackerStatus;
 	packetPath: string;
+	packetName: string;
 	summary: string;
 	now: string;
 	repoRoot: string;
@@ -46,6 +47,7 @@ type ResolvedPacketTrackerUpdate = {
 
 export interface PacketTrackerEntry {
 	packetPath: string;
+	packetName: string;
 	lastStep: PacketTrackerStep;
 	lastStatus: PacketTrackerStatus;
 	lastSummary: string;
@@ -69,6 +71,7 @@ export interface PacketTrackerUpdate {
 	step: string;
 	status: string;
 	packetPath?: string;
+	packetName?: string;
 	output?: string;
 	nextStepChoice?: string;
 	now: string;
@@ -119,19 +122,39 @@ export function packetTrackerPath(repoRoot: string): string {
 export function parsePacketStatus(
 	output: string,
 ): PacketTrackerStatus | undefined {
-	const match = output.match(
+	const match = topTrackerBlock(output).match(
 		/(?:^|\n)\s*(?:[-*]\s*)?(?:tracker\s+status|status)\s*:\s*(success|failure|aborted)\b/i,
 	);
 	const value = match?.[1]?.toLowerCase();
 	return isPacketTrackerStatus(value) ? value : undefined;
 }
 
+export function parsePacketPath(output: string): string | undefined {
+	return trackerFieldFromOutput(output, "packet path");
+}
+
+export function parsePacketName(output: string): string | undefined {
+	return trackerFieldFromOutput(output, "packet name");
+}
+
+export function parsePacketSummary(output: string): string | undefined {
+	const summary = trackerFieldFromOutput(output, "summary");
+	return summary ? truncateSummary(normalizeSummaryLine(summary)) : undefined;
+}
+
 export function summarizePacketOutput(output: string): string {
-	const lines = output.split(/\r?\n/).map(normalizeSummaryLine).filter(Boolean);
+	const explicitSummary = parsePacketSummary(output);
+	if (explicitSummary) return explicitSummary;
+
+	const lines = topTrackerBlock(output)
+		.split(/\r?\n/)
+		.map(normalizeSummaryLine)
+		.filter(Boolean);
 	const preferred = lines
-		.map((line) => line.match(/^(?:result|summary)\s*:\s*(.+)$/i)?.[1]?.trim())
+		.map((line) => line.match(/^(?:result|verdict)\s*:\s*(.+)$/i)?.[1]?.trim())
 		.find(Boolean);
-	return truncateSummary(preferred ?? lines[0] ?? "No summary provided.");
+	const fallback = lines.find((line) => !isSummaryBoilerplate(line));
+	return truncateSummary(preferred ?? fallback ?? "No summary provided.");
 }
 
 export function normalizePacketPath(
@@ -174,10 +197,16 @@ function resolveTrackerUpdate(
 		: fallbackPacketPath(update, state);
 	if (!packetPath) return undefined;
 
+	const packetName =
+		update.packetName ??
+		parsePacketName(update.output ?? "") ??
+		packetNameFromPath(packetPath);
+
 	return {
 		step: update.step,
 		status: update.status,
 		packetPath,
+		packetName,
 		summary: summarizePacketOutput(update.output ?? ""),
 		now: update.now,
 		repoRoot,
@@ -311,12 +340,13 @@ function makeCurrent(
 function entryFromUpdate(
 	update: Pick<
 		ResolvedPacketTrackerUpdate,
-		"step" | "status" | "packetPath" | "summary" | "now"
+		"step" | "status" | "packetPath" | "packetName" | "summary" | "now"
 	>,
 	nextStep: PacketTrackerNextStep,
 ): PacketTrackerEntry {
 	return {
 		packetPath: update.packetPath,
+		packetName: update.packetName,
 		lastStep: update.step,
 		lastStatus: update.status,
 		lastSummary: update.summary,
@@ -328,6 +358,7 @@ function entryFromUpdate(
 function newPacketTrackerEntry(packetPath: string): PacketTrackerEntry {
 	return {
 		packetPath,
+		packetName: packetNameFromPath(packetPath),
 		lastStep: "warden-start",
 		lastStatus: "success",
 		lastSummary: "",
@@ -372,6 +403,42 @@ function siblingHandoffPath(packetPath: string): string {
 	return normalizeSlashes(join(dirname(packetPath), "handoff.md"));
 }
 
+export function packetNameFromPath(packetPath: string): string {
+	return (
+		normalizeSlashes(dirname(packetPath))
+			.split("/")
+			.filter((part) => part && part !== ".")
+			.at(-1) ?? ""
+	);
+}
+
+function trackerFieldFromOutput(
+	output: string,
+	fieldName: string,
+): string | undefined {
+	const escaped = fieldName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+	return topTrackerBlock(output)
+		.match(
+			new RegExp(
+				`(?:^|\\n)\\s*(?:[-*]\\s*)?${escaped}\\s*:\\s*(.+?)(?=\\r?\\n|$)`,
+				"i",
+			),
+		)?.[1]
+		?.trim();
+}
+
+function topTrackerBlock(output: string): string {
+	const lines = output.split(/\r?\n/);
+	const endIndex = lines.findIndex((line) => /^##\s+/.test(line));
+	return (endIndex >= 0 ? lines.slice(0, endIndex) : lines).join("\n");
+}
+
+function isSummaryBoilerplate(line: string): boolean {
+	return /^(?:warden\s+(?:start|grill|tdd|close)(?:\s+result)?|tracker\s+status|packet\s+(?:name|path|action)|next\s+(?:action|step))\b/i.test(
+		line,
+	);
+}
+
 function normalizeSummaryLine(line: string): string {
 	const trimmed = line
 		.replace(/^\s*[-*]\s+/, "")
@@ -409,6 +476,7 @@ function isPacketTrackerEntry(value: unknown): value is PacketTrackerEntry {
 	return (
 		hasExactKeys(value, [
 			"packetPath",
+			"packetName",
 			"lastStep",
 			"lastStatus",
 			"lastSummary",
@@ -416,6 +484,7 @@ function isPacketTrackerEntry(value: unknown): value is PacketTrackerEntry {
 			"timestamp",
 		]) &&
 		typeof value.packetPath === "string" &&
+		typeof value.packetName === "string" &&
 		isPacketTrackerStep(value.lastStep) &&
 		isPacketTrackerStatus(value.lastStatus) &&
 		typeof value.lastSummary === "string" &&
@@ -433,6 +502,7 @@ function isCompletedPacketTrackerEntry(
 	return (
 		hasExactKeys(value, [
 			"packetPath",
+			"packetName",
 			"lastStep",
 			"lastStatus",
 			"lastSummary",

@@ -15,6 +15,9 @@ import {
 	PACKET_TRACKER_RELATIVE_PATH,
 	applyPacketTrackerUpdate,
 	loadPacketTrackerState,
+	packetNameFromPath,
+	parsePacketName,
+	parsePacketPath,
 	parsePacketStatus,
 	summarizePacketOutput,
 	type PacketTrackerState,
@@ -63,6 +66,7 @@ function writeTracker(state: unknown): void {
 function existingEntry(packetPath: string, step = "warden-start") {
 	return {
 		packetPath,
+		packetName: packetNameFromPath(packetPath),
 		lastStep: step,
 		lastStatus: "success",
 		lastSummary: "old",
@@ -87,6 +91,7 @@ describe("packet tracker core", () => {
 		assert.deepEqual(state.queue, []);
 		assert.deepEqual(state.recentCompleted, []);
 		assert.equal(state.current?.packetPath, ".warden/work/one/packet.md");
+		assert.equal(state.current?.packetName, "one");
 		assert.equal(state.current?.lastStep, "warden-start");
 		assert.equal(state.current?.lastStatus, "success");
 		assert.equal(state.current?.lastSummary, "created packet");
@@ -127,8 +132,10 @@ describe("packet tracker core", () => {
 
 		const state = readTracker();
 		assert.equal(state.current?.packetPath, ".warden/work/two/packet.md");
+		assert.equal(state.current?.packetName, "two");
 		assert.equal(state.current?.nextStep, "warden-tdd");
 		assert.equal(state.queue[0]?.packetPath, ".warden/work/old/packet.md");
+		assert.equal(state.queue[0]?.packetName, "old");
 	});
 
 	it("uses extension-owned tdd next-step choice and falls back to grill", () => {
@@ -220,6 +227,7 @@ describe("packet tracker core", () => {
 			state.recentCompleted[0]?.packetPath,
 			".warden/work/one/packet.md",
 		);
+		assert.equal(state.recentCompleted[0]?.packetName, "one");
 		assert.equal(
 			state.recentCompleted[0]?.handoffPath,
 			".warden/work/one/handoff.md",
@@ -321,9 +329,30 @@ describe("packet tracker core", () => {
 	it("rejects invalid status/step/nextStep and bounds summaries", () => {
 		assert.equal(parsePacketStatus("Status: success"), "success");
 		assert.equal(parsePacketStatus("Status: closed"), undefined);
+		const trackerOutput =
+			"# Warden Start Result\n\nTracker status: success\nPacket name: Display Name / user text\nPacket path: .warden/work/one/packet.md\nSummary: Ready for implementation.\n\n## Summary\nTracker status: failure\nPacket name: ignored\nPacket path: .warden/work/two/packet.md\nSummary: ignored";
+		assert.equal(parsePacketStatus(trackerOutput), "success");
+		assert.equal(parsePacketName(trackerOutput), "Display Name / user text");
+		assert.equal(parsePacketPath(trackerOutput), ".warden/work/one/packet.md");
+		assert.equal(
+			summarizePacketOutput(trackerOutput),
+			"Ready for implementation.",
+		);
 		assert.equal(
 			summarizePacketOutput("# Title\n\nSummary: " + "x".repeat(500)).length,
 			300,
+		);
+		assert.equal(
+			summarizePacketOutput(
+				"Verdict: Packet solid for TDD\nSummary: Ready for implementation.",
+			),
+			"Ready for implementation.",
+		);
+		assert.equal(
+			summarizePacketOutput(
+				"# Warden Start Result\n\nTracker status: success\nPacket path: .warden/work/one/packet.md\n\n## Summary\nCreated one packet for TDD.\n\n## Assumptions\nNone.",
+			),
+			"No summary provided.",
 		);
 
 		assert.equal(

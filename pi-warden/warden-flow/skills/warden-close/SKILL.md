@@ -200,9 +200,13 @@ Every final response must include the exact tracker field line:
 
 ```text
 Tracker status: success | failure | aborted
+Packet name: <slug>
+Packet path: .warden/work/<slug>/packet.md
+Status: Closed | Not ready | Blocked
+Summary: Put a one-line summary
 ```
 
-Use `success` only when `Status: Closed`. Use `failure` when `Status: Not ready` or `Status: Blocked`. Use `aborted` when the user stops the workflow. Do not emit a tracker `nextStep`; the extension owns next-step state.
+Use `success` only when `Status: Closed`. Use `failure` when `Status: Not ready` or `Status: Blocked`. Use `aborted` when the user stops the workflow.
 
 Respond in this shape:
 
@@ -210,7 +214,10 @@ Respond in this shape:
 # Warden Close Result
 
 Tracker status: success | failure | aborted
+Packet name: <slug>
+Packet path: .warden/work/<slug>/packet.md
 Status: Closed | Not ready | Blocked
+Summary: Put a one-line summary
 
 ## Result
 

@@ -17,7 +17,7 @@ Use when the user wants to create a reusable Agent Skill for Pi, either globally
 A new `<skill-name>/SKILL.md` exists under one chosen skills directory:
 
 - global: `$PI_CODING_AGENT_DIR/.agents/skills/<skill-name>/SKILL.md`
-- project: `<git-root>/.agents/skills/<skill-name>/SKILL.md`
+- project: `<repo-root>/.agents/skills/<skill-name>/SKILL.md`
 
 The generated skill uses the bundled `templates/SKILL-template.md` as guidance, but contains only concrete final content for the new skill.
 
@@ -40,7 +40,7 @@ Before writing, ask the user to choose exactly one scope through the active user
 Show both target roots in the question:
 
 - `Global` — `$PI_CODING_AGENT_DIR/.agents/skills/`
-- `Project` — `<git-root>/.agents/skills/`
+- `Project` — `<repo-root>/.agents/skills/`
 
 Use project scope from the current Git repository root. If project scope is chosen outside a Git repository, stop and ask the user to rerun from a project repository or provide a project root.
 
@@ -99,7 +99,7 @@ Generated `SKILL.md` content must strip:
 ### Step 1: Choose scope
 
 1. Resolve global root from `$PI_CODING_AGENT_DIR/.agents/skills/`.
-2. Resolve project root from `<git-root>/.agents/skills/`.
+2. Resolve project root from `<repo-root>/.agents/skills/`.
 3. Ask the user to choose `Global` or `Project`, showing both roots.
 4. Stop if the chosen root cannot be resolved.
 5. Keep the chosen root for target-path checks; do not write yet.

@@ -110,7 +110,7 @@ describe("warden packet tracker extension", () => {
 		});
 
 		await runFirstHandler(pi, "input", {
-			text: "/skill:warden-start .warden/work/one/packet.md",
+			text: "/skill:warden-start packet.md",
 			source: "interactive",
 		});
 		assert.throws(() => readTracker(), /ENOENT/);
@@ -118,14 +118,21 @@ describe("warden packet tracker extension", () => {
 		await runFirstHandler(
 			pi,
 			"agent_end",
-			assistantEnd("Status: success\nSummary: packet ready"),
+			assistantEnd(
+				"# Warden Start Result\n\nTracker status: success\nPacket name: output-one\nPacket path: .warden/work/one/packet.md\nSummary: Created output-one packet for TDD.\n\n## Summary\nTracker status: failure\nPacket name: ignored\nPacket path: .warden/work/two/packet.md\nSummary: ignored",
+			),
 			{ cwd },
 		);
 
 		const state = readTracker();
 		assert.equal(state.current?.packetPath, ".warden/work/one/packet.md");
+		assert.equal(state.current?.packetName, "output-one");
 		assert.equal(state.current?.lastStep, "warden-start");
 		assert.equal(state.current?.lastStatus, "success");
+		assert.equal(
+			state.current?.lastSummary,
+			"Created output-one packet for TDD.",
+		);
 		assert.equal(state.current?.nextStep, "warden-grill");
 	});
 

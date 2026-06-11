@@ -160,13 +160,16 @@ Stop without target-file edits when:
 
 ## Output format
 
-Every final or stopped response must include the exact tracker field line:
+Every final or stopped response must include these exact tracker field lines:
 
 ```text
 Tracker status: success | failure | aborted
+Packet name: <slug>
+Packet path: .warden/work/<slug>/packet.md
+Summary: Put a one-line summary
 ```
 
-Use `success` only when the packet slice is correctly implemented or intentionally validated with accepted no-code evidence. Use `failure` when blocked, under-specified, tests fail, or implementation is incomplete. Use `aborted` when the user stops the workflow. Do not emit a tracker `nextStep`; the extension owns next-step state and post-TDD choice.
+Use `success` only when the packet slice is correctly implemented or intentionally validated with accepted no-code evidence. Use `failure` when blocked, under-specified, tests fail, or implementation is incomplete. Use `aborted` when the user stops the workflow.
 
 Respond in this shape:
 
@@ -174,6 +177,9 @@ Respond in this shape:
 # Warden TDD Result
 
 Tracker status: success | failure | aborted
+Packet name: <slug>
+Packet path: .warden/work/<slug>/packet.md
+Summary: Put a one-line summary
 
 ## Result
 

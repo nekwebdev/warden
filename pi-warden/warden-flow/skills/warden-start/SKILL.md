@@ -16,7 +16,7 @@ Use this as the entry point for a lean Warden dev cycle, for example: `/skill:wa
 
 ## Outcome
 
-- One lean work packet exists at `<git-root>/.warden/work/<slug>/packet.md`, or packet markdown is shown when preview/dry-run/no-edit/blocked safety applies.
+- One lean work packet exists at `<repo-root>/.warden/work/<slug>/packet.md`, or packet markdown is shown when preview/dry-run/no-edit/blocked safety applies.
 - Packet has one vertical slice, concrete acceptance behavior, narrow verification, manual verification, boundaries, non-goals, and next safe step.
 - Broad or unsafe work is split, reduced, or rejected.
 - Late fine-tuning checkpoint completed and answers incorporated before final output.
@@ -32,7 +32,7 @@ If input is rough intent, choose a short lowercase slug from user intent using h
 Canonical packet root:
 
 - discover Git repository root from current cwd first;
-- create or update packets only under `<git-root>/.warden/work/**` when cwd is inside a Git repository;
+- create or update packets only under `<repo-root>/.warden/work/**` when cwd is inside a Git repository;
 - if invoked from nested cwd with no explicit path, write under Git repository root, not nested cwd;
 - do not write `.warden/work/**` under nested cwd unless that cwd is itself a separate Git repository;
 - if cwd is not inside a Git repository, fail clearly unless explicit standalone path behavior is supported by repo evidence;
@@ -54,10 +54,13 @@ Track progress in the harness only. Do not create repo task files or durable wor
 
 ## Safety rules
 
+- Check `git status --porcelain` from the Git repository root before creating or updating a packet.
+- If the working tree is dirty, cancel immediately; tell the user to commit, stash, or otherwise clean the repo before rerunning `/skill:warden-start`.
+
 Default behavior when file-editing tools are available:
 
-- create or update `<git-root>/.warden/work/<slug>/packet.md`;
-- create `<git-root>/.warden/work/<slug>/` first when needed;
+- create or update `<repo-root>/.warden/work/<slug>/packet.md`;
+- create `<repo-root>/.warden/work/<slug>/` first when needed;
 - output packet markdown instead of writing only when the user asks for preview/dry run, environment cannot edit files, or implementation safety is blocked.
 
 Slice rules:
@@ -129,7 +132,7 @@ Create or refine packet markdown using the exact section set in `## Packet forma
 
 ### Step 6: Write and report
 
-1. Write packet to `<git-root>/.warden/work/<slug>/packet.md` unless preview/dry-run/no-edit/blocked safety applies.
+1. Write packet to `<repo-root>/.warden/work/<slug>/packet.md` unless preview/dry-run/no-edit/blocked safety applies.
 2. Respond with `# Warden Start Result`.
 3. Offer `/skill:warden-grill <repo-root>/.warden/work/<slug>/packet.md` as next action.
 
@@ -208,17 +211,20 @@ For prose-only `SKILL.md` or docs edits, prefer manual read/verification over ma
 
 ## Stop conditions
 
-Stop or preview without writing when canonical root cannot resolve, packet path would escape `<git-root>/.warden/work/**`, implementation safety is blocked, user requested dry run/preview, environment cannot edit files, or the request cannot be reduced to one safe slice.
+Stop or preview without writing when canonical root cannot resolve, packet path would escape `<repo-root>/.warden/work/**`, implementation safety is blocked, user requested dry run/preview, environment cannot edit files, or the request cannot be reduced to one safe slice.
 
 ## Output format
 
-Every final response must include the exact tracker field line:
+Every final response must include these exact tracker field lines:
 
 ```text
 Tracker status: success | failure | aborted
+Packet name: <slug>
+Packet path: .warden/work/<slug>/packet.md
+Summary: Put a one-line summary
 ```
 
-Use `success` only when a real `packet.md` path is ready for the next Warden Flow step. Use `failure` when blocked, preview-only, or no usable packet path exists. Use `aborted` when the user stops the workflow. Do not emit a tracker `nextStep`; the extension owns next-step state.
+Use `success` only when a real `packet.md` path is ready for the next Warden Flow step. Use `failure` when blocked, preview-only, or no usable packet path exists. Use `aborted` when the user stops the workflow.
 
 Respond in this shape:
 
@@ -226,8 +232,9 @@ Respond in this shape:
 # Warden Start Result
 
 Tracker status: success | failure | aborted
-Packet path:
-Packet action:
+Packet name: <slug>
+Packet path: .warden/work/<slug>/packet.md
+Summary: Put a one-line summary
 
 ## Summary
 
