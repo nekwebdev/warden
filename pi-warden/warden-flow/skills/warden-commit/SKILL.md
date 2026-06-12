@@ -22,7 +22,7 @@ Use when the user wants current local Git changes inspected, grouped into atomic
 
 User-provided arguments may guide workspace focus, path scope, grouping, subject wording, or body wording.
 
-Arguments never authorize applying commits.
+Arguments never authorize applying commits. Only an invocation-scoped hidden Warden Flow auto directive with an exact package-generated structured consent marker may authorize skipping the second approval prompt, and only after all normal snapshot and safety checks pass.
 
 Pi skill command arguments arrive after the `</skill>` block as user text. Do not rely on `$ARGUMENTS`, `$0`, or `$1` substitution inside this file.
 
@@ -88,7 +88,7 @@ git diff --no-index -- /dev/null <path>
 
 ## Approval policy
 
-Print the full plan as a normal assistant response first. Then request a user decision through the active user-input workflow. Do not put the plan inside the user-input prompt.
+For non-auto mode, print the full plan as a normal assistant response first, then request a user decision through the active user-input workflow. For valid auto mode, build the same full plan, skip the second approval prompt only when every auto safety condition passes, and include the exact applied plan in the result. Do not put the plan inside the user-input prompt.
 
 Question text:
 
@@ -96,7 +96,7 @@ Question text:
 Apply this exact commit plan?
 ```
 
-Approval must clearly and unconditionally accept the exact visible plan. Ambiguous, conditional, partial, edited, or questioning replies are not approval. If not approved, revise, abort, or request one clarifying answer through the active user-input workflow; do not apply.
+Approval must clearly and unconditionally accept the exact visible plan, unless valid auto consent applies. Ambiguous, conditional, partial, edited, or questioning replies are not approval. If not approved and no valid auto consent applies, revise, abort, or request one clarifying answer through the active user-input workflow; do not apply.
 
 ## Procedure
 
@@ -125,7 +125,7 @@ Approval must clearly and unconditionally accept the exact visible plan. Ambiguo
 
 ### Step 4: Review
 
-Show the full plan with:
+Show or record the full plan with:
 
 - `snapshotHash`;
 - each commit subject;
@@ -135,13 +135,13 @@ Show the full plan with:
 - diff inspection performed;
 - grouping reason when useful.
 
-### Step 5: Request approval
+### Step 5: Request approval or validate auto consent
 
-Request `Apply this exact commit plan?` through the active user-input workflow. Do not apply unless approval is clear and unconditional.
+Request `Apply this exact commit plan?` through the active user-input workflow unless valid auto consent applies. Do not apply unless approval is clear and unconditional, or the current hidden Warden Flow auto directive has a valid package-generated consent marker and its auto-apply safety conditions pass.
 
 ### Step 6: Apply
 
-If approved, call `warden_commit_apply` with the reviewed `snapshotHash`, exact planned commits, and exact repo-relative file paths.
+If approved or valid auto consent applies, call `warden_commit_apply` with the reviewed `snapshotHash`, exact planned commits, and exact repo-relative file paths.
 
 ### Step 7: Report
 
@@ -153,9 +153,9 @@ Before calling `warden_commit_apply`, confirm:
 
 - snapshot ran;
 - every planned path was inspected;
-- full plan was visible to the user;
-- approval came after the visible plan;
-- approval clearly accepted the exact visible plan;
+- full plan was visible to the user, or valid auto mode will include the exact applied plan in the result;
+- approval came after the visible plan, or valid auto consent applies;
+- approval clearly accepted the exact visible plan, or valid auto consent applies;
 - tool arguments exactly match the reviewed plan;
 - no excluded, risky, hidden, generated, or unrelated paths are included;
 - no manual staging or `git commit` command was used.
@@ -168,7 +168,7 @@ Stop without applying when:
 - workspace state is unclear or changed after planning;
 - planned paths are unsafe or uninspected;
 - grouping or message intent remains unclear;
-- approval is missing or ambiguous;
+- approval is missing or ambiguous and no valid auto consent applies;
 - `warden_commit_apply` refuses the plan.
 
 ## Output format
@@ -203,7 +203,7 @@ Why this grouping:
 
 ## Next step
 
-Request approval through the active user-input workflow with `Apply this exact commit plan?`.
+Request approval through the active user-input workflow with `Apply this exact commit plan?`, or apply through `warden_commit_apply` when valid auto consent applies and every auto safety condition passed.
 ```
 
 ### Result

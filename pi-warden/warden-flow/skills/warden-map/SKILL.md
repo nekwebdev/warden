@@ -26,6 +26,8 @@ Default to scoped refresh. Use full remap only when requested or root orientatio
 
 Input may be empty, a repository path, a repo-relative scope, or a request such as "map this repo".
 
+A hidden Warden Flow auto directive may mark leading `--auto` as invocation control syntax. In auto mode, use the cleaned empty/root scope or safe repo-relative scope and skip optional prompt mechanics; safety checks and dirty-repo refusal still apply.
+
 Discover the Git repository root from cwd first. Empty input inside a Git repository maps the Git root, not a nested cwd. Resolve absolute or relative paths to a repository root or repo-relative scope before writing.
 
 Interpret repo-relative scopes relative to the Git root and write only under `<repo-root>/.warden/**`.

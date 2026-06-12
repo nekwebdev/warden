@@ -6,14 +6,14 @@ It reduces repeated repo discovery by maintaining a small map tree, injecting on
 
 ## What it provides
 
-- `/skill:warden-map` — creates or refreshes repository map files.
+- `/skill:warden-map` — creates or refreshes repository map files; leading `--auto` uses one safe cleaned scope and skips optional prompt mechanics without bypassing dirty-repo refusal.
 - `/skill:warden-docs` — aligns stale `README.md` and `AGENTS.md` files with repo evidence when map freshness is current.
 - `/skill:warden-create-skill` — creates a new global or project Agent Skill from the bundled Warden skill template.
 - `/skill:warden-start` — turns rough intent into one small `.warden/work/<slug>/packet.md` work packet for a lean dev cycle.
 - `/skill:warden-grill` — pressure-tests a work packet or manual feedback through a question/update loop until it is solid for TDD.
 - `/skill:warden-tdd` — implements one grilled work packet slice with strict test-first workflow.
 - `/skill:warden-close` — validates an accepted work packet or existing closure `handoff.md`, creates or updates final `handoff.md`, and decides changelog/map impact.
-- `/skill:warden-commit` — plans safe, atomic local commits and can apply them after plan approval.
+- `/skill:warden-commit` — plans safe, atomic local commits and can apply them after plan approval; leading `--auto` may create local commits without a second approval only after strict snapshot safety checks and package-generated consent.
 - `/warden:effort` — opens the Warden panel Effort pane for Warden skill thinking-level settings through `@nekwebdev/warden-panel`.
 - `extensions/warden-map` — injects map capsules and git context.
 - `extensions/warden-commit` — registers `warden_commit_snapshot` and `warden_commit_apply` for safe local commit planning and execution.
@@ -105,7 +105,7 @@ Git context is cached and re-injected only when branch, commit, or dirty state c
 
 ## Runtime directives
 
-`extensions/warden-directives` can inject invocation-scoped Warden Flow guidance before a skill turn. Current support covers `warden-start` prompt selection, leading name/branch flags, and auto mode.
+`extensions/warden-directives` can inject invocation-scoped Warden Flow guidance before a skill turn. Current support covers `warden-start` prompt selection, leading name/branch flags, `warden-start` auto mode, plus explicit leading `--auto` for `warden-commit` and `warden-map`.
 
 Use leading flags to make `warden-start` packet selection deterministic before drafting:
 
@@ -131,7 +131,18 @@ You can also set a Pi agent fallback in `settings.json`:
 }
 ```
 
-Precedence is explicit invocation flag, then `warden.flow.interactionMode`, then normal interactive behavior. Unsupported modes or missing directive files fail safe by injecting no directive. This slice has no per-invocation `--interactive` escape flag; disable or change the setting to restore plain interactive default behavior.
+Precedence for `warden-start` is explicit invocation flag, then `warden.flow.interactionMode`, then normal interactive behavior. `warden-commit` and `warden-map` do not use settings fallback auto mode; they require direct leading `--auto` or a future stricter package-generated handoff. Unsupported modes or missing directive files fail safe by stripping explicit `--auto` when applicable and injecting no directive. This slice has no per-invocation `--interactive` escape flag for `warden-start`; disable or change the setting to restore plain interactive default behavior.
+
+Explicit auto examples:
+
+```text
+/skill:warden-map --auto pi-warden/warden-flow
+/skill:warden-commit --auto package-local auto-mode slice
+```
+
+`warden-map --auto` accepts only empty/root scope or one safe repo-relative scope before directive injection. It rejects absolute paths, `..` escapes, empty path segments, shell metacharacters, and ambiguous multi-token scope text. The map workflow still refuses dirty repositories before map or map-state writes.
+
+`warden-commit --auto` injects a hidden package-generated `directAutoCommitConsent=true` marker. It may create local commits without a second approval only after `warden_commit_snapshot` and inspection show one clear user intent and one cohesive commit plan. Snapshot buckets may be merged when they are companion parts of the same change, such as package implementation, tests, docs, skill guidance, and required root changelog updates. It still rejects risky, excluded, hidden, generated, secret-looking, unrelated, warning, staged/unstaged ambiguity, or unclear grouping paths, and it must apply only through `warden_commit_apply`. It performs no remote or destructive Git operations.
 
 Runtime directives stay inside the `@nekwebdev/warden-flow` package. They do not implement runner workflows, agent lifecycle commands, Pi launch plumbing, worktree creation, remote setup, fetch, pull, push, or sibling package behavior.
 

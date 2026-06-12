@@ -1,6 +1,9 @@
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import {
+	WARDEN_COMMIT_SKILL_NAME,
 	buildWardenFlowDirectiveMessage,
+	buildWardenFlowDirectiveMessageWithPrefix,
+	parseWardenSkillDirectAutoInvocation,
 	resolveWardenFlowInteractionMode,
 	wardenFlowSkillNameFromText,
 	type WardenFlowDirectiveMessage,
@@ -32,8 +35,8 @@ type EventContext = {
 	readonly cwd?: string;
 };
 
-type PreparedWardenStartDirective = {
-	readonly message: WardenFlowDirectiveMessage;
+type PreparedWardenDirective = {
+	readonly message?: WardenFlowDirectiveMessage;
 	readonly transformedText: string;
 };
 
@@ -49,16 +52,31 @@ export function registerWardenDirectives(pi: ExtensionAPI): void {
 	pi.on("input", async (event: InputEvent, ctx?: EventContext) => {
 		if (event.source === "extension") return { action: "continue" } as const;
 
-		const prepared = await prepareWardenStartDirective(
+		const preparedStart = await prepareWardenStartDirective(
 			pi,
 			event.text,
 			ctx?.cwd,
 		);
-		if (prepared) {
-			pendingMessage = prepared.message;
-			return prepared.transformedText === event.text
+		if (preparedStart) {
+			pendingMessage = preparedStart.message;
+			return preparedStart.transformedText === event.text
 				? ({ action: "continue" } as const)
-				: ({ action: "transform", text: prepared.transformedText } as const);
+				: ({
+						action: "transform",
+						text: preparedStart.transformedText,
+					} as const);
+		}
+
+		const preparedDirectAuto = prepareWardenDirectAutoDirective(event.text);
+		if (preparedDirectAuto) {
+			pendingDirective = undefined;
+			pendingMessage = preparedDirectAuto.message;
+			return preparedDirectAuto.transformedText === event.text
+				? ({ action: "continue" } as const)
+				: ({
+						action: "transform",
+						text: preparedDirectAuto.transformedText,
+					} as const);
 		}
 
 		const skillName = wardenFlowSkillNameFromText(event.text);
@@ -95,7 +113,7 @@ async function prepareWardenStartDirective(
 	pi: ExtensionAPI,
 	text: string,
 	cwd: string | undefined,
-): Promise<PreparedWardenStartDirective | undefined> {
+): Promise<PreparedWardenDirective | undefined> {
 	if (wardenFlowSkillNameFromText(text) !== "warden-start") return undefined;
 
 	const currentBranch = await readCurrentBranch(pi, cwd);
@@ -127,6 +145,32 @@ async function prepareWardenStartDirective(
 			loadWardenStartDirectiveBodies(result.selection),
 		),
 		transformedText: result.selection.transformedText,
+	};
+}
+
+function prepareWardenDirectAutoDirective(
+	text: string,
+): PreparedWardenDirective | undefined {
+	const result = parseWardenSkillDirectAutoInvocation(text);
+	if (!result) return undefined;
+	if (!result.ok) {
+		throw new Error(`warden-map: --auto scope ${result.errors.join(" ")}`);
+	}
+	const preamble =
+		result.invocation.skillName === WARDEN_COMMIT_SKILL_NAME
+			? [
+					"## Warden Flow Auto Consent",
+					"directAutoCommitConsent=true",
+					"consentSource=direct-leading-auto",
+				].join("\n")
+			: "";
+	return {
+		message: buildWardenFlowDirectiveMessageWithPrefix(
+			result.invocation.skillName,
+			result.invocation.interactionMode,
+			preamble,
+		),
+		transformedText: result.invocation.transformedText,
 	};
 }
 

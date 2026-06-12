@@ -6,6 +6,7 @@ All notable Warden changes are recorded here.
 
 ### Added
 
+- Added `@nekwebdev/warden-flow` explicit leading `--auto` runtime directives for `warden-commit` and `warden-map`, including cohesive auto-commit safety gates, strict commit consent markers, and safe map scope validation.
 - Added `@nekwebdev/warden-flow` active-flow footer status showing current packet tracker state through a default-on Display setting.
 - Added `@nekwebdev/fresh-skill` standalone Pi package with `/fresh` clean-session skill replay.
 - Added `@nekwebdev/warden-flow` packet tracker extension for allowlisted packet lifecycle state in `.warden/work/packet-tracker.json`.

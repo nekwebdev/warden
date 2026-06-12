@@ -120,6 +120,93 @@ describe("Warden directives extension", () => {
 		assert.doesNotMatch(result.message.content, /--auto add X/);
 	});
 
+	it("transforms direct warden-commit --auto input and injects consent marker", async () => {
+		const pi = createFakePi();
+		wardenDirectives(pi as unknown as ExtensionAPI);
+
+		assert.deepEqual(
+			await runFirstHandler(pi, "input", {
+				text: "/skill:warden-commit --auto finish packet",
+				source: "interactive",
+			}),
+			{ action: "transform", text: "/skill:warden-commit finish packet" },
+		);
+
+		const result = await runFirstHandler(pi, "before_agent_start", {
+			prompt:
+				'<skill name="warden-commit" location="/tmp/SKILL.md">commit</skill>',
+		});
+
+		assertMessageResult(result);
+		assert.equal(result.message.customType, WARDEN_FLOW_DIRECTIVE_CUSTOM_TYPE);
+		assert.equal(result.message.display, false);
+		assert.match(
+			result.message.content,
+			/^<warden-flow-directive skill="warden-commit" interactionMode="auto">/,
+		);
+		assert.match(result.message.content, /directAutoCommitConsent=true/);
+		assert.doesNotMatch(result.message.content, /--auto finish packet/);
+	});
+
+	it("transforms direct warden-map --auto input and injects hidden directive", async () => {
+		const pi = createFakePi();
+		wardenDirectives(pi as unknown as ExtensionAPI);
+
+		assert.deepEqual(
+			await runFirstHandler(pi, "input", {
+				text: "/skill:warden-map --auto pi-warden/warden-flow",
+				source: "interactive",
+			}),
+			{ action: "transform", text: "/skill:warden-map pi-warden/warden-flow" },
+		);
+
+		const result = await runFirstHandler(pi, "before_agent_start", {
+			prompt: '<skill name="warden-map" location="/tmp/SKILL.md">map</skill>',
+		});
+
+		assertMessageResult(result);
+		assert.equal(result.message.customType, WARDEN_FLOW_DIRECTIVE_CUSTOM_TYPE);
+		assert.match(
+			result.message.content,
+			/^<warden-flow-directive skill="warden-map" interactionMode="auto">/,
+		);
+	});
+
+	it("rejects unsafe warden-map --auto scope before directive injection", async () => {
+		const pi = createFakePi();
+		wardenDirectives(pi as unknown as ExtensionAPI);
+
+		await assert.rejects(
+			runFirstHandler(pi, "input", {
+				text: "/skill:warden-map --auto ../outside",
+				source: "interactive",
+			}),
+			/warden-map: --auto scope/i,
+		);
+	});
+
+	it("does not use settings fallback for commit or map auto mode", async () => {
+		writeSettings({ warden: { flow: { interactionMode: "auto" } } });
+		const pi = createFakePi();
+		wardenDirectives(pi as unknown as ExtensionAPI);
+
+		for (const skillName of ["warden-commit", "warden-map"]) {
+			assert.deepEqual(
+				await runFirstHandler(pi, "input", {
+					text: `/skill:${skillName} normal intent`,
+					source: "interactive",
+				}),
+				{ action: "continue" },
+			);
+			assert.equal(
+				await runFirstHandler(pi, "before_agent_start", {
+					prompt: `<skill name="${skillName}" location="/tmp/SKILL.md">body</skill>`,
+				}),
+				undefined,
+			);
+		}
+	});
+
 	it("uses settings fallback without transforming plain warden-start intent", async () => {
 		writeSettings({ warden: { flow: { interactionMode: "auto" } } });
 		const pi = createFakePi();
@@ -209,27 +296,26 @@ describe("Warden directives extension", () => {
 		wardenDirectives(pi as unknown as ExtensionAPI);
 
 		await runFirstHandler(pi, "input", {
-			text: "/skill:warden-start --auto add X",
+			text: "/skill:warden-commit --auto finish packet",
 			source: "interactive",
 		});
 		await runFirstHandler(pi, "agent_end", {});
 		assert.equal(
 			await runFirstHandler(pi, "before_agent_start", {
 				prompt:
-					'<skill name="warden-start" location="/tmp/SKILL.md">start</skill>',
+					'<skill name="warden-commit" location="/tmp/SKILL.md">commit</skill>',
 			}),
 			undefined,
 		);
 
 		await runFirstHandler(pi, "input", {
-			text: "/skill:warden-start --auto add X",
+			text: "/skill:warden-map --auto pi-warden",
 			source: "interactive",
 		});
 		await runFirstHandler(pi, "session_shutdown", {});
 		assert.equal(
 			await runFirstHandler(pi, "before_agent_start", {
-				prompt:
-					'<skill name="warden-start" location="/tmp/SKILL.md">start</skill>',
+				prompt: '<skill name="warden-map" location="/tmp/SKILL.md">map</skill>',
 			}),
 			undefined,
 		);
