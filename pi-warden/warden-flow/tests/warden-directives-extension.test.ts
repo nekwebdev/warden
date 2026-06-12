@@ -26,10 +26,25 @@ type MessageResult = {
 
 function createFakePi() {
 	const handlers = new Map<string, Handler[]>();
+	const execCalls: string[] = [];
 	return {
 		handlers,
+		execCalls,
 		on(name: string, handler: Handler) {
 			handlers.set(name, [...(handlers.get(name) ?? []), handler]);
+		},
+		async exec(_command: string, args: string[]) {
+			execCalls.push(args.join(" "));
+			const key = args.join(" ");
+			if (key === "rev-parse --abbrev-ref HEAD")
+				return { stdout: "main\n", code: 0 };
+			if (key === "status --porcelain") return { stdout: "", code: 0 };
+			if (key.startsWith("show-ref --verify --quiet refs/heads/")) {
+				return { stdout: "", code: 1 };
+			}
+			if (key.startsWith("switch -c ")) return { stdout: "", code: 0 };
+			if (key.startsWith("switch ")) return { stdout: "", code: 0 };
+			throw new Error(`unexpected git args: ${key}`);
 		},
 	};
 }
@@ -141,7 +156,7 @@ describe("Warden directives extension", () => {
 		assert.match(result.message.content, /interactionMode="auto"/);
 	});
 
-	it("keeps interactive default when no flag or settings exist", async () => {
+	it("injects deterministic selection while keeping interactive prompts by default", async () => {
 		const pi = createFakePi();
 		wardenDirectives(pi as unknown as ExtensionAPI);
 
@@ -152,13 +167,41 @@ describe("Warden directives extension", () => {
 			}),
 			{ action: "continue" },
 		);
-		assert.equal(
-			await runFirstHandler(pi, "before_agent_start", {
-				prompt:
-					'<skill name="warden-start" location="/tmp/SKILL.md">start</skill>',
-			}),
-			undefined,
+		const result = await runFirstHandler(pi, "before_agent_start", {
+			prompt:
+				'<skill name="warden-start" location="/tmp/SKILL.md">start</skill>',
+		});
+
+		assertMessageResult(result);
+		assert.match(result.message.content, /interactionMode="prompt"/);
+		assert.match(result.message.content, /Warden Start Prompt Selection/);
+		assert.match(result.message.content, /Packet type: feature/);
+		assert.match(
+			result.message.content,
+			/Skip create\/switch branch prompt: no/,
 		);
+	});
+
+	it("injects name directive for leading name flag", async () => {
+		const pi = createFakePi();
+		wardenDirectives(pi as unknown as ExtensionAPI);
+
+		assert.deepEqual(
+			await runFirstHandler(pi, "input", {
+				text: "/skill:warden-start --name branch-aware-start add X",
+				source: "interactive",
+			}),
+			{ action: "transform", text: "/skill:warden-start add X" },
+		);
+		const result = await runFirstHandler(pi, "before_agent_start", {
+			prompt:
+				'<skill name="warden-start" location="/tmp/SKILL.md">start</skill>',
+		});
+
+		assertMessageResult(result);
+		assert.match(result.message.content, /interactionMode="name"/);
+		assert.match(result.message.content, /Warden Start Name Selection/);
+		assert.match(result.message.content, /Packet slug: branch-aware-start/);
 	});
 
 	it("clears pending explicit directive on agent end and shutdown", async () => {

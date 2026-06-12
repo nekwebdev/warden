@@ -30,6 +30,7 @@ Repository guidance for coding agents working in `run-warden/`.
 - `warden pi <name> ...` must run agent-local Pi with `PI_CODING_AGENT_DIR`, `PILENS_DATA_DIR`, and `CONTEXT_MODE_DIR` pointed inside the agent directory: `PILENS_DATA_DIR=$PI_CODING_AGENT_DIR/pi-lens`, `CONTEXT_MODE_DIR=$PI_CODING_AGENT_DIR/context-mode`.
 - Store the per-agent launch cwd only as `warden.agent.cwd`.
 - Preserve unknown agent settings when writing Warden-owned settings keys.
+- Keep `warden worktree` branch type choices aligned with `pi-warden/warden-flow` `warden-start` branch selection enum/heuristic (`feature`, `bugfix`, `hotfix`, `release`, `docs`, `test`, `chore`) when either side changes.
 
 ## Testing
 

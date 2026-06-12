@@ -6,7 +6,11 @@ import { getPiAgentSettingsPath } from "./effort.js";
 export const WARDEN_FLOW_DIRECTIVE_CUSTOM_TYPE = "warden-flow-directive";
 export const WARDEN_FLOW_DIRECTIVE_TAG = "warden-flow-directive";
 export const WARDEN_START_SKILL_NAME = "warden-start";
-export const WARDEN_FLOW_INTERACTION_MODES = ["auto"] as const;
+export const WARDEN_FLOW_INTERACTION_MODES = [
+	"auto",
+	"name",
+	"prompt",
+] as const;
 
 export type WardenFlowInteractionMode =
 	(typeof WARDEN_FLOW_INTERACTION_MODES)[number];

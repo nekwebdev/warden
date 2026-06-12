@@ -105,15 +105,19 @@ Git context is cached and re-injected only when branch, commit, or dirty state c
 
 ## Runtime directives
 
-`extensions/warden-directives` can inject invocation-scoped Warden Flow guidance before a skill turn. Current support is limited to `warden-start` auto mode.
+`extensions/warden-directives` can inject invocation-scoped Warden Flow guidance before a skill turn. Current support covers `warden-start` prompt selection, leading name/branch flags, and auto mode.
 
-Use an explicit flag to run `warden-start` without optional fine-tuning prompts:
+Use leading flags to make `warden-start` packet selection deterministic before drafting:
 
 ```text
-/skill:warden-start --auto add a tiny change
+/skill:warden-start --name tiny-change add a tiny change
+/skill:warden-start --branch chore/tiny-change add a tiny change
+/skill:warden-start --auto --branch chore/tiny-change add a tiny change
 ```
 
-The `--auto` token is control syntax. The skill receives cleaned user intent such as `add a tiny change`, not the literal flag.
+`--name <slug>`, `--branch <type>/<slug>`, and `--auto` are control syntax only when they appear before rough intent. The skill receives cleaned user intent such as `add a tiny change`, plus hidden package-computed selection metadata. Slugs use lowercase letters, numbers, and single dashes only; no slashes.
+
+`--auto` skips optional fine-tuning prompts when safe. If no current branch context already handles branch choice, auto mode verifies `git status --porcelain` is clean, then runs only local `git switch <type>/<slug>` for an existing branch or `git switch -c <type>/<slug>` for a new branch.
 
 You can also set a Pi agent fallback in `settings.json`:
 
@@ -129,7 +133,7 @@ You can also set a Pi agent fallback in `settings.json`:
 
 Precedence is explicit invocation flag, then `warden.flow.interactionMode`, then normal interactive behavior. Unsupported modes or missing directive files fail safe by injecting no directive. This slice has no per-invocation `--interactive` escape flag; disable or change the setting to restore plain interactive default behavior.
 
-Runtime directives stay inside the `@nekwebdev/warden-flow` package. They do not implement runner workflows, agent lifecycle commands, Pi launch plumbing, or sibling package behavior.
+Runtime directives stay inside the `@nekwebdev/warden-flow` package. They do not implement runner workflows, agent lifecycle commands, Pi launch plumbing, worktree creation, remote setup, fetch, pull, push, or sibling package behavior.
 
 ## Tmux question alert
 

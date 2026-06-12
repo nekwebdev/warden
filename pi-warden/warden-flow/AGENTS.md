@@ -25,7 +25,7 @@ Package-owned areas:
 - `warden-map` skill in `skills/warden-map/`;
 - `warden-docs` skill in `skills/warden-docs/`;
 - `warden-create-skill` skill and bundled skill template in `skills/warden-create-skill/`;
-- `warden-start` skill in `skills/warden-start/`;
+- `warden-start` skill in `skills/warden-start/` plus branch-aware selection helpers in `src/warden-start-selection.ts`;
 - `warden-grill` skill in `skills/warden-grill/`;
 - `warden-tdd` skill in `skills/warden-tdd/`;
 - `warden-close` skill in `skills/warden-close/`;
@@ -68,6 +68,7 @@ This package does not own Warden runner workflows, agent lifecycle commands, sib
 - Call `warden_commit_apply` only after user confirmation; the tool input assumes confirmation already happened, validates matching snapshot hashes, stages exact paths only, and never pushes, pulls, fetches, resets, rebases, amends, tags, stashes, checks out, cleans, restores, creates PRs, or runs remote git operations.
 - Do not add subagents, workflow runners, sibling package installers, or model override cascades to this package.
 - Runtime effort changes must restore the previous thinking level after the agent turn unless Pi exposes a safer verified non-persistent path.
+- Keep `warden-start` branch type enum and heuristic aligned with `warden worktree` types (`feature`, `bugfix`, `hotfix`, `release`, `docs`, `test`, `chore`) when either side changes.
 - Packet tracker state is owned by `extensions/warden-packet-tracker/` plus `src/packet-tracker.ts`, not by skill prose.
 - Tmux question alerts must preserve Warden's captured window name, ignore missing/failing tmux, `notify-send`, or `dms notify`, only change Warden-prefixed robot windows, and keep notification bodies limited to ask-user question text.
 - Tracker-affecting `warden-*` skills must be added to the extension allowlist and covered by package tests.

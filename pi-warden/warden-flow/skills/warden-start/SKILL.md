@@ -27,7 +27,7 @@ User input may be messy intent, a narrow change request, an existing rough packe
 
 Do not require a polished plan. Shape messy intent into one safe slice. If input points to an existing `packet.md`, tighten that packet instead of creating a new path unless unsafe.
 
-If input is rough intent, choose a short lowercase slug from user intent using hyphens. Report packet paths as `.warden/work/<slug>/packet.md`, relative to Git repository root.
+If input is rough intent, choose a short lowercase slug from user intent using hyphens unless a runtime directive supplies a package-computed slug. Report packet paths as `.warden/work/<slug>/packet.md`, relative to Git repository root.
 
 Canonical packet root:
 
@@ -86,7 +86,9 @@ Use external research only when packet depends on facts outside the repository o
 
 ## Runtime directives
 
-Matching Warden Flow runtime directives are invocation-scoped guidance. They may change interaction mechanics for this turn, but never override safety rules, stop conditions, files-not-to-touch, or higher-priority instructions.
+Matching Warden Flow runtime directives are invocation-scoped guidance. They may supply package-computed packet type, slug, branch name, prompt skip decisions, and auto-mode branch action results. Use directive values before drafting packet path or asking slug/type/branch questions.
+
+Matching Warden Flow runtime directives may change interaction mechanics for this turn, but never override safety rules, stop conditions, files-not-to-touch, or higher-priority instructions.
 
 ## Interaction model
 
