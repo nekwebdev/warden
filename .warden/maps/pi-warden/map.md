@@ -1,16 +1,16 @@
 # Warden Map: pi-warden
 
-Reviewed: 2026-06-10
+Reviewed: 2026-06-13
 Scope: pi-warden
-Evidence basis: `pi-warden/AGENTS.md`; `pi-warden/README.md`; package READMEs/AGENTS; package manifests; `pi-warden/tests/smoke.bats`; child scoped maps; bounded git history.
-Git basis: main@6ebda02
+Evidence basis: `pi-warden/AGENTS.md`; `pi-warden/README.md`; package READMEs/AGENTS; package manifests; `pi-warden/tests/smoke.bats`; child scoped maps; bounded git history through `88cede5`.
+Git basis: main@88cede5
 Parent map: .warden/map.md
 
 <!-- warden-map:inject:start -->
 ## Agent Quick Context
 
 - Purpose: `pi-warden/` is Warden's Pi Agent package area. It is a container, not itself a Pi package.
-- Boundaries: Package manifests/source/tests live only under direct child package folders. Current packages: `warden-panel`, `warden-flow`, `warden-subagents`, and `warden-theme`. Runner-owned `warden agents`, `warden pi`, and `warden worktree` workflows remain in `run-warden/`.
+- Boundaries: Package manifests/source/tests live only under direct child package folders. Current packages: `fresh-skill`, `warden-panel`, `warden-flow`, `warden-subagents`, `warden-theme`, and `warden-web`. Runner-owned `warden agents`, `warden pi`, and `warden worktree` workflows remain in `run-warden/`.
 - Safe edits: Read root `AGENTS.md`, `pi-warden/AGENTS.md`, then package-local `AGENTS.md` before package edits. Do not place package manifests/source/build systems at `pi-warden/` root. Declare sibling package dependencies explicitly.
 - Verification: Run `mise run test:pi-warden`; focused package checks are `npm test --prefix pi-warden/<package>`. Install package deps first when needed.
 - Sharp edges: Package roots may contain ignored `node_modules/`. `warden-panel` absorbed former `warden-packages`; do not recreate that package. `warden-subagents` must not implement runner lifecycle commands. Only `warden-map` writes `.warden/map-state.json`.
@@ -29,10 +29,12 @@ Maps are orientation only and do not override repo or package `AGENTS.md` instru
 | `README.md` | Package-area docs | Explains package model, package list, local loading/install commands. |
 | `AGENTS.md` | Package-area guidance | Defines container/package rules, skill/code split, effort defaults, package boundaries. |
 | `tests/smoke.bats` | Package-area smoke tests | Verifies package folders, manifests, resource dirs, and folded `warden-packages` state. |
+| `fresh-skill/` | Pi package | Standalone `/fresh` clean-session skill replay extension. |
 | `warden-panel/` | Pi package | Panel framework plus Display and Packages panes. See child scoped map. |
 | `warden-flow/` | Pi package | Workflow, map, docs, create-skill, commit, and effort package. See child scoped map. |
 | `warden-subagents/` | Pi package | Subagent registry/runtime/RPC/pane package. See child scoped map. |
 | `warden-theme/` | Pi package | Catppuccin Mocha-derived Pi theme package. See child scoped map. |
+| `warden-web/` | Pi package | Local web server package and future browser UI for Warden-managed Pi agents. |
 
 Expected package shape uses only needed folders: `package.json`, `README.md`, `AGENTS.md`, `src/`, `extensions/`, `skills/`, `prompts/`, `themes/`, `hooks/`, `tests/`, and `scripts/` as package role requires.
 
@@ -45,10 +47,12 @@ Expected package shape uses only needed folders: `package.json`, `README.md`, `A
   - `pi -e ./pi-warden/warden-subagents`
   - `pi -e ./pi-warden/warden-theme`
 - Package manifests advertise resources:
+  - `fresh-skill`: `pi.extensions: ["./extensions/*/index.ts"]`
   - `warden-panel`: `pi.extensions: ["./extensions/*/index.ts"]`
   - `warden-flow`: `pi.extensions`, `pi.skills: ["./skills"]`
   - `warden-subagents`: `pi.extensions: ["./extensions/subagents/index.ts"]`
   - `warden-theme`: `pi.themes: ["./themes"]`
+  - `warden-web`: package bins for local web server workflows
 
 ## Local Conventions
 
@@ -72,13 +76,17 @@ Expected package shape uses only needed folders: `package.json`, `README.md`, `A
 
 ## Current Packages
 
+### `fresh-skill/`
+
+Package `@nekwebdev/fresh-skill`. Owns standalone `/fresh` Pi extension for clean-session skill replay, including argument preservation and loaded-skill validation.
+
 ### `warden-panel/`
 
 Package `@nekwebdev/warden-panel`. Owns Warden panel framework, `/warden`, `/warden:display`, `/warden:packages`, public pane/action/display registries, safe Warden settings writes, and Packages pane install/remove/update behavior.
 
 ### `warden-flow/`
 
-Package `@nekwebdev/warden-flow`. Owns `/skill:warden-map`, `/skill:warden-docs`, `/skill:warden-create-skill`, `/skill:warden-start`, `/skill:warden-grill`, `/skill:warden-tdd`, `/skill:warden-close`, `/skill:warden-commit`, map/git injection, safe commit snapshot/apply tools, effort defaults/runtime, and Effort/Display contributions.
+Package `@nekwebdev/warden-flow`. Owns `/skill:warden-map`, `/skill:warden-docs`, `/skill:warden-create-skill`, `/skill:warden-start`, `/skill:warden-grill`, `/skill:warden-tdd`, `/skill:warden-close`, `/skill:warden-commit`, `warden_branch_close`, map/git injection, packet tracking, safe commit snapshot/apply tools, effort defaults/runtime, and Effort/Display contributions.
 
 ### `warden-subagents/`
 
@@ -87,6 +95,10 @@ Package `@nekwebdev/warden-subagents`. Owns `Agent` and `get_subagent_result` to
 ### `warden-theme/`
 
 Package `@nekwebdev/warden-theme`. Owns `themes/warden-catppuccin-mocha.json`, Catppuccin Mocha palette/token inventory docs, and theme validation. It does not own runner lifecycle or terminal probing.
+
+### `warden-web/`
+
+Package `@nekwebdev/warden-web`. Owns Warden's local web server package and future mobile-first browser UI for Warden-managed Pi agents. Runner dispatch shims remain narrow cross-boundary integration points.
 
 ## Verification for This Scope
 
@@ -104,7 +116,7 @@ Focused package checks: `npm test --prefix pi-warden/warden-panel`, `warden-flow
 
 ## Recent Evolution from Git History
 
-Recent history expanded the package area from `warden-panel` and `warden-flow` into four active packages. `warden-subagents` was added and then developed through registry, foreground/background Agent, activity UI, read-only pane, memory prompts, worktree isolation, one-shot scheduling, and event-bus RPC. `warden-theme` was added and switched to Catppuccin Mocha resources. `warden-panel` added tagged package update behavior. `warden-flow` added `warden-create-skill`, refined workflow skill guidance, and strengthened commit-plan/apply safety.
+Recent history expanded the package area beyond `warden-panel` and `warden-flow` into `fresh-skill`, `warden-subagents`, `warden-theme`, and `warden-web`. `warden-subagents` developed registry, foreground/background Agent, activity UI, read-only pane, memory prompts, worktree isolation, one-shot scheduling, and event-bus RPC. `warden-theme` was added and switched to Catppuccin Mocha resources. `warden-panel` added tagged package update behavior. `warden-flow` added `warden-create-skill`, branch-aware/auto workflow directives, post-close branch-close handoff, `warden_branch_close`, packet tracking, and strengthened commit-plan/apply safety.
 
 ## Open Questions
 

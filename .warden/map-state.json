@@ -1,13 +1,13 @@
 {
   "version": 1,
-  "head": "6ebda028450966a53d19801d5e5c28240999822a",
-  "generatedAt": "2026-06-10T09:50:53.000Z",
+  "head": "88cede5bdac2866b9dcdd8e9eec45abeb5caa84b",
+  "generatedAt": "2026-06-13T02:06:18Z",
   "maps": {
-    ".warden/map.md": "6ebda028450966a53d19801d5e5c28240999822a",
+    ".warden/map.md": "88cede5bdac2866b9dcdd8e9eec45abeb5caa84b",
     ".warden/maps/run-warden/map.md": "6ebda028450966a53d19801d5e5c28240999822a",
-    ".warden/maps/pi-warden/map.md": "6ebda028450966a53d19801d5e5c28240999822a",
+    ".warden/maps/pi-warden/map.md": "88cede5bdac2866b9dcdd8e9eec45abeb5caa84b",
     ".warden/maps/pi-warden/warden-panel/map.md": "6ebda028450966a53d19801d5e5c28240999822a",
-    ".warden/maps/pi-warden/warden-flow/map.md": "6ebda028450966a53d19801d5e5c28240999822a",
+    ".warden/maps/pi-warden/warden-flow/map.md": "88cede5bdac2866b9dcdd8e9eec45abeb5caa84b",
     ".warden/maps/pi-warden/warden-subagents/map.md": "6ebda028450966a53d19801d5e5c28240999822a",
     ".warden/maps/pi-warden/warden-theme/map.md": "6ebda028450966a53d19801d5e5c28240999822a"
   }

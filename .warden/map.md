@@ -1,15 +1,15 @@
 # Warden Map
 
-Reviewed: 2026-06-10
+Reviewed: 2026-06-13
 Scope: repository root
-Evidence basis: root/subproject AGENTS and README files; `CHANGELOG.md`; `mise.toml`; package manifests; Bats/package test entry points; existing scoped maps; bounded git history.
-Git basis: main@6ebda02
+Evidence basis: root/subproject AGENTS and README files; `CHANGELOG.md`; `mise.toml`; package manifests; Bats/package test entry points; existing scoped maps; bounded git history through `88cede5`.
+Git basis: main@88cede5
 
 <!-- warden-map:inject:start -->
 ## Agent Quick Context
 
 - Purpose: Warden is a federated monorepo for operating-environment workflow: clone anywhere, run `./warden`, normalize into `WARDEN_HOME`, then delegate to `run-warden/bin/warden` through mise.
-- Boundaries: Root `./warden` is bootstrap shim only. `run-warden/` owns CLI workflows, doctor, shell integration, Pi agent envs, Pi launch, and worktree launcher. `pi-warden/` is package container for `warden-panel`, `warden-flow`, `warden-subagents`, and `warden-theme`. `nix-warden/` and `dev-warden/` remain skeleton boundaries.
+- Boundaries: Root `./warden` is bootstrap shim only. `run-warden/` owns CLI workflows, doctor, shell integration, Pi agent envs, Pi launch, and worktree launcher. `pi-warden/` is package container for `fresh-skill`, `warden-panel`, `warden-flow`, `warden-subagents`, `warden-theme`, and `warden-web`. `nix-warden/` and `dev-warden/` remain skeleton boundaries.
 - Safe edits: Read root `AGENTS.md`, then nearest nested `AGENTS.md`; for Pi package work also read package `AGENTS.md`. Put runner behavior in `run-warden/`, Pi package behavior in `pi-warden/<package>/`, and keep root bootstrap tiny.
 - Verification: Full suite is `mise run test`. Focused suites: `test:root`, `test:run-warden`, `test:pi-warden`, `test:nix-warden`, `test:dev-warden`. Pi package checks use `npm test --prefix pi-warden/<package>`.
 - Sharp edges: First run and shell integration require consent before repo moves, mise install, or shell startup-file mutation. Never overwrite unrelated `WARDEN_HOME`, shell files, agent settings, or user package settings. Maps are orientation only, not instruction overrides.
@@ -31,9 +31,10 @@ Maps are orientation only. They do not override system, developer, user, or repo
 | `run-warden/` | Delegated runner | Owns command dispatch, shell libraries, shell snippets, Pi agent env lifecycle, Pi launch, and worktree launcher. See scoped map. |
 | `pi-warden/` | Pi package container | Holds package-area docs/tests and direct child Pi packages. Not itself a package. See scoped map. |
 | `pi-warden/warden-panel/` | Pi package | `@nekwebdev/warden-panel`; panel framework, Display pane, Packages pane, shared pane APIs. |
-| `pi-warden/warden-flow/` | Pi package | `@nekwebdev/warden-flow`; Warden workflow skills, map/git injection, effort UI/runtime, commit tools, skill creation workflow. |
+| `pi-warden/warden-flow/` | Pi package | `@nekwebdev/warden-flow`; Warden workflow skills, map/git injection, packet tracker, branch-close tool, effort UI/runtime, commit tools, skill creation workflow. |
 | `pi-warden/warden-subagents/` | Pi package | `@nekwebdev/warden-subagents`; Agent tool, background manager, scheduling, worktree isolation, registry, RPC, Subagents pane. |
 | `pi-warden/warden-theme/` | Pi package | `@nekwebdev/warden-theme`; Catppuccin Mocha-derived Pi theme resource and token inventory. |
+| `pi-warden/warden-web/` | Pi package | `@nekwebdev/warden-web`; local web server package and future browser UI for Warden-managed Pi agents. |
 | `nix-warden/` | Future system area | Skeleton boundary; canonical future config anchor is `$WARDEN_HOME/nix-warden`. |
 | `dev-warden/` | Future dev-env area | Skeleton boundary for future developer-environment workflows. |
 | `tests/root/` | Root bootstrap tests | Bats coverage for first-run movement, existing home safety, doctor, and shell integration. |
@@ -90,15 +91,15 @@ Maps are orientation only. They do not override system, developer, user, or repo
 - Runner installs/updates `@earendil-works/pi-coding-agent` into isolated agent npm prefixes and launches agent-local Pi.
 - Fresh agents receive `run-warden/templates/AGENTS-template.md` with agent-name substitution only.
 - `warden-panel` exposes pane/action/display registries through `globalThis` for sibling package contributions.
-- `warden-flow` contributes map/git injection, Warden skills, commit tools, effort runtime/UI, and skill creation workflow.
+- `warden-flow` contributes map/git injection, Warden skills, commit tools, packet tracking, branch close handoff/tooling, effort runtime/UI, and skill creation workflow.
 - `warden-subagents` contributes `Agent`, `get_subagent_result`, `/agents`, `/warden:agents`, RPC/events, background UI, notifications, and read-only pane.
 - `warden-theme` contributes `themes/warden-catppuccin-mocha.json` through Pi theme loading.
 
 ## Recent Evolution from Git History
 
-Git history was available. Bounded review from previous map basis `76a529e` to `main@6ebda02` shows active clusters in `pi-warden/warden-subagents`, `pi-warden/warden-flow`, `pi-warden/warden-panel`, `pi-warden/warden-theme`, and `run-warden/`.
+Git history was available. Bounded review from previous map basis `6ebda02` to `main@88cede5` shows active clusters in `pi-warden/warden-flow`, `pi-warden/fresh-skill`, `run-warden/`, `.github/`, and root/package docs.
 
-Orientation-relevant changes: `warden-subagents` grew from scaffold into active package; `warden-theme` was added; `run-warden` finalized command forms, isolated context-mode storage, seeded agent guidance, and added `warden worktree`; `warden-flow` added `warden-create-skill` and commit-plan refinements; `warden-panel` added tagged npm package updates; GitHub package hygiene now tracks new packages.
+Orientation-relevant changes: `fresh-skill` became a direct Pi package; `warden-flow` added branch-aware `warden-start`, auto runtime directives, post-close branch-close handoff, and `warden_branch_close`; `run-warden` adjusted worktree guidance for branch types. `warden_branch_close` is package-owned Warden Flow behavior, while runner-owned worktree and agent lifecycle commands remain in `run-warden/`.
 
 Use live git context injection for current branch, dirty paths, and staging details.
 
@@ -112,6 +113,7 @@ Use live git context injection for current branch, dirty paths, and staging deta
 | `pi-warden/warden-flow` | `.warden/maps/pi-warden/warden-flow/map.md` | Independently testable workflow/map/commit/effort/skill package. |
 | `pi-warden/warden-subagents` | `.warden/maps/pi-warden/warden-subagents/map.md` | Independently testable subagent registry/runtime/RPC/pane package. |
 | `pi-warden/warden-theme` | `.warden/maps/pi-warden/warden-theme/map.md` | Independently testable Pi theme package. |
+| `pi-warden/warden-web` | not yet mapped | Direct package exists; create scoped map when web UI/server work resumes. |
 
 `nix-warden/` and `dev-warden/` remain covered by root map only because current evidence marks them as skeleton boundaries.
 
