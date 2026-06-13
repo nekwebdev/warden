@@ -9,3 +9,4 @@ export * from "./runtime-directives.js";
 export * from "./warden-start-selection.js";
 export * from "./packet-tracker.js";
 export * from "./branch-close-handoff.js";
+export * from "./branch-close.js";

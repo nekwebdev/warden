@@ -31,6 +31,8 @@ export interface BranchCloseHandoffPayload {
 	packetPath?: string;
 	packetName?: string;
 	cwd: string;
+	branchCloseDestructiveConsent?: true;
+	branchCloseAutoCommitConsent?: true;
 }
 
 export interface MakeBranchCloseHandoffPayloadInput {
@@ -129,6 +131,16 @@ export function makeBranchCloseHandoffPayload(
 		...(input.packetPath ? { packetPath: input.packetPath } : {}),
 		...(input.packetName ? { packetName: input.packetName } : {}),
 		cwd: input.cwd,
+	};
+}
+
+export function addBranchCloseConsentMarkers(
+	payload: BranchCloseHandoffPayload,
+): BranchCloseHandoffPayload {
+	return {
+		...payload,
+		branchCloseDestructiveConsent: true,
+		branchCloseAutoCommitConsent: true,
 	};
 }
 

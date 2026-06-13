@@ -6,6 +6,7 @@ All notable Warden changes are recorded here.
 
 ### Added
 
+- Added `@nekwebdev/warden-flow` `warden_branch_close` extension tool with consent-gated auto-commit, map-refresh stops, rebase/merge/push orchestration, and post-push cleanup safety checks.
 - Added `@nekwebdev/warden-flow` post-close branch-close handoff prompt support with deterministic map-impact parsing, safe branch gating, structured `warden_branch_close` payloads, and fail-closed manual next steps.
 - Added `@nekwebdev/warden-flow` explicit leading `--auto` runtime directives for `warden-commit` and `warden-map`, including cohesive auto-commit safety gates, strict commit consent markers, and safe map scope validation.
 - Added `@nekwebdev/warden-flow` active-flow footer status showing current packet tracker state through a default-on Display setting.

@@ -7,6 +7,7 @@ import {
 	type WardenPanelPaneContext,
 } from "@nekwebdev/warden-panel";
 import {
+	addBranchCloseConsentMarkers,
 	formatBranchCloseManualNextStep,
 	formatBranchClosePrompt,
 	isSafeBranchCloseBranchName,
@@ -472,16 +473,17 @@ async function promptForBranchCloseHandoff(
 	}
 	if (choice !== "close-branch")
 		return { action: "skipped", reason: "declined" };
+	const consentedPayload = addBranchCloseConsentMarkers(payload);
 	if (!ctx.branchClose?.dispatch) {
 		return {
 			action: "manual-next-step",
 			reason: "dispatcher-unavailable",
-			manualNextStep,
-			payload,
+			manualNextStep: formatBranchCloseManualNextStep(consentedPayload),
+			payload: consentedPayload,
 		};
 	}
-	await ctx.branchClose.dispatch(payload);
-	return { action: "dispatched", payload };
+	await ctx.branchClose.dispatch(consentedPayload);
+	return { action: "dispatched", payload: consentedPayload };
 }
 
 function isAllowlistedStep(value: unknown): value is PacketTrackerStep {

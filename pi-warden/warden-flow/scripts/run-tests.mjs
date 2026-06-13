@@ -13,6 +13,7 @@ const tests = [
 	"tests/runtime-directives.test.ts",
 	"tests/warden-start-selection.test.ts",
 	"tests/branch-close-handoff.test.ts",
+	"tests/branch-close.test.ts",
 	"tests/packet-tracker.test.ts",
 	"tests/packet-tracker-extension.test.ts",
 	"tests/warden-directives-extension.test.ts",

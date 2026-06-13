@@ -555,6 +555,8 @@ describe("warden packet tracker extension", () => {
 				packetPath: ".warden/work/one/packet.md",
 				packetName: "one",
 				cwd,
+				branchCloseDestructiveConsent: true,
+				branchCloseAutoCommitConsent: true,
 			},
 		]);
 		assert.deepEqual(results, [

@@ -13,6 +13,7 @@ It reduces repeated repo discovery by maintaining a small map tree, injecting on
 - `/skill:warden-grill` — pressure-tests a work packet or manual feedback through a question/update loop until it is solid for TDD.
 - `/skill:warden-tdd` — implements one grilled work packet slice with strict test-first workflow.
 - `/skill:warden-close` — validates an accepted work packet or existing closure `handoff.md`, creates or updates final `handoff.md`, and decides changelog/map impact.
+- `warden_branch_close` — extension tool that closes accepted feature-branch work only from structured post-close handoff arguments and exact package-generated consent markers.
 - `/skill:warden-commit` — plans safe, atomic local commits and can apply them after plan approval; leading `--auto` may create local commits without a second approval only after strict snapshot safety checks and package-generated consent.
 - `/warden:effort` — opens the Warden panel Effort pane for Warden skill thinking-level settings through `@nekwebdev/warden-panel`.
 - `extensions/warden-map` — injects map capsules and git context.
@@ -257,9 +258,21 @@ It asks the user to choose global or project scope, reads `skills/warden-create-
 
 Successful close output includes deterministic map-impact tracker fields: `Maps: none | scoped-refresh | root-refresh` and `Maps scope: none | <repo-relative-scope> | root`. The packet tracker parses those fields from the final assistant output only; it does not persist them in `.warden/work/packet-tracker.json`.
 
-After a successful close on a safe non-default feature branch, the packet tracker can ask whether to hand off to `warden_branch_close`. Accepting dispatches or queues only structured arguments: feature branch, detected default branch, parsed map fields, packet path/name, and current worktree path. If the prompt UI is unavailable/dismissed or no branch-close dispatcher is registered, no git mutation starts and the extension exposes a manual `warden_branch_close` next step for after `.warden/work/warden-branch-close-engine/packet.md` lands. Default-branch, detached-HEAD, declined, missing-map-field, and unsafe-branch-name paths do not start branch close.
+After a successful close on a safe non-default feature branch, the packet tracker can ask whether to hand off to `warden_branch_close`. Accepting dispatches or queues only structured arguments: feature branch, detected default branch, parsed map fields, packet path/name, current worktree path, and the package-generated `branchCloseDestructiveConsent: true` plus `branchCloseAutoCommitConsent: true` markers. If the prompt UI is unavailable/dismissed or no branch-close dispatcher is registered, no git mutation starts and the extension exposes a manual `warden_branch_close` next step. Default-branch, detached-HEAD, declined, missing-map-field, and unsafe-branch-name paths do not start branch close.
 
 Use it when accepted work needs final closure documented, or when an existing close record should be confirmed before commit planning.
+
+## Branch close tool
+
+`warden_branch_close` validates structured handoff arguments before planning any mutating command. It rejects unsafe branch names, invalid map field pairs, detached HEAD, default-branch runs, missing destructive consent, ambiguous dirty state, risky/hidden/generated/secret-looking dirty paths, unsafe auto-commit snapshots, missing default worktrees, default-branch divergence, and git failures.
+
+Dirty eligible packet work can be auto-committed only when both exact markers are present: `branchCloseDestructiveConsent: true` and `branchCloseAutoCommitConsent: true`. The tool uses the same snapshot/apply safety contract as `warden_commit_snapshot` and `warden_commit_apply`; otherwise it stops with `/skill:warden-commit --auto ...` or `/skill:warden-commit ...` as the next safe command. Missing auto-commit consent does not block a proven clean no-op close.
+
+When maps require refresh, the tool stops before `git fetch origin`, rebase, merge, push, or cleanup. Root refresh returns `/skill:warden-map --auto`; scoped refresh returns `/skill:warden-map --auto <scope>`; then commit safe map changes and rerun `warden_branch_close` with the same structured arguments.
+
+After commit/no-op and map checks pass, the command order is fetch origin, fast-forward-sync the default worktree when present, rebase the feature branch onto `origin/<default>`, merge to default with `git merge --no-ff --no-edit <feature>`, push default, then clean up only after successful push. Multi-worktree cleanup runs from the default worktree cwd: remove feature worktree, delete local feature branch, then delete remote feature branch. If current feature worktree is removed, output includes `current worktree removed; close this worktree pi agent`. If cleanup fails after push, status is `partial_success` with the remaining manual cleanup command.
+
+Result states are `closed`, `needs_map_refresh`, `blocked`, and `partial_success`.
 
 ## Commit helper
 
@@ -277,7 +290,7 @@ It never pushes, pulls, fetches, rebases, resets, amends, tags, stashes, checks 
 
 ## Scope boundary
 
-This package owns Warden workflow/orientation Pi behavior, including `warden-map`, `warden-docs`, `warden-create-skill`, `warden-start`, `warden-grill`, `warden-tdd`, `warden-close`, `warden-commit`, map capsule injection, commit snapshot/apply tooling, and Warden Flow skill effort settings.
+This package owns Warden workflow/orientation Pi behavior, including `warden-map`, `warden-docs`, `warden-create-skill`, `warden-start`, `warden-grill`, `warden-tdd`, `warden-close`, `warden-commit`, `warden_branch_close`, map capsule injection, commit snapshot/apply tooling, and Warden Flow skill effort settings.
 
 It does not own Warden runner workflows, Pi agent lifecycle commands, or sibling package installation workflows.
 
