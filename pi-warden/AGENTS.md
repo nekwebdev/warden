@@ -66,7 +66,7 @@ Use only folders that fit the package.
   - Owns `/skill:warden-map`, map capsule injection, scoped map loading, and git context injection.
   - Owns `/skill:warden-docs` for stale durable doc alignment when map freshness is current.
   - Owns `/skill:warden-create-skill` and its bundled Warden skill template.
-  - Owns `/skill:warden-start`, `/skill:warden-grill`, `/skill:warden-tdd`, and `/skill:warden-close` workflow skills.
+  - Owns `/skill:warden-start`, `/skill:warden-prompt`, `/skill:warden-grill`, `/skill:warden-tdd`, and `/skill:warden-close` workflow skills.
   - Owns `/skill:warden-commit`, commit snapshot/apply tools, and local commit safety rules.
   - Owns `/warden:effort` and per-skill effort defaults for Warden Flow skills.
   - Owns tmux ask-user wait glyph alerts and Linux desktop notifications for `ask_user_question` prompts.

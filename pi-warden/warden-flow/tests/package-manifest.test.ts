@@ -48,6 +48,7 @@ const expectedSkillEntries = [
 	join("skills", "warden-docs", "SKILL.md"),
 	join("skills", "warden-grill", "SKILL.md"),
 	join("skills", "warden-map", "SKILL.md"),
+	join("skills", "warden-prompt", "SKILL.md"),
 	join("skills", "warden-start", "SKILL.md"),
 	join("skills", "warden-tdd", "SKILL.md"),
 ];
@@ -326,6 +327,38 @@ describe("package pi resources", () => {
 		assert.match(content, /For each question, provide your recommended answer/);
 		assert.match(content, /Never silently overwrite an existing/);
 		assert.match(content, /<skill-name>\/SKILL\.md/);
+	});
+
+	it("warden-prompt workshops rough intent without executing workflows", () => {
+		const content = skillContent("warden-prompt");
+
+		assert.match(content, /^name:\s*warden-prompt$/m);
+		assert.match(content, /^argument-hint:\s*\[rough work idea\]$/m);
+		assert.match(content, /^disable-model-invocation:\s*true$/m);
+		assert.match(content, /must not implement code/i);
+		assert.match(content, /must not edit project files/i);
+		assert.match(content, /must not run workflows automatically/i);
+		assert.match(content, /Explore, Lock, and Start-prompt modes/);
+		assert.match(content, /Current goal/);
+		assert.match(content, /Locked decisions/);
+		assert.match(content, /Open questions/);
+		assert.match(content, /Rejected options/);
+		assert.match(content, /Acceptance\/checklist notes/);
+		assert.match(content, /decision compression/i);
+		assert.match(content, /confirm.*concept.*locked/is);
+		assert.match(content, /confirm.*ready for `warden-start`/is);
+		assert.match(
+			content,
+			/must not invoke, hand off to, or auto-run `warden-start`/,
+		);
+		assert.match(content, /final comprehensive `warden-start` prompt/);
+		assert.match(
+			content,
+			/inspect relevant existing files\/docs before implementation/,
+		);
+		assert.match(content, /must not carry unresolved open questions/);
+		assert.doesNotMatch(content, /Tracker status:/);
+		assert.equal(packetTrackerSkillNames.includes("warden-prompt"), false);
 	});
 
 	it("all skill directories contain SKILL.md with minimal frontmatter", () => {

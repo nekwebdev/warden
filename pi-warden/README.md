@@ -114,6 +114,7 @@ Provides:
 - `/skill:warden-docs` — aligns stale `README.md` and `AGENTS.md` files with repo evidence when map freshness is current;
 - `/skill:warden-create-skill` — creates a new global or project Agent Skill from the bundled Warden skill template;
 - `/skill:warden-start` — turns rough intent into one small work packet;
+- `/skill:warden-prompt` — workshops vague work ideas into comprehensive `/skill:warden-start` prompts without editing files or running workflows;
 - `/skill:warden-grill` — pressure-tests a work packet or manual feedback until TDD-ready;
 - `/skill:warden-tdd` — implements one grilled packet slice with strict test-first workflow;
 - `/skill:warden-close` — validates an accepted packet or existing closure `handoff.md`, creates or updates final `handoff.md`, and decides changelog/map impact;

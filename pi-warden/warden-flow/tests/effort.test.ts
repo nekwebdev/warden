@@ -29,6 +29,7 @@ const EFFORT_HIGH = "high";
 const EFFORT_XHIGH = "xhigh";
 const SEEDED_SKILL_EFFORTS = {
 	"warden-map": EFFORT_LOW,
+	"warden-prompt": EFFORT_MEDIUM,
 	"warden-start": EFFORT_MEDIUM,
 	"warden-grill": EFFORT_HIGH,
 	"warden-tdd": EFFORT_HIGH,

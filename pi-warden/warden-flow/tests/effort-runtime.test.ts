@@ -136,6 +136,7 @@ describe("Warden effort runtime hook", () => {
 			effort: {
 				skills: {
 					"warden-map": "low",
+					"warden-prompt": "medium",
 					"warden-start": "medium",
 					"warden-grill": "high",
 					"warden-tdd": "high",
@@ -169,6 +170,20 @@ describe("Warden effort runtime hook", () => {
 		assert.deepEqual(
 			await runFirstHandler(pi, "input", {
 				text: "/skill:warden-start add lean packet",
+				source: "interactive",
+			}),
+			{ action: "continue" },
+		);
+		assert.deepEqual(pi.setCalls, ["medium"]);
+	});
+
+	it("applies medium effort by default for /skill:warden-prompt", async () => {
+		const pi = createFakePi("off");
+		wardenEffort(pi as unknown as ExtensionAPI);
+
+		assert.deepEqual(
+			await runFirstHandler(pi, "input", {
+				text: "/skill:warden-prompt improve docs workflow",
 				source: "interactive",
 			}),
 			{ action: "continue" },

@@ -26,6 +26,7 @@ Package-owned areas:
 - `warden-docs` skill in `skills/warden-docs/`;
 - `warden-create-skill` skill and bundled skill template in `skills/warden-create-skill/`;
 - `warden-start` skill in `skills/warden-start/` plus branch-aware selection helpers in `src/warden-start-selection.ts`;
+- `warden-prompt` prompt-workshop skill in `skills/warden-prompt/`;
 - `warden-grill` skill in `skills/warden-grill/`;
 - `warden-tdd` skill in `skills/warden-tdd/`;
 - `warden-close` skill in `skills/warden-close/`;
