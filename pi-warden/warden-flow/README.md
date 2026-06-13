@@ -255,6 +255,10 @@ It asks the user to choose global or project scope, reads `skills/warden-create-
 
 `/skill:warden-close` accepts a `packet.md` or `handoff.md` path. It validates accepted closure against packet/repo evidence, creates a missing sibling `handoff.md` when closure evidence is sufficient, leaves valid handoffs unchanged, and may update stale handoff content. It does not implement code, edit maps, stage changes, or commit changes.
 
+Successful close output includes deterministic map-impact tracker fields: `Maps: none | scoped-refresh | root-refresh` and `Maps scope: none | <repo-relative-scope> | root`. The packet tracker parses those fields from the final assistant output only; it does not persist them in `.warden/work/packet-tracker.json`.
+
+After a successful close on a safe non-default feature branch, the packet tracker can ask whether to hand off to `warden_branch_close`. Accepting dispatches or queues only structured arguments: feature branch, detected default branch, parsed map fields, packet path/name, and current worktree path. If the prompt UI is unavailable/dismissed or no branch-close dispatcher is registered, no git mutation starts and the extension exposes a manual `warden_branch_close` next step for after `.warden/work/warden-branch-close-engine/packet.md` lands. Default-branch, detached-HEAD, declined, missing-map-field, and unsafe-branch-name paths do not start branch close.
+
 Use it when accepted work needs final closure documented, or when an existing close record should be confirmed before commit planning.
 
 ## Commit helper

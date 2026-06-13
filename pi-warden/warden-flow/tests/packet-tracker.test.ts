@@ -21,6 +21,7 @@ import {
 	parsePacketName,
 	parsePacketPath,
 	parsePacketStatus,
+	parseWardenCloseMapFields,
 	summarizePacketOutput,
 	type PacketTrackerState,
 } from "../src/index.js";
@@ -423,5 +424,88 @@ describe("packet tracker core", () => {
 			false,
 		);
 		assert.equal(loadPacketTrackerState(cwd).state, undefined);
+	});
+
+	it("parses and validates warden-close map-impact fields", () => {
+		assert.deepEqual(
+			parseWardenCloseMapFields(
+				"Tracker status: success\nSummary: closed\nMaps: none\nMaps scope: none",
+			),
+			{ status: "valid", maps: "none", mapsScope: "none" },
+		);
+		assert.deepEqual(
+			parseWardenCloseMapFields(
+				"Tracker status: success\nSummary: closed\nMaps: root-refresh\nMaps scope: root",
+			),
+			{ status: "valid", maps: "root-refresh", mapsScope: "root" },
+		);
+		assert.deepEqual(
+			parseWardenCloseMapFields(
+				"Tracker status: success\nSummary: closed\nMaps: scoped-refresh\nMaps scope: pi-warden/warden-flow",
+			),
+			{
+				status: "valid",
+				maps: "scoped-refresh",
+				mapsScope: "pi-warden/warden-flow",
+			},
+		);
+
+		for (const mapsScope of [
+			"/tmp/nope",
+			"",
+			"pi-warden//warden-flow",
+			"pi-warden/../run-warden",
+			"C:/Users/nope",
+			"pi-warden\\warden-flow",
+			"pi-warden;rm-rf",
+		]) {
+			assert.deepEqual(
+				parseWardenCloseMapFields(
+					`Tracker status: success\nMaps: scoped-refresh\nMaps scope: ${mapsScope}`,
+				),
+				{ status: "invalid", reason: "invalid-maps-scope" },
+			);
+		}
+		assert.deepEqual(parseWardenCloseMapFields("Summary: old close"), {
+			status: "missing",
+		});
+		assert.deepEqual(
+			parseWardenCloseMapFields(
+				"Maps: none\nMaps scope: root\n\n## Body\nMaps: root-refresh\nMaps scope: root",
+			),
+			{ status: "invalid", reason: "invalid-map-pair" },
+		);
+	});
+
+	it("ignores map-impact fields as summary fallback and keeps them out of tracker JSON", () => {
+		const trackerOutput =
+			"# Warden Close Result\n\nTracker status: success\nPacket name: one\nPacket path: .warden/work/one/packet.md\nStatus: Closed\nSummary: Closed one.\nMaps: scoped-refresh\nMaps scope: pi-warden/warden-flow";
+		assert.equal(summarizePacketOutput(trackerOutput), "Closed one.");
+
+		mkdirSync(join(cwd, ".warden", "work", "one"), { recursive: true });
+		writeFileSync(
+			join(cwd, ".warden", "work", "one", "handoff.md"),
+			"# Handoff\n",
+			"utf-8",
+		);
+		writeTracker({
+			version: 1,
+			current: existingEntry(".warden/work/one/packet.md", "warden-tdd"),
+			queue: [],
+			recentCompleted: [],
+		});
+
+		applyPacketTrackerUpdate({
+			cwd,
+			step: "warden-close",
+			status: "success",
+			packetPath: ".warden/work/one/packet.md",
+			output: trackerOutput,
+			now,
+		});
+
+		const rawTracker = readFileSync(trackerPath(), "utf-8");
+		assert.doesNotMatch(rawTracker, /"maps"|"mapsScope"|Maps scope/);
+		assert.equal(readTracker().recentCompleted[0]?.lastSummary, "Closed one.");
 	});
 });

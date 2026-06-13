@@ -231,6 +231,14 @@ describe("package pi resources", () => {
 		assert.match(content, /Status: Closed \| Not ready \| Blocked/);
 	});
 
+	it("warden-close emits deterministic map-impact tracker fields after Summary", () => {
+		const content = skillContent("warden-close");
+		const trackerFieldBlock =
+			/Summary: Put a one-line summary\nMaps: none \| scoped-refresh \| root-refresh\nMaps scope: none \| <repo-relative-scope> \| root/g;
+
+		assert.equal([...content.matchAll(trackerFieldBlock)].length, 2);
+	});
+
 	it("packet tracker skills expose exact final status contract", () => {
 		for (const skillName of packetTrackerSkillNames) {
 			const content = skillContent(skillName);

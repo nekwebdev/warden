@@ -204,6 +204,8 @@ Packet name: <slug>
 Packet path: .warden/work/<slug>/packet.md
 Status: Closed | Not ready | Blocked
 Summary: Put a one-line summary
+Maps: none | scoped-refresh | root-refresh
+Maps scope: none | <repo-relative-scope> | root
 ```
 
 Use `success` only when `Status: Closed`. Use `failure` when `Status: Not ready` or `Status: Blocked`. Use `aborted` when the user stops the workflow.
@@ -218,6 +220,8 @@ Packet name: <slug>
 Packet path: .warden/work/<slug>/packet.md
 Status: Closed | Not ready | Blocked
 Summary: Put a one-line summary
+Maps: none | scoped-refresh | root-refresh
+Maps scope: none | <repo-relative-scope> | root
 
 ## Result
 

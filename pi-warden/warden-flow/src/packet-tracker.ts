@@ -29,6 +29,17 @@ export type PacketTrackerNextStep = (typeof PACKET_TRACKER_NEXT_STEPS)[number];
 
 type TddNextStepChoice = "warden-grill" | "warden-close";
 
+export type WardenCloseMapImpact = "none" | "scoped-refresh" | "root-refresh";
+
+export type WardenCloseMapFieldsParseResult =
+	| {
+			status: "valid";
+			maps: WardenCloseMapImpact;
+			mapsScope: string;
+	  }
+	| { status: "missing" }
+	| { status: "invalid"; reason: string };
+
 type LoadedPacketTrackerState = {
 	state?: PacketTrackerState;
 	invalid?: true;
@@ -157,6 +168,24 @@ export function parsePacketName(output: string): string | undefined {
 export function parsePacketSummary(output: string): string | undefined {
 	const summary = trackerFieldFromOutput(output, "summary");
 	return summary ? truncateSummary(normalizeSummaryLine(summary)) : undefined;
+}
+
+export function parseWardenCloseMapFields(
+	output: string,
+): WardenCloseMapFieldsParseResult {
+	const maps = trackerFieldFromOutput(output, "maps");
+	const mapsScope = trackerFieldFromOutput(output, "maps scope");
+	if (maps === undefined && mapsScope === undefined)
+		return { status: "missing" };
+	if (!isWardenCloseMapImpact(maps) || mapsScope === undefined) {
+		return { status: "invalid", reason: "invalid-map-pair" };
+	}
+	if (!isValidMapImpactPair(maps, mapsScope)) {
+		return maps === "scoped-refresh"
+			? { status: "invalid", reason: "invalid-maps-scope" }
+			: { status: "invalid", reason: "invalid-map-pair" };
+	}
+	return { status: "valid", maps, mapsScope };
 }
 
 export function summarizePacketOutput(output: string): string {
@@ -451,9 +480,37 @@ function topTrackerBlock(output: string): string {
 }
 
 function isSummaryBoilerplate(line: string): boolean {
-	return /^(?:warden\s+(?:start|grill|tdd|close)(?:\s+result)?|tracker\s+status|packet\s+(?:name|path|action)|next\s+(?:action|step))\b/i.test(
+	return /^(?:warden\s+(?:start|grill|tdd|close)(?:\s+result)?|tracker\s+status|packet\s+(?:name|path|action)|next\s+(?:action|step)|maps(?:\s+scope)?)\b/i.test(
 		line,
 	);
+}
+
+function isWardenCloseMapImpact(value: unknown): value is WardenCloseMapImpact {
+	return (
+		value === "none" || value === "scoped-refresh" || value === "root-refresh"
+	);
+}
+
+function isValidMapImpactPair(
+	maps: WardenCloseMapImpact,
+	mapsScope: string,
+): boolean {
+	if (maps === "none") return mapsScope === "none";
+	if (maps === "root-refresh") return mapsScope === "root";
+	return isSafeRepoRelativeMapScope(mapsScope);
+}
+
+function isSafeRepoRelativeMapScope(value: string): boolean {
+	if (!value) return false;
+	if (isAbsolute(value) || value.includes("\\")) return false;
+	if (/^[A-Za-z]:[\\/]/.test(value)) return false;
+	if (/[\s\x00-\x1f;&|`$<>()[\]{}*!?~#]/.test(value)) return false;
+	const parts = value.split("/");
+	if (parts.some((part) => !part || part === "." || part === "..")) {
+		return false;
+	}
+	const normalized = normalizeSlashes(value);
+	return !isExternalOrEmptyPath(relative(".", normalized));
 }
 
 function normalizeSummaryLine(line: string): string {
